@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        qt: ['6.8.1']
+        include:
+          - os: ubuntu-latest
+            host: linux
+            arch: linux_gcc_64
+            icu: 'icu'
+          - os: windows-latest
+            host: windows
+            arch: win64_msvc2022_64
+          - os: macos-latest
+            host: mac
+            arch: clang_64
+            no-error: '-DCMAKE_CXX_FLAGS="-Wno-error=switch -Wno-error=unused-parameter -Wno-error=missing-field-initializers"'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: Install Qt
+        uses: Jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt }}
+          arch: ${{ matrix.arch }}
+          archives: 'qtbase ${{ matrix.icu }}'
+          modules: 'qtlanguageserver qthttpserver'
+          tools: 'tools_cmake tools_ninja'
+          cache: true
+          setup-python: 'true'
+          install-deps: 'true'
+
+      - name: setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ${{ matrix.no-error }} -DQT_BUILD_EXAMPLES=1 -DQT_BUILD_TESTS=1
+
+      - name: Build
+        run: |
+          cmake --build build --config RelWithDebInfo --parallel
+  
+      - name: Install
+        run: |
+          cmake --install build
+
+      - name: Test
+        working-directory: build
+        env:
+          QT_QPA_PLATFORM: 'offscreen'
+        run: |
+          ctest --output-on-failure

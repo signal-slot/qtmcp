@@ -1,0 +1,5 @@
+{
+    "cmake.configureArgs": [
+        "-DQT_BUILD_TESTS=1","-DQT_BUILD_EXAMPLES=1"
+    ]
+}

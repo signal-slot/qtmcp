@@ -1,0 +1,171 @@
+# Copyright (C) 2025 Signal Slot Inc.
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+
+#####################################################################
+## McpCommon Module:
+#####################################################################
+
+qt_internal_add_module(McpCommon
+    INTERNAL_MODULE
+    SOURCES
+        qmcpcommonglobal.h
+        qmcpgadget.h qmcpgadget.cpp
+        qmcpanyof.h qmcpanyof.cpp
+        qmcpjsonrpcmessage.h
+        qmcpjsonrpcerror.h
+        qmcpjsonrpcerrorerror.h
+        qmcpjsonrpcnotification.h
+        qmcpjsonrpcnotificationparams.h
+        qmcpjsonrpcnotificationparamsmeta.h
+        qmcpjsonrpcrequest.h
+        qmcpjsonrpcrequestparams.h
+        qmcpjsonrpcrequestparamsmeta.h
+        qmcpjsonrpcresponse.h
+        qmcpannotated.h
+        qmcpblobresourcecontents.h
+        qmcpcalltoolrequest.h
+        qmcpcalltoolrequestparams.h
+        qmcpcalltoolresult.h
+        qmcpcalltoolresultcontent.h
+        qmcpcancellednotification.h
+        qmcpcancellednotificationparams.h
+        qmcpclientcapabilities.h
+        qmcpclientcapabilitiesexperimental.h
+        qmcpclientcapabilitiesroots.h
+        qmcpclientcapabilitiessampling.h
+        qmcpclientnotification.h
+        qmcpclientrequest.h
+        qmcpclientresult.h
+        qmcpcompleterequest.h
+        qmcpcompleterequestparams.h
+        qmcpcompleterequestparamsargument.h
+        qmcpcompleterequestparamsref.h
+        qmcpcompleteresult.h
+        qmcpcompleteresultcompletion.h
+        qmcpcreatemessagerequest.h
+        qmcpcreatemessagerequestparams.h
+        qmcpcreatemessagerequestparamsmetadata.h
+        qmcpcreatemessageresult.h
+        qmcpcreatemessageresultcontent.h
+        qmcpcursor.h
+        qmcpembeddedresource.h
+        qmcpembeddedresourceresource.h
+        qmcpemptyresult.h
+        qmcpgetpromptrequest.h
+        qmcpgetpromptrequestparams.h
+
+        qmcpgetpromptresult.h
+        qmcpimagecontent.h
+        qmcpimplementation.h
+        qmcpinitializednotification.h
+        qmcpinitializednotificationparams.h
+        qmcpinitializednotificationparamsmeta.h
+        qmcpinitializerequest.h
+        qmcpinitializerequestparams.h
+        qmcpinitializeresult.h
+        qmcplistpromptsrequest.h
+        qmcplistpromptsrequestparams.h
+        qmcplistpromptsresult.h
+        qmcplistresourcesrequest.h
+        qmcplistresourcesrequestparams.h
+        qmcplistresourcesresult.h
+        qmcplistresourcetemplatesrequest.h
+        qmcplistresourcetemplatesrequestparams.h
+        qmcplistresourcetemplatesresult.h
+        qmcplistrootsrequest.h
+        qmcplistrootsrequestparams.h
+        qmcplistrootsrequestparamsmeta.h
+        qmcplistrootsresult.h
+        qmcplisttoolsrequest.h
+        qmcplisttoolsrequestparams.h
+        qmcplisttoolsresult.h
+        qmcplogginglevel.h
+        qmcploggingmessagenotification.h
+        qmcploggingmessagenotificationparams.h
+        qmcpmodelhint.h
+        qmcpmodelpreferences.h
+        qmcpnotification.h
+        qmcpnotificationparams.h
+        qmcpnotificationparamsmeta.h
+        qmcppaginatedrequest.h
+        qmcppaginatedrequestparams.h
+        qmcppaginatedresult.h
+        qmcppingrequest.h
+        qmcppingrequestparams.h
+        qmcppingrequestparamsmeta.h
+        qmcpprogressnotification.h
+        qmcpprogressnotificationparams.h
+        qmcpprogresstoken.h
+        qmcpprompt.h
+        qmcppromptargument.h
+        qmcppromptlistchangednotification.h
+        qmcppromptlistchangednotificationparams.h
+        qmcppromptlistchangednotificationparamsmeta.h
+        qmcppromptmessage.h
+        qmcppromptmessagecontent.h
+        qmcppromptreference.h
+        qmcpreadresourcerequest.h
+        qmcpreadresourcerequestparams.h
+        qmcpreadresourceresult.h
+        qmcpreadresourceresultcontents.h
+        qmcprequest.h
+        qmcprequestid.h
+        qmcprequestparams.h
+        qmcprequestparamsmeta.h
+        qmcpresource.h
+        qmcpresourcecontents.h
+        qmcpresourcelistchangednotification.h
+        qmcpresourcelistchangednotificationparams.h
+        qmcpresourcelistchangednotificationparamsmeta.h
+        qmcpresourcereference.h
+        qmcpresourcetemplate.h
+        qmcpresourceupdatednotification.h
+        qmcpresourceupdatednotificationparams.h
+        qmcpresult.h
+        qmcpresultmeta.h
+        qmcprole.h
+        qmcproot.h
+        qmcprootslistchangednotification.h
+        qmcprootslistchangednotificationparams.h
+        qmcprootslistchangednotificationparamsmeta.h
+        qmcpsamplingmessage.h
+        qmcpsamplingmessagecontent.h
+        qmcpservercapabilities.h
+        qmcpservercapabilitiesexperimental.h
+        qmcpservercapabilitieslogging.h
+        qmcpservercapabilitiesprompts.h
+        qmcpservercapabilitiesresources.h
+        qmcpservercapabilitiestools.h
+        qmcpservernotification.h
+        qmcpserverrequest.h
+        qmcpserverresult.h
+        qmcpsetlevelrequest.h
+        qmcpsetlevelrequestparams.h
+        qmcpsubscriberequest.h
+        qmcpsubscriberequestparams.h
+        qmcptextcontent.h
+        qmcptextresourcecontents.h
+        qmcptool.h
+        qmcptoolinputschema.h
+        qmcptoollistchangednotification.h
+        qmcptoollistchangednotificationparams.h
+        qmcptoollistchangednotificationparamsmeta.h
+        qmcpunsubscriberequest.h
+        qmcpunsubscriberequestparams.h
+        qmcpjsonrpcmessage.h
+        qmcpanyof.h
+        qmcpannotations.h
+    DEFINES
+        QT_BUILD_MCPCOMMON_LIB
+        QT_NO_CONTEXTLESS_CONNECT
+    PUBLIC_LIBRARIES
+        Qt::Core
+)
+
+## Scopes:
+#####################################################################
+
+qt_internal_extend_target(McpCommon CONDITION TARGET Qt::Gui
+    PUBLIC_LIBRARIES
+        Qt::Gui
+)

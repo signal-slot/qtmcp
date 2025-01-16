@@ -1,0 +1,24 @@
+{
+    "EngineDict": {
+        "Editor": {
+            "Text": "Make a change and save."
+        }
+    },
+    "Font": {
+        "FillColor": {
+            "Type": 1,
+            "Values": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        "Name": "HelveticaNeue-Light",
+        "StyleSheetSet": [
+            {
+                "Name": "Normal RGB"
+            }
+        ]
+    }
+}
