@@ -55,6 +55,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCallToolRequestParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCALLTOOLREQUESTPARAMS_H

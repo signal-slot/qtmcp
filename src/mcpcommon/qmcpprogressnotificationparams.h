@@ -82,6 +82,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpProgressNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPPROGRESSNOTIFICATIONPARAMS_H

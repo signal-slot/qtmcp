@@ -43,6 +43,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpAnnotated)
+
 QT_END_NAMESPACE
 
 #endif // QMCPANNOTATED_H

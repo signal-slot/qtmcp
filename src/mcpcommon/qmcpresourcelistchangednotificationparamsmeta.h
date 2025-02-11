@@ -43,6 +43,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpResourceListChangedNotificationParamsMeta)
+
 QT_END_NAMESPACE
 
 #endif // QMCPRESOURCELISTCHANGEDNOTIFICATIONPARAMSMETA_H

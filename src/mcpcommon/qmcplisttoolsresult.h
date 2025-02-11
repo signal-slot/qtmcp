@@ -64,6 +64,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpListToolsResult)
+
 QT_END_NAMESPACE
 
 #endif // QMCPLISTTOOLSRESULT_H

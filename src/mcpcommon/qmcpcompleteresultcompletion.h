@@ -83,6 +83,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCompleteResultCompletion)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCOMPLETERESULTCOMPLETION_H

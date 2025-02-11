@@ -83,6 +83,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpPrompt)
+
 QT_END_NAMESPACE
 
 #endif // QMCPPROMPT_H

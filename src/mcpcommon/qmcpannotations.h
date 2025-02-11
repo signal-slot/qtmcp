@@ -71,6 +71,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpAnnotations)
+
 QT_END_NAMESPACE
 
 #endif // QMCPANNOTATIONS_H

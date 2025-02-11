@@ -40,6 +40,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCreateMessageRequestParamsMetadata)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCREATEMESSAGEREQUESTPARAMSMETADATA_H

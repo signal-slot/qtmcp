@@ -71,6 +71,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCallToolResultContent)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCALLTOOLRESULTCONTENT_H

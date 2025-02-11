@@ -43,6 +43,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpJSONRPCError)
+
 QT_END_NAMESPACE
 
 #endif // QMCPJSONRPCERROR_H

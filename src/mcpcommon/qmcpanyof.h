@@ -50,6 +50,8 @@ protected:
     };
 };
 
+Q_DECLARE_SHARED(QMcpAnyOf)
+
 QT_END_NAMESPACE
 
 #endif // QMCPANYOF_H

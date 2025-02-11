@@ -44,6 +44,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpClientCapabilitiesSampling)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCLIENTCAPABILITIESSAMPLING_H

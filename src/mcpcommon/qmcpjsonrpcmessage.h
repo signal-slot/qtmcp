@@ -34,6 +34,8 @@ protected:
     };
 };
 
+Q_DECLARE_SHARED(QMcpJSONRPCMessage)
+
 class Q_MCPCOMMON_EXPORT QMcpJSONRPCMessageWithId : public QMcpJSONRPCMessage
 {
     Q_GADGET
@@ -64,6 +66,8 @@ protected:
         Private *clone() const override { return new Private(*this); }
     };
 };
+
+Q_DECLARE_SHARED(QMcpJSONRPCMessageWithId)
 
 QT_END_NAMESPACE
 

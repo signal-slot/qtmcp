@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpUnsubscribeRequestParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPUNSUBSCRIBEREQUESTPARAMS_H

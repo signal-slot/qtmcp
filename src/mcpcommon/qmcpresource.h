@@ -133,6 +133,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpResource)
+
 QT_END_NAMESPACE
 
 #endif // QMCPRESOURCE_H

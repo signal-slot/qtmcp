@@ -47,6 +47,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpRootsListChangedNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPROOTSLISTCHANGEDNOTIFICATIONPARAMS_H

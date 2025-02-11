@@ -159,6 +159,7 @@ public:
     QMcpGadget() : data(new Private) {}
     virtual ~QMcpGadget() = default;
     QMcpGadget &operator=(const QMcpGadget &) = default;
+    void swap(QMcpGadget &other) { data.swap(other.data); }
 
     template <class T>
     bool operator!=(const T &other) const {

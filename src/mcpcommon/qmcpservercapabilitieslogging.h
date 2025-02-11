@@ -43,6 +43,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpServerCapabilitiesLogging)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSERVERCAPABILITIESLOGGING_H

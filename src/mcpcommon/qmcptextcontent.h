@@ -66,6 +66,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpTextContent)
+
 QT_END_NAMESPACE
 
 #endif // QMCPTEXTCONTENT_H

@@ -81,6 +81,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpJSONRPCErrorError)
+
 QT_END_NAMESPACE
 
 #endif // QMCPJSONRPCERRORERROR_H

@@ -112,6 +112,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpResourceTemplate)
+
 QT_END_NAMESPACE
 
 #endif // QMCPRESOURCETEMPLATE_H

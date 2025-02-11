@@ -66,6 +66,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpServerCapabilitiesResources)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSERVERCAPABILITIESRESOURCES_H

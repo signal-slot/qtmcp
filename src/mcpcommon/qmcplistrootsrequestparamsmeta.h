@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpListRootsRequestParamsMeta)
+
 QT_END_NAMESPACE
 
 #endif // QMCPLISTROOTSREQUESTPARAMSMETA_H

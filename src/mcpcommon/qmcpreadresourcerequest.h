@@ -45,6 +45,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpReadResourceRequest)
+
 QT_END_NAMESPACE
 
 #endif // QMCPREADRESOURCEREQUEST_H

@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpJSONRPCRequestParamsMeta)
+
 QT_END_NAMESPACE
 
 #endif // QMCPJSONRPCREQUESTPARAMSMETA_H

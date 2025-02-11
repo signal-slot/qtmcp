@@ -45,6 +45,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpSetLevelRequest)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSETLEVELREQUEST_H

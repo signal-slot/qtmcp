@@ -53,6 +53,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpSamplingMessageContent)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSAMPLINGMESSAGECONTENT_H

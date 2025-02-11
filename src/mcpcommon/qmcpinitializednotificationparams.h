@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpInitializedNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPINITIALIZEDNOTIFICATIONPARAMS_H

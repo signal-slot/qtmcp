@@ -64,6 +64,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpListPromptsResult)
+
 QT_END_NAMESPACE
 
 #endif // QMCPLISTPROMPTSRESULT_H

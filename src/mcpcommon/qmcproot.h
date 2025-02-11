@@ -68,6 +68,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpRoot)
+
 QT_END_NAMESPACE
 
 #endif // QMCPROOT_H

@@ -47,6 +47,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpListResourceTemplatesRequestParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPLISTRESOURCETEMPLATESREQUESTPARAMS_H

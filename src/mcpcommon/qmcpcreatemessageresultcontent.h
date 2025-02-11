@@ -53,6 +53,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCreateMessageResultContent)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCREATEMESSAGERESULTCONTENT_H

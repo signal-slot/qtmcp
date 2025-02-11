@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpResourceUpdatedNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPRESOURCEUPDATEDNOTIFICATIONPARAMS_H

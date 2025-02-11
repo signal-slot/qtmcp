@@ -80,6 +80,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpLoggingMessageNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPLOGGINGMESSAGENOTIFICATIONPARAMS_H

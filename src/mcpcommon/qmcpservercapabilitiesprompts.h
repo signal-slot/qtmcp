@@ -48,6 +48,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpServerCapabilitiesPrompts)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSERVERCAPABILITIESPROMPTS_H

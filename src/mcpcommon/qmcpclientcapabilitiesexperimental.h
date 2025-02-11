@@ -43,6 +43,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpClientCapabilitiesExperimental)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCLIENTCAPABILITIESEXPERIMENTAL_H

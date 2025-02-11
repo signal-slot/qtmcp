@@ -47,6 +47,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpPaginatedRequestParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPPAGINATEDREQUESTPARAMS_H

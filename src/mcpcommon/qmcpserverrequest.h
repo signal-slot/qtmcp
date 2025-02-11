@@ -32,6 +32,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpServerRequest)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSERVERREQUEST_H

@@ -80,6 +80,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpTool)
+
 QT_END_NAMESPACE
 
 #endif // QMCPTOOL_H

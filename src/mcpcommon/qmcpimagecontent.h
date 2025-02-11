@@ -99,6 +99,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpImageContent)
+
 QT_END_NAMESPACE
 
 #endif // QMCPIMAGECONTENT_H

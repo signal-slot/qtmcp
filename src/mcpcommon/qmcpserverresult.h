@@ -46,6 +46,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpServerResult)
+
 QT_END_NAMESPACE
 
 #endif // QMCPSERVERRESULT_H

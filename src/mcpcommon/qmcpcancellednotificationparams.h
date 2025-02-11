@@ -65,6 +65,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCancelledNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCANCELLEDNOTIFICATIONPARAMS_H

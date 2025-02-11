@@ -65,6 +65,8 @@ protected:
     };
 };
 
+Q_DECLARE_SHARED(QMcpJSONRPCNotificationParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPJSONRPCNOTIFICATIONPARAMS_H

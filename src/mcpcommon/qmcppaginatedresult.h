@@ -47,6 +47,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpPaginatedResult)
+
 QT_END_NAMESPACE
 
 #endif // QMCPPAGINATEDRESULT_H

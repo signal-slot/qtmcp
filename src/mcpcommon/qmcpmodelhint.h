@@ -58,6 +58,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpModelHint)
+
 QT_END_NAMESPACE
 
 #endif // QMCPMODELHINT_H

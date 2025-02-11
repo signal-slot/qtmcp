@@ -93,6 +93,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpBlobResourceContents)
+
 QT_END_NAMESPACE
 
 #endif // QMCPBLOBRESOURCECONTENTS_H

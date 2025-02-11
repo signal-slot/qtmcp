@@ -58,6 +58,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpCompleteRequestParams)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCOMPLETEREQUESTPARAMS_H

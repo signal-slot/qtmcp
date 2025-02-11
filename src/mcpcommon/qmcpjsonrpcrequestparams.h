@@ -61,7 +61,7 @@ private:
     };
 };
 
-Q_DECLARE_METATYPE(QMcpJSONRPCRequestParams)
+Q_DECLARE_SHARED(QMcpJSONRPCRequestParams)
 
 QT_END_NAMESPACE
 

@@ -54,6 +54,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpImplementation)
+
 QT_END_NAMESPACE
 
 #endif // QMCPIMPLEMENTATION_H

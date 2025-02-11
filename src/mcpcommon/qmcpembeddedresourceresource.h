@@ -53,6 +53,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpEmbeddedResourceResource)
+
 QT_END_NAMESPACE
 
 #endif // QMCPEMBEDDEDRESOURCERESOURCE_H

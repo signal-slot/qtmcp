@@ -123,6 +123,8 @@ public:
     };
 };
 
+Q_DECLARE_SHARED(QMcpModelPreferences)
+
 QT_END_NAMESPACE
 
 #endif // QMCPMODELPREFERENCES_H

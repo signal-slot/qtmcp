@@ -62,6 +62,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpToolInputSchema)
+
 QT_END_NAMESPACE
 
 #endif // QMCPTOOLINPUTSCHEMA_H

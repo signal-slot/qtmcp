@@ -48,6 +48,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpClientCapabilitiesRoots)
+
 QT_END_NAMESPACE
 
 #endif // QMCPCLIENTCAPABILITIESROOTS_H

@@ -47,6 +47,8 @@ private:
     };
 };
 
+Q_DECLARE_SHARED(QMcpPromptListChangedNotification)
+
 QT_END_NAMESPACE
 
 #endif // QMCPPROMPTLISTCHANGEDNOTIFICATION_H
