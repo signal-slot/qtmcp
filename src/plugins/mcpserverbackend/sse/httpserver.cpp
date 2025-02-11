@@ -1,15 +1,16 @@
 #include "httpserver.h"
 
 HttpServer::HttpServer(QObject *parent)
-    : QMcpAbstractHttpServer{parent}
-{}
-
-QByteArray HttpServer::sse()
+    : QMcpAbstractHttpServer(parent)
 {
-    return QByteArrayLiteral("");
+}
+
+QByteArray HttpServer::sse(const QNetworkRequest &)
+{
+    return QByteArray();
 }
 
 QByteArray HttpServer::message()
 {
-    return QByteArrayLiteral("");
+    return QByteArrayLiteral("Regular HTTP endpoint");
 }

@@ -2,6 +2,7 @@
 #define HTTPSERVER_H
 
 #include <QtMcpServer/qmcpabstracthttpserver.h>
+#include <QtNetwork/QNetworkRequest>
 
 class HttpServer : public QMcpAbstractHttpServer
 {
@@ -9,7 +10,7 @@ class HttpServer : public QMcpAbstractHttpServer
 public:
     explicit HttpServer(QObject *parent = nullptr);
 
-    Q_INVOKABLE QByteArray sse();
+    Q_INVOKABLE QByteArray sse(const QNetworkRequest &request);
     Q_INVOKABLE QByteArray message();
 };
 

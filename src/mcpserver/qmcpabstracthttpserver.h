@@ -2,7 +2,9 @@
 #define QMCPABSTRACTHTTPSERVER_H
 
 #include <QtCore/QObject>
+#include <QtCore/QUuid>
 #include <QtMcpServer/qmcpserverglobal.h>
+#include <QtNetwork/QNetworkRequest>
 
 QT_BEGIN_NAMESPACE
 
@@ -17,6 +19,11 @@ public:
     ~QMcpAbstractHttpServer() override;
 
     bool bind(QTcpServer *server);
+
+protected:
+    QByteArray registerSseRequest(const QNetworkRequest &request);
+    void sendSseEvent(const QByteArray &id, const QByteArray &data, const QString &event = QString());
+    void closeSseConnection(const QByteArray &id);
 
 private:
     class Private;

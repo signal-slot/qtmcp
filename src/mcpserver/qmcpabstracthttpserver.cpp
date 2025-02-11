@@ -27,6 +27,7 @@ public:
         int indexOfMethod = -1;
         qint64 contentLength = -1;  // Store expected content length
         qint64 receivedLength = 0;  // Track received data size
+        QByteArray sseId;
     };
 
     QMap<QTcpSocket*, ParseData> dataMap;
@@ -195,16 +196,19 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
 void QMcpAbstractHttpServer::Private::sendHttpResponse(QTcpSocket *socket, const QByteArray &data,
                                                      const QString &contentType, int statusCode)
 {
-    QString statusText = (statusCode == 200) ? QStringLiteral("OK") : QStringLiteral("Not Found");
-    QByteArray response = QString(QStringLiteral("HTTP/1.1 %1 %2\r\n"
-                                               "Content-Type: %3\r\n"
-                                               "Content-Length: %4\r\n"
-                                               "\r\n"))
-                             .arg(statusCode)
-                             .arg(statusText)
-                             .arg(contentType)
-                             .arg(data.size())
-                             .toLatin1();
+    QByteArray response;
+    if (dataMap.value(socket).sseId.isEmpty()) {
+        QString statusText = (statusCode == 200) ? "OK"_L1 : "Not Found"_L1;
+        response = u"HTTP/1.1 %1 %2\r\n"
+                   "Content-Type: %3\r\n"
+                   "Content-Length: %4\r\n"
+                   "\r\n"_s
+                       .arg(statusCode)
+                       .arg(statusText)
+                       .arg(contentType)
+                       .arg(data.size())
+                       .toLatin1();
+    }
     response += data;
     socket->write(response);
     socket->flush();
@@ -226,7 +230,8 @@ bool QMcpAbstractHttpServer::bind(QTcpServer *server)
         disconnect(connection);
         connection = QMetaObject::Connection();
         // Clean up any existing connections
-        for (QTcpSocket *socket : d->dataMap.keys()) {
+        const auto sockets = d->dataMap.keys();
+        for (QTcpSocket *socket : sockets) {
             socket->disconnect();
             socket->deleteLater();
         }
@@ -243,3 +248,59 @@ bool QMcpAbstractHttpServer::bind(QTcpServer *server)
     }
     return true;
 }
+
+QByteArray QMcpAbstractHttpServer::registerSseRequest(const QNetworkRequest &request)
+{
+    QByteArray ret;
+    static QByteArray response = QByteArrayLiteral("HTTP/1.1 200 OK\r\n"
+                                            "Content-Type: text/event-stream\r\n"
+                                            "Cache-Control: no-cache\r\n"
+                                            "Connection: keep-alive\r\n"
+                                            "\r\n");
+    const auto sockets = d->dataMap.keys();
+    for (QTcpSocket *socket : sockets) {
+        if (d->dataMap.value(socket).request == request) {
+            ret = QUuid::createUuid().toByteArray(QUuid::Id128);
+            d->dataMap[socket].sseId = ret;
+            socket->write(response);
+            socket->flush();
+            break;
+        }
+    }
+    if (ret.isEmpty())
+        qWarning() << "sse socket for" << request.url() << "not found";
+    return ret;
+}
+
+void QMcpAbstractHttpServer::sendSseEvent(const QByteArray &id, const QByteArray &data,
+                                         const QString &event)
+{
+    const auto sockets = d->dataMap.keys();
+    for (QTcpSocket *socket : sockets) {
+        if (d->dataMap.value(socket).sseId == id) {
+            QByteArray message;
+            if (!event.isEmpty())
+                message += "event: " + event.toUtf8() + "\r\n";
+            message += "data: " + data + "\r\n\r\n";
+            socket->write(message);
+            socket->flush();
+            return;
+        }
+    }
+    qWarning() << "sse" << id << "not found";
+}
+
+void QMcpAbstractHttpServer::closeSseConnection(const QByteArray &id)
+{
+    const auto sockets = d->dataMap.keys();
+    for (QTcpSocket *socket : sockets) {
+        if (d->dataMap.value(socket).sseId == id) {
+            d->dataMap.remove(socket);
+            socket->close();
+            socket->deleteLater();
+            return;
+        }
+    }
+    qWarning() << "sse" << id << "not found";
+}
+

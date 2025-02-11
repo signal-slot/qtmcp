@@ -9,6 +9,7 @@
 #include <QtCore/QJsonParseError>
 #include <QtCore/QLoggingCategory>
 #include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
 
 QT_BEGIN_NAMESPACE
 
@@ -30,7 +31,6 @@ public:
 QMcpServerSse::Private::Private(QMcpServerSse *parent)
     : q(parent)
 {
-
 }
 
 QMcpServerSse::QMcpServerSse(QObject *parent)
@@ -62,12 +62,13 @@ void QMcpServerSse::start(const QString &server)
 void QMcpServerSse::send(const QJsonObject &object)
 {
     const auto data = QJsonDocument(object).toJson(QJsonDocument::Compact);
-    qDebug() << data;
+    qDebug() << "Broadcasting message:" << data;
 }
 
 void QMcpServerSse::notify(const QJsonObject &object)
 {
-    send(object);
+    const auto data = QJsonDocument(object).toJson(QJsonDocument::Compact);
+    qDebug() << "Broadcasting notification:" << data;
 }
 
 QT_END_NAMESPACE
