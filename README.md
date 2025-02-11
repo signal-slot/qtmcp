@@ -13,6 +13,7 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 - Real-time notifications
 - Progress tracking
 - Logging facilities
+- Experimental features support
 
 ## Requirements
 
@@ -36,7 +37,7 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 .
 ├── src/
 │   ├── mcpclient/      # Client implementation
-│   ├── mcpcommon/      # Shared components
+│   ├── mcpcommon/      # Shared components and protocol definitions
 │   ├── mcpserver/      # Server implementation
 │   └── plugins/        # Plugin implementations
 │       ├── mcpclientbackend/  # Client backend plugins
@@ -56,27 +57,33 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 
 ### Client Capabilities
 - Resource access and management
-- Tool execution
-- Progress tracking
+- Tool execution with schema validation
+- Progress tracking and cancellation
 - Prompt template handling
 - Real-time notifications
 - Customizable logging levels
+- Experimental features support
+- Sampling capabilities
 
 ### Server Capabilities
-- Resource provision
-- Tool hosting
+- Resource provision and template support
+- Tool hosting with input validation
 - Prompt template management
-- Progress reporting
-- Logging facilities
+- Progress reporting and cancellation
+- Logging facilities with severity levels
 - Subscription management
+- HTTP server capabilities
+- Experimental features
 
 ### Protocol Features
 - JSON-RPC based communication
 - URI-based resource identification
 - Template-based resource access
-- Tool execution framework
-- Progress notification system
+- Tool execution framework with schema validation
+- Progress notification system with cancellation support
 - Logging with configurable severity levels
+- Experimental features framework
+- Sampling and model hints
 
 ## Building from Source
 
@@ -93,17 +100,19 @@ mkdir build && cd build
 
 3. Configure with CMake:
 ```bash
-cmake -DCMAKE_PREFIX_PATH=/path/to/qt ..
+cmake -DCMAKE_PREFIX_PATH=/path/to/qt \
+      -DBUILD_EXAMPLES=ON \
+      -DBUILD_TESTING=ON ..
 ```
 
 4. Build the project:
 ```bash
-cmake --build .
+cmake --build . --parallel
 ```
 
 5. Optionally run tests:
 ```bash
-ctest
+ctest --output-on-failure
 ```
 
 ## Getting Started
@@ -117,25 +126,28 @@ Located in `examples/mcpclient/inspector/`, the MCP Inspector provides a compreh
 - Resource browsing and management
 - Prompt template listing and execution
 - Real-time protocol inspection
+- Experimental features testing
 
 ### Echo Server Example
 Located in `examples/mcpserver/echo/`, this example demonstrates:
 - Basic MCP server implementation
 - Standard input/output communication
 - Simple request-response pattern
+- Resource template usage
 
 ### Window Server Example
 Located in `examples/mcpserver/window/`, this example shows:
 - GUI-based MCP server implementation
 - Window management capabilities
 - Complex resource handling
+- Tool implementation patterns
 
 ### Building the Examples
 
 ```bash
 mkdir build && cd build
-cmake ..
-make
+cmake -DBUILD_EXAMPLES=ON ..
+cmake --build . --parallel
 ```
 
 The example executables will be available in the build directory under their respective paths.
@@ -149,18 +161,13 @@ Qt MCP supports a plugin-based architecture for both client and server backends:
   - Implement `QMcpClientBackendInterface`
   - Handle client-side communication
   - Support different transport mechanisms
+  - Experimental features support
 
 - Server Plugins (`src/plugins/mcpserverbackend/`):
   - Implement `QMcpServerBackendInterface`
   - Handle server-side communication
   - Support custom resource and tool implementations
-
-#### Standard I/O Backend
-The stdio backend (`src/plugins/mcpserverbackend/stdio/`) provides:
-- Line-based JSON-RPC communication
-- Standard input/output transport
-- Non-blocking I/O handling
-- Automatic message framing
+  - HTTP server capabilities
 
 ### CMake Build System
 The project uses a modular CMake build system:
@@ -172,21 +179,24 @@ The project uses a modular CMake build system:
 ### Adding New Tools
 Tools can be implemented by creating a new tool definition that follows the MCP schema. The tool definition includes:
 - Name and description
-- Input schema specification
+- Input schema specification (JSON Schema)
 - Implementation of the tool's functionality
+- Optional experimental features
 
 ### Resource Management
 Resources are identified by URIs and can be:
 - Static resources with direct URIs
 - Dynamic resources using URI templates
+- Blob and text content types
 - Subscribed to for real-time updates
 
 ### Error Handling
 The protocol provides comprehensive error handling through:
 - Standard error codes
 - Detailed error messages
-- Progress notifications
+- Progress notifications with cancellation
 - Logging with configurable severity levels
+- JSON-RPC error responses
 
 ## Testing
 
@@ -203,7 +213,7 @@ The project includes a comprehensive test suite:
 Run the tests using:
 ```bash
 cd build
-ctest -V
+ctest --output-on-failure
 ```
 
 ## Protocol Specification
@@ -220,6 +230,7 @@ The Model Context Protocol is defined using JSON Schema (see `spec/schema.json`)
   - Tools: Server-provided functions with defined input schemas
   - Prompts: Template-based message generation
   - Roles: User and assistant roles in communication
+  - Experimental Features: Optional protocol extensions
 
 ## License
 
