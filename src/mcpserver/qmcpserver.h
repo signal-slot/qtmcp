@@ -41,7 +41,7 @@ public:
 
     template<typename Request, typename Callback>
         requires std::invocable<Callback, const CallbackResult<Callback>&>
-    void request(const Request &request, Callback callback)
+    void request(const QUuid &session, const Request &request, Callback callback)
     {
         using Result = CallbackResult<Callback>;
 
@@ -78,7 +78,7 @@ public:
     template <typename T> struct RequestHandlerTraits;
 
     template <typename R, typename C, typename Arg>
-    struct RequestHandlerTraits<R(C::*)(Arg, QMcpJSONRPCErrorError *) const> {
+    struct RequestHandlerTraits<R(C::*)(const QUuid &, Arg, QMcpJSONRPCErrorError *) const> {
         using RequestType = std::decay_t<Arg>;
         using ResultType = std::decay_t<R>;
     };
@@ -95,10 +95,10 @@ public:
         static_assert(std::is_base_of<QMcpResult, Res>::value,
                       "Result type must inherit from QMcpResult");
 
-        auto wrapper = [handler](const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
+        auto wrapper = [handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
             Req req;
             req.fromJsonObject(json);
-            Res res = handler(req, error);
+            Res res = handler(session, req, error);
             return res.toJsonObject();
         };
 
@@ -108,7 +108,7 @@ public:
     template <typename T> struct NotificationHandlerTraits;
 
     template <typename C, typename Arg>
-    struct NotificationHandlerTraits<void(C::*)(Arg) const> {
+    struct NotificationHandlerTraits<void(C::*)(const QUuid &, Arg) const> {
         using NotificationType = std::decay_t<Arg>;
     };
 
@@ -121,17 +121,17 @@ public:
         static_assert(std::is_base_of<QMcpNotification, Notification>::value,
                       "Notification type must inherit from QMcpNotification");
 
-        auto wrapper = [handler](const QJsonObject &json) {
+        auto wrapper = [handler](const QUuid &session, const QJsonObject &json) {
             Notification notification;
             notification.fromJsonObject(json);
-            handler(notification);
+            handler(session, notification);
         };
 
         registerNotificationHandler(Notification().method(), wrapper);
     }
 
     QList<QMcpTool> tools() const;
-    QList<QMcpCallToolResultContent> callTool(const QString &name, const QJsonObject &params, bool *ok = nullptr);
+    QList<QMcpCallToolResultContent> callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok = nullptr);
     virtual QHash<QString, QString> descriptions() const;
 
 public slots:
@@ -139,13 +139,14 @@ public slots:
 
 signals:
     void started();
-    void received(const QJsonObject &object);
-    void result(const QJsonObject &result);
+    void newSessionStarted(const QUuid &uuid);
+    void received(const QUuid &session, const QJsonObject &object);
+    void result(const QUuid &session, const QJsonObject &result);
 
 private:
-    void send(const QJsonObject &message, std::function<void(const QJsonObject &)> callback = nullptr);
-    void registerRequestHandler(const QString &method, std::function<QJsonObject(const QJsonObject &, QMcpJSONRPCErrorError *)>);
-    void registerNotificationHandler(const QString &method, std::function<void(const QJsonObject &)>);
+    void send(const QUuid &session, const QJsonObject &message, std::function<void(const QJsonObject &)> callback = nullptr);
+    void registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
+    void registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)>);
 
 private:
     class Private;

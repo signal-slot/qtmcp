@@ -13,21 +13,21 @@ QT_BEGIN_NAMESPACE
 QMcpServerBackendInterface::QMcpServerBackendInterface(QObject *parent)
     : QObject{parent}
 {
-    connect(this, &QMcpServerBackendInterface::received, this, [this](const QJsonObject &object) {
+    connect(this, &QMcpServerBackendInterface::received, this, [this](const QUuid &session, const QJsonObject &object) {
         if (object.contains("id"_L1)) {
             const auto id = object.value("id"_L1);
             const auto result = object.value("result"_L1).toObject();
-            if (callbacks.contains(id)) {
-                callbacks.take(id)(result);
+            if (callbacks.value(session).contains(id)) {
+                callbacks[session].take(id)(result);
             }
-            emit this->result(result);
+            emit this->result(session, result);
         } else {
             // TODO: notification
         }
     });
 }
 
-void QMcpServerBackendInterface::request(const QJsonObject &request, std::function<void(const QJsonObject &)> callback)
+void QMcpServerBackendInterface::request(const QUuid &session, const QJsonObject &request, std::function<void(const QJsonObject &)> callback)
 {
     static int id = 0;
     if (request.contains("id"_L1)) {
@@ -35,11 +35,11 @@ void QMcpServerBackendInterface::request(const QJsonObject &request, std::functi
         request2.insert("id"_L1, id);
 
         if (callback)
-            callbacks.insert(id, callback);
+            callbacks[session].insert(id, callback);
         id++;
-        send(request2);
+        send(session, request2);
     } else {
-        send(request);
+        send(session, request);
     }
 }
 

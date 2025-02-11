@@ -21,9 +21,9 @@ public:
     bool bind(QTcpServer *server);
 
 protected:
-    QByteArray registerSseRequest(const QNetworkRequest &request);
-    void sendSseEvent(const QByteArray &id, const QByteArray &data, const QString &event = QString());
-    void closeSseConnection(const QByteArray &id);
+    QUuid registerSseRequest(const QNetworkRequest &request);
+    void sendSseEvent(const QUuid &id, const QByteArray &data, const QString &event = QString());
+    void closeSseConnection(const QUuid &id);
 
 private:
     class Private;

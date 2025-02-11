@@ -31,20 +31,21 @@ public:
         }
 
         connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
-        connect(backend, &QMcpServerBackendInterface::received, q, [this](const QJsonObject &object) {
+        connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, &QMcpServer::newSessionStarted);
+        connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {
             // response
             if (object.contains("id"_L1)) {
                 const auto id = object.value("id"_L1);
                 if (object.contains("result"_L1)) {
-                    if (callbacks.contains(id)) {
+                    if (callbacks[session].contains(id)) {
                         const auto result = object.value("result"_L1).toObject();
-                        callbacks.take(id)(result);
+                        callbacks[session].take(id)(result);
                         return;
                     }
                 } else if (object.contains("error"_L1)) {
                     qWarning() << "TODO: error handling" << object;;
-                    if (callbacks.contains(id)) {
-                        callbacks.take(id)({});
+                    if (callbacks[session].contains(id)) {
+                        callbacks[session].take(id)({});
                         return;
                     }
                 }
@@ -58,18 +59,18 @@ public:
                     if (requestHandlers.contains(method)) {
                         const auto handler = requestHandlers.value(method);
                         QMcpJSONRPCErrorError error;
-                        const auto result = handler(object, &error);
+                        const auto result = handler(session, object, &error);
                         if (error.code() > 0) {
                             QMcpJSONRPCError response;
                             response.setId(id);
                             response.setError(error);
-                            q->send(response.toJsonObject());
+                            q->send(session, response.toJsonObject());
                         } else {
                             QMcpJSONRPCResponse response;
                             response.setId(id);
                             auto object = response.toJsonObject();
                             object.insert("result"_L1, result);
-                            q->send(object);
+                            q->send(session, object);
                         }
                     } else {
                         // Respond with error
@@ -78,7 +79,7 @@ public:
                         auto error = response.error();
                         error.setMessage("Server doesn't handle the request"_L1);
                         response.setError(error);
-                        q->send(response.toJsonObject());
+                        q->send(session, response.toJsonObject());
                     }
                     return;
                 }
@@ -87,7 +88,7 @@ public:
                 if (notificationHandlers.contains(method)) {
                     const auto handlers = notificationHandlers.values(method);
                     for (auto &handler : handlers) {
-                        handler(object);
+                        handler(session, object);
                     }
                     return;
                 }
@@ -101,9 +102,9 @@ private:
     QMcpServer *q;
 public:
     QMcpServerBackendInterface *backend = nullptr;
-    QHash<QJsonValue, std::function<void(const QJsonObject &)>> callbacks;
-    QHash<QString, std::function<QJsonObject(const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
-    QMultiHash<QString, std::function<void(const QJsonObject&)>> notificationHandlers;
+    QHash<QUuid, QHash<QJsonValue, std::function<void(const QJsonObject &)>>> callbacks;
+    QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
+    QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
 };
 
 QStringList QMcpServer::backends()
@@ -124,7 +125,7 @@ void QMcpServer::start(const QString &args)
     d->backend->start(args);
 }
 
-void QMcpServer::send(const QJsonObject &request, std::function<void(const QJsonObject &)> callback)
+void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::function<void(const QJsonObject &)> callback)
 {
     if (!d->backend) return;
     static int id = 0;
@@ -133,23 +134,21 @@ void QMcpServer::send(const QJsonObject &request, std::function<void(const QJson
         request2.insert("id"_L1, id);
 
         if (callback)
-            d->callbacks.insert(id, callback);
+            d->callbacks[session].insert(id, callback);
         id++;
-        d->backend->send(request2);
+        d->backend->send(session, request2);
     } else {
-        d->backend->send(request);
+        d->backend->send(session, request);
     }
 }
 
-void QMcpServer::registerRequestHandler(const QString &method, std::function<QJsonObject(const QJsonObject &, QMcpJSONRPCErrorError *)> callback)
+void QMcpServer::registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)> callback)
 {
-    qDebug() << method;
     d->requestHandlers.insert(method, callback);
 }
 
-void QMcpServer::registerNotificationHandler(const QString &method, std::function<void(const QJsonObject &)> callback)
+void QMcpServer::registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)> callback)
 {
-    qDebug() << method;
     d->notificationHandlers.insert(method, callback);
 }
 
@@ -180,10 +179,12 @@ QList<QMcpTool> QMcpServer::tools() const
                                              { "QString", "string" },
                                              { "int", "number" },
                                              };
-
+            QSet<QString> internalTypes { "QUuid"_L1 };
             QJsonObject object;
             if (mcpTypes.contains(type))
                 object.insert("type"_L1, mcpTypes.value(type));
+            else if (internalTypes.contains(type))
+                continue;
             else
                 qWarning() << "Unknown type" << type;
 
@@ -241,53 +242,65 @@ T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &arg
 }
 }
 
-QList<QMcpCallToolResultContent> QMcpServer::callTool(const QString &name, const QJsonObject &params, bool *ok)
+QList<QMcpCallToolResultContent> QMcpServer::callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok)
 {
     QList<QMcpCallToolResultContent> ret;
-    if (ok)
-        *ok = false;
+    bool found = false;
     const auto *mo = metaObject();
     for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
         const auto mm = mo->method(i);
         if (mm.name() != name.toUtf8())
             continue;
 
-        if (params.size() != mm.parameterCount())
-            continue;
-
-        const auto types = mm.parameterTypes();
-        const auto names = mm.parameterNames();
-
-        if (![](const QStringList &a, QByteArrayList b) {
-                QByteArrayList c;
-                for (const auto &s : a)
-                    c.append(s.toUtf8());
-                std::sort(b.begin(), b.end(), std::less<QByteArray>());
-                std::sort(c.begin(), c.end(), std::less<QByteArray>());
+        auto checkParams = [](const QStringList &a, QByteArrayList b) {
+            QByteArrayList c;
+            for (const auto &s : a)
+                c.append(s.toUtf8());
+            std::sort(b.begin(), b.end(), std::less<QByteArray>());
+            std::sort(c.begin(), c.end(), std::less<QByteArray>());
             return b == c;
-            }(params.keys(), names))
+        };
+
+        const auto names = mm.parameterNames();
+        switch (mm.parameterCount() - params.size()) {
+        case 0: // exact match
+            if (!checkParams(params.keys(), names))
+                continue;
+            break;
+        case 1: // may contain session
+            if (!checkParams(params.keys() << "session"_L1, names))
+                continue;
+            break;
+        default:
             continue;
+        }
 
         QVariantList convertedArgs;
         convertedArgs.reserve(mm.parameterCount());
 
+        const auto types = mm.parameterTypes();
         for (int j = 0; j < mm.parameterCount(); j++) {
             const auto type = types.at(j);
             const auto name = QString::fromUtf8(names.at(j));
-            auto value = params.value(name).toVariant();
 
             const auto metaType = QMetaType::fromName(type);
-            if (metaType.id() == QMetaType::UnknownType) {
+            switch (metaType.id()) {
+            case QMetaType::UnknownType:
                 qWarning() << "Unknown or unsupported type:" << type;
                 break;
+            case QMetaType::QUuid:
+                convertedArgs.append(session);
+                continue;
+            default: {
+                auto value = params.value(name).toVariant();
+                if (!value.convert(mm.parameterMetaType(j))) {
+                    qWarning() << "Failed to convert JSON value to type:" << type;
+                    break;
+                }
+                convertedArgs.append(value);
+                break; }
             }
 
-            if (!value.convert(mm.parameterMetaType(j))) {
-                qWarning() << "Failed to convert JSON value to type:" << type;
-                break;
-            }
-
-            convertedArgs.append(value);
         }
 
         if (convertedArgs.count() != mm.parameterCount())
@@ -325,19 +338,16 @@ QList<QMcpCallToolResultContent> QMcpServer::callTool(const QString &name, const
             default:
                 qFatal() << "invokeMethodWithJson: too many parameters, or not implemented in switch.";
             }
-            if (ok)
-                *ok = true;
+            found = true;
             return ret; }
         case QMetaType::QString: {
-            if (ok)
-                *ok = true;
+            found = true;
             QString text = callMethod<QString>(this, &mm, convertedArgs);
             ret.append(QMcpTextContent(text));
             break; }
 #ifdef QT_GUI_LIB
         case QMetaType::QImage: {
-            if (ok)
-                *ok = true;
+            found = true;
             QImage image = callMethod<QImage>(this, &mm, convertedArgs);
             ret.append(QMcpImageContent(image));
             break; }
@@ -346,7 +356,10 @@ QList<QMcpCallToolResultContent> QMcpServer::callTool(const QString &name, const
             qFatal() << mm.returnMetaType() << "not supported yet";
         }
     }
-    qWarning() << name << "not found for " << params;
+    if (ok)
+        *ok = found;
+    if (!found)
+        qWarning() << name << "not found for " << params;
     return ret;
 }
 

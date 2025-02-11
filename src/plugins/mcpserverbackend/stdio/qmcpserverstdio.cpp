@@ -33,6 +33,7 @@ private:
 private:
     QMcpServerStdio *q;
     QSocketNotifier *notifier;
+    const QUuid uuid = QUuid::createUuid();
 };
 
 QMcpServerStdio::Private::Private(QMcpServerStdio *parent)
@@ -43,6 +44,7 @@ QMcpServerStdio::Private::Private(QMcpServerStdio *parent)
     // Set stdin to binary mode to avoid CRLF translation
     _setmode(_fileno(stdin), _O_BINARY);
 #endif
+    QMetaObject::invokeMethod(q, "newSessionStarted", Qt::QueuedConnection, Q_ARG(QUuid, uuid));
     connect(notifier, &QSocketNotifier::activated, q, [this](QSocketDescriptor socket, QSocketNotifier::Type activationEvent) {
         readData(socket, activationEvent);
     });
@@ -97,7 +99,7 @@ void QMcpServerStdio::Private::readData(QSocketDescriptor socket, QSocketNotifie
             continue;
         }
 
-        emit q->received(jsonDoc.object());
+        emit q->received(uuid, jsonDoc.object());
     }
 }
 
@@ -113,18 +115,17 @@ void QMcpServerStdio::start(const QString &server)
     Q_UNUSED(server);
 }
 
-void QMcpServerStdio::send(const QJsonObject &object)
+void QMcpServerStdio::send(const QUuid &session, const QJsonObject &object)
 {
+    Q_UNUSED(session)
     const auto data = QJsonDocument(object).toJson(QJsonDocument::Compact);
     qDebug() << data;
     std::cout << data.toStdString() << std::endl;
 }
 
-void QMcpServerStdio::notify(const QJsonObject &object)
+void QMcpServerStdio::notify(const QUuid &session, const QJsonObject &object)
 {
-    send(object);
+    send(session, object);
 }
 
 QT_END_NAMESPACE
-
-#include "qmcpserverstdio.moc"

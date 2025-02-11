@@ -10,10 +10,10 @@ class McpServer : public QMcpServer
 {
     Q_OBJECT
 public:
-    explicit McpServer(QObject *parent = nullptr);
+    explicit McpServer(const QString &backend = "stdio", QObject *parent = nullptr);
     ~McpServer() override;
 
-    Q_INVOKABLE QString echo(const QString &message) const;
+    Q_INVOKABLE QString echo(const QString &message, const QUuid &session) const;
 
     QHash<QString, QString> descriptions() const override;
 

@@ -25,24 +25,29 @@ private:
 public:
     QTcpServer tcpServer;
     HttpServer httpServer;
-    QSet<QUuid> sessions;
+    QSet<QUuid> uuids;
 };
 
 QMcpServerSse::Private::Private(QMcpServerSse *parent)
     : q(parent)
 {
+    connect(&httpServer, &HttpServer::newSession, q, [this](const QUuid &uuid) {
+        uuids.insert(uuid);
+    });
 }
 
 QMcpServerSse::QMcpServerSse(QObject *parent)
     : QMcpServerBackendInterface(parent)
     , d(new Private(this))
-{}
+{
+    connect(&d->httpServer, &HttpServer::newSession, this, &QMcpServerSse::newSessionStarted);
+    connect(&d->httpServer, &HttpServer::received, this, &QMcpServerSse::received);
+}
 
 QMcpServerSse::~QMcpServerSse() = default;
 
 void QMcpServerSse::start(const QString &server)
 {
-    Q_UNUSED(server);
     QHostAddress address = QHostAddress::Any;
     quint16 port = 0;
     const int colon = server.indexOf(':');
@@ -56,21 +61,19 @@ void QMcpServerSse::start(const QString &server)
         qWarning() << "server start failed." << server;
         return;
     }
-    qDebug() << "Listening on port" << d->tcpServer.serverPort();
+    qCDebug(lcQMcpServerSsePlugin) << "Listening on port" << d->tcpServer.serverPort();
 }
 
-void QMcpServerSse::send(const QJsonObject &object)
+void QMcpServerSse::send(const QUuid &session, const QJsonObject &object)
 {
-    const auto data = QJsonDocument(object).toJson(QJsonDocument::Compact);
-    qDebug() << "Broadcasting message:" << data;
+    qCDebug(lcQMcpServerSsePlugin) << "Sending message:" << session;
+    
+    d->httpServer.send(session, object);
 }
 
-void QMcpServerSse::notify(const QJsonObject &object)
+void QMcpServerSse::notify(const QUuid &session, const QJsonObject &object)
 {
-    const auto data = QJsonDocument(object).toJson(QJsonDocument::Compact);
-    qDebug() << "Broadcasting notification:" << data;
+    send(session, object);
 }
 
 QT_END_NAMESPACE
-
-#include "qmcpserversse.moc"

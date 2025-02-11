@@ -11,41 +11,52 @@ public:
 
 private:
     McpServer *q;
-    bool initialized = false;
+    QHash<QUuid, bool> initialized;
 };
 
 McpServer::Private::Private(McpServer *parent)
     : q(parent)
 {
+    connect(q, &McpServer::newSessionStarted, q, [this](const QUuid &session) {
+        initialized.insert(session, false);
+    });
+
     // initialize
-    q->addRequestHandler([](const QMcpInitializeRequest &request, QMcpJSONRPCErrorError *error) {
+    q->addRequestHandler([this](const QUuid &session, const QMcpInitializeRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpInitializeResult result;
-        if (request.params().protocolVersion() == "2024-11-05") {
-            auto serverInfo = result.serverInfo();
-            serverInfo.setName("Qt MCP window server");
-            serverInfo.setVersion("0.1.0");
-            result.setServerInfo(serverInfo);
-            result.setProtocolVersion("2024-11-05");
-        } else {
+        if (initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Initialized"_L1);
+            return result;
+        }
+        if (request.params().protocolVersion() != "2024-11-05") {
             error->setCode(20241105);
             error->setMessage("Protocol Version %1 is not supported"_L1.arg(request.params().protocolVersion()));
+            return result;
         }
+
+        auto serverInfo = result.serverInfo();
+        serverInfo.setName("Qt MCP window server");
+        serverInfo.setVersion("0.1.0");
+        result.setServerInfo(serverInfo);
+        result.setProtocolVersion("2024-11-05");
         return result;
     });
-    q->addNotificationHandler([this](const QMcpInitializedNotification &) {
-        initialized = true;
+    q->addNotificationHandler([this](const QUuid &session, const QMcpInitializedNotification &) {
+        initialized[session] = true;
     });
 
     // ping
-    q->addRequestHandler([](const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
+    q->addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
+        Q_UNUSED(session); // ping can be accepted even before initialization
         QMcpResult result;
         return result;
     });
 
     // tools
-    q->addRequestHandler([this](const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
+    q->addRequestHandler([this](const QUuid &session, const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
         QMcpListToolsResult result;
-        if (!initialized) {
+        if (!initialized.value(session, false)) {
             error->setCode(1);
             error->setMessage("Not initialized"_L1);
             return result;
@@ -55,9 +66,9 @@ McpServer::Private::Private(McpServer *parent)
         return result;
     });
 
-    q->addRequestHandler([this](const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
+    q->addRequestHandler([this](const QUuid &session, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpCallToolResult result;
-        if (!initialized) {
+        if (!initialized.value(session, false)) {
             error->setCode(1);
             error->setMessage("Not initialized"_L1);
             return result;
@@ -65,7 +76,7 @@ McpServer::Private::Private(McpServer *parent)
 
         const auto params = request.params();
         bool ok;
-        const auto content = q->callTool(params.name(), params.arguments(), &ok);
+        const auto content = q->callTool(session, params.name(), params.arguments(), &ok);
         if (ok) {
             auto contents = result.content();
             contents.append(content);
@@ -75,8 +86,8 @@ McpServer::Private::Private(McpServer *parent)
     });
 }
 
-McpServer::McpServer(QObject *parent)
-    : QMcpServer("stdio"_L1, parent)
+McpServer::McpServer(const QString &backend, QObject *parent)
+    : QMcpServer(backend, parent)
     , d(new Private(this))
 {}
 

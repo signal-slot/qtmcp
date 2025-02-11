@@ -16,21 +16,22 @@ class Q_MCPSERVER_EXPORT QMcpServerBackendInterface : public QObject
 public:
     explicit QMcpServerBackendInterface(QObject *parent = nullptr);
 
-    void request(const QJsonObject &request, std::function<void(const QJsonObject &)> callback = nullptr);
+    void request(const QUuid &session, const QJsonObject &request, std::function<void(const QJsonObject &)> callback = nullptr);
 
 public slots:
     virtual void start(const QString &server) = 0;
-    virtual void send(const QJsonObject &object) = 0;
-    virtual void notify(const QJsonObject &object) = 0;
+    virtual void send(const QUuid &session, const QJsonObject &object) = 0;
+    virtual void notify(const QUuid &session, const QJsonObject &object) = 0;
 
 signals:
+    void newSessionStarted(const QUuid &session);
     void started();
     void finished();
-    void received(const QJsonObject &object);
-    void result(const QJsonObject &result);
+    void received(const QUuid &session, const QJsonObject &object);
+    void result(const QUuid &session, const QJsonObject &result);
 
 private:
-    QHash<QJsonValue, std::function<void(const QJsonObject &)>> callbacks;
+    QHash<QUuid, QHash<QJsonValue, std::function<void(const QJsonObject &)>>> callbacks;
 };
 
 QT_END_NAMESPACE

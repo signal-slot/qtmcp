@@ -11,7 +11,7 @@ class McpServer : public QMcpServer
 {
     Q_OBJECT
 public:
-    explicit McpServer(QObject *parent = nullptr);
+    explicit McpServer(const QString &backend = "stdio", QObject *parent = nullptr);
     ~McpServer() override;
 
     Q_INVOKABLE QImage screenShot() const;

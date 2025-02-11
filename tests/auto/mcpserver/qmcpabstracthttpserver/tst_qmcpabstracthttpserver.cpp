@@ -51,9 +51,9 @@ QByteArray TestHttpServer::getSse(const QNetworkRequest &request)
 {
     QByteArray ret;
     if (request.hasRawHeader("Accept") && request.rawHeader("Accept") == "text/event-stream"_ba) {
-        auto uuid = registerSseRequest(request);
+        const auto uuid = registerSseRequest(request);
         ret += "event: endpoint\r\ndata: /messages/?session_id="_ba;
-        ret += uuid;
+        ret += uuid.toByteArray(QUuid::Id128);
         qDebug() << Q_FUNC_INFO << __LINE__ << uuid;
     }
     return ret;
@@ -62,7 +62,7 @@ QByteArray TestHttpServer::getSse(const QNetworkRequest &request)
 QByteArray TestHttpServer::postMessages(const QNetworkRequest &request, const QByteArray &body)
 {
     QUrlQuery query(request.url().query());
-    QByteArray uuid = query.queryItemValue("session_id").toUtf8();
+    const auto uuid = QUuid::fromBytes(query.queryItemValue("session_id").toUtf8());
     sendSseEvent(uuid, "test"_ba, "done"_L1);
     return "Accept"_ba;
 }

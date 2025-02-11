@@ -81,9 +81,17 @@ void QMcpClientSse::Private::start(const QUrl &url)
                 data = data.mid(6);
                 if (key == "endpoint") {
                     message = sse;
+                    qDebug() << message << sse;
                     int question = data.indexOf('?');
-                    message.setPath(data.left(question));
-                    message.setQuery(data.mid(question + 1));
+                    if (question < 0) {
+                        message.setPath(data);
+                        qDebug() << message << sse;
+                    } else {
+                        message.setPath(data.left(question));
+                        qDebug() << message << sse;
+                        message.setQuery(data.mid(question + 1));
+                        qDebug() << message << sse;
+                    }
                 } else if (key == "message") {
                     QJsonParseError error;
                     const auto json = QJsonDocument::fromJson(data, &error);
@@ -125,6 +133,10 @@ void QMcpClientSse::start(const QString &server)
 
 void QMcpClientSse::send(const QJsonObject &object)
 {
+    if (d->message.isEmpty()) {
+        qWarning() << d->message;
+        return;
+    }
     QNetworkRequest request(d->message);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 

@@ -19,8 +19,8 @@ public:
 
 public slots:
     void start(const QString &server) override;
-    void send(const QJsonObject &object) override;
-    void notify(const QJsonObject &object) override;
+    void send(const QUuid &session, const QJsonObject &object) override;
+    void notify(const QUuid &session, const QJsonObject &object) override;
 
 private:
     class Private;

@@ -27,10 +27,10 @@ public:
         int indexOfMethod = -1;
         qint64 contentLength = -1;  // Store expected content length
         qint64 receivedLength = 0;  // Track received data size
-        QByteArray sseId;
     };
 
     QMap<QTcpSocket*, ParseData> dataMap;
+    QMap<QUuid, QTcpSocket*> sessions;
 };
 
 QMcpAbstractHttpServer::Private::Private(QMcpAbstractHttpServer *parent)
@@ -158,7 +158,7 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
     }
 
     if (data.indexOfMethod < 0) {
-        sendHttpResponse(socket, QByteArrayLiteral("Not Found"), QStringLiteral("text/plain"), 404);
+        sendHttpResponse(socket, "Not Found"_ba, QStringLiteral("text/plain"), 404);
         return;
     }
 
@@ -190,25 +190,26 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
     default:
         qFatal();
     }
-    sendHttpResponse(socket, ret, "text/plain"_L1, 200);
+    if (sessions.key(socket).isNull())
+        sendHttpResponse(socket, ret, "text/plain"_L1, 200);
+    else
+        socket->write(ret);
+    dataMap[socket] = ParseData();
 }
 
 void QMcpAbstractHttpServer::Private::sendHttpResponse(QTcpSocket *socket, const QByteArray &data,
                                                      const QString &contentType, int statusCode)
 {
-    QByteArray response;
-    if (dataMap.value(socket).sseId.isEmpty()) {
-        QString statusText = (statusCode == 200) ? "OK"_L1 : "Not Found"_L1;
-        response = u"HTTP/1.1 %1 %2\r\n"
-                   "Content-Type: %3\r\n"
-                   "Content-Length: %4\r\n"
-                   "\r\n"_s
-                       .arg(statusCode)
-                       .arg(statusText)
-                       .arg(contentType)
-                       .arg(data.size())
-                       .toLatin1();
-    }
+    QString statusText = (statusCode == 200) ? "OK"_L1 : "Not Found"_L1;
+    QByteArray response = u"HTTP/1.1 %1 %2\r\n"
+               "Content-Type: %3\r\n"
+               "Content-Length: %4\r\n"
+               "\r\n"_s
+                   .arg(statusCode)
+                   .arg(statusText)
+                   .arg(contentType)
+                   .arg(data.size())
+                   .toLatin1();
     response += data;
     socket->write(response);
     socket->flush();
@@ -249,9 +250,9 @@ bool QMcpAbstractHttpServer::bind(QTcpServer *server)
     return true;
 }
 
-QByteArray QMcpAbstractHttpServer::registerSseRequest(const QNetworkRequest &request)
+QUuid QMcpAbstractHttpServer::registerSseRequest(const QNetworkRequest &request)
 {
-    QByteArray ret;
+    QUuid ret;
     static QByteArray response = QByteArrayLiteral("HTTP/1.1 200 OK\r\n"
                                             "Content-Type: text/event-stream\r\n"
                                             "Cache-Control: no-cache\r\n"
@@ -260,47 +261,44 @@ QByteArray QMcpAbstractHttpServer::registerSseRequest(const QNetworkRequest &req
     const auto sockets = d->dataMap.keys();
     for (QTcpSocket *socket : sockets) {
         if (d->dataMap.value(socket).request == request) {
-            ret = QUuid::createUuid().toByteArray(QUuid::Id128);
-            d->dataMap[socket].sseId = ret;
+            ret = QUuid::createUuid();
+            d->sessions.insert(ret, socket);
             socket->write(response);
             socket->flush();
             break;
         }
     }
-    if (ret.isEmpty())
+    if (ret.isNull())
         qWarning() << "sse socket for" << request.url() << "not found";
     return ret;
 }
 
-void QMcpAbstractHttpServer::sendSseEvent(const QByteArray &id, const QByteArray &data,
+void QMcpAbstractHttpServer::sendSseEvent(const QUuid &id, const QByteArray &data,
                                          const QString &event)
 {
-    const auto sockets = d->dataMap.keys();
-    for (QTcpSocket *socket : sockets) {
-        if (d->dataMap.value(socket).sseId == id) {
-            QByteArray message;
-            if (!event.isEmpty())
-                message += "event: " + event.toUtf8() + "\r\n";
-            message += "data: " + data + "\r\n\r\n";
-            socket->write(message);
-            socket->flush();
-            return;
-        }
+    if (!d->sessions.contains(id)) {
+        qWarning() << "sse" << id << "not found";
+        return;
     }
-    qWarning() << "sse" << id << "not found";
+    auto *socket = d->sessions.value(id);
+    QByteArray message;
+    if (!event.isEmpty())
+        message += "event: " + event.toUtf8() + "\r\n";
+    message += "data: " + data + "\r\n\r\n";
+    socket->write(message);
+    socket->flush();
 }
 
-void QMcpAbstractHttpServer::closeSseConnection(const QByteArray &id)
+void QMcpAbstractHttpServer::closeSseConnection(const QUuid &id)
 {
-    const auto sockets = d->dataMap.keys();
-    for (QTcpSocket *socket : sockets) {
-        if (d->dataMap.value(socket).sseId == id) {
-            d->dataMap.remove(socket);
-            socket->close();
-            socket->deleteLater();
-            return;
-        }
+    if (!d->sessions.contains(id)) {
+        qWarning() << "sse" << id << "not found";
+        return;
     }
-    qWarning() << "sse" << id << "not found";
+    auto *socket = d->sessions.take(id);
+    d->dataMap.remove(socket);
+    socket->close();
+    socket->deleteLater();
+    return;
 }
 
