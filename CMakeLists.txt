@@ -19,7 +19,6 @@ find_package(Qt6 ${PROJECT_VERSION} CONFIG OPTIONAL_COMPONENTS
     Gui
     Widgets
     Network
-    HttpServer
 )
 
 qt_internal_project_setup()

@@ -6,8 +6,8 @@ qt_internal_add_plugin(QMcpServerSsePlugin
     PLUGIN_TYPE mcpserverbackend
     SOURCES
         qmcpserversse.h qmcpserversse.cpp
+        httpserver.h httpserver.cpp
     LIBRARIES
-	Qt::McpServer
-	Qt::HttpServer
-        Qt::Concurrent
+        Qt::McpServer
+        Qt::Network
 )

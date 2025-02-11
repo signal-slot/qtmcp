@@ -3,4 +3,4 @@
 
 add_subdirectory(mcpcommon)
 add_subdirectory(mcpclient)
-# add_subdirectory(mcpserver)
+add_subdirectory(mcpserver)

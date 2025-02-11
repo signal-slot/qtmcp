@@ -15,11 +15,13 @@ qt_internal_add_module(McpServer
         qmcpserver.h qmcpserver.cpp
         qmcpserverbackendplugin.h
         qmcpserverbackendinterface.h qmcpserverbackendinterface.cpp
+        qmcpabstracthttpserver.h qmcpabstracthttpserver.cpp
     INCLUDE_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC_LIBRARIES
         Qt::McpCommon
         Qt::CorePrivate
+        Qt::Network
     DEFINES
         QT_BUILD_MCPSERVER_LIB
 )
