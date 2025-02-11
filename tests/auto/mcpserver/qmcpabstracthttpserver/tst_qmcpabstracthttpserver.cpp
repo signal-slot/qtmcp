@@ -14,9 +14,9 @@ public:
     explicit TestHttpServer(QObject *parent = nullptr) : QMcpAbstractHttpServer(parent) {}
 protected:
     Q_INVOKABLE QByteArray get() const;
-    Q_INVOKABLE QByteArray getEcho(const QNetworkRequest &request, bool first) const;
-    Q_INVOKABLE QByteArray post(const QNetworkRequest &request, const QByteArray &body, bool first) const;
-    Q_INVOKABLE QByteArray postEcho(const QNetworkRequest &request, const QByteArray &body, bool first) const;
+    Q_INVOKABLE QByteArray getEcho(const QNetworkRequest &request) const;
+    Q_INVOKABLE QByteArray post(const QNetworkRequest &request, const QByteArray &body) const;
+    Q_INVOKABLE QByteArray postEcho(const QNetworkRequest &request, const QByteArray &body) const;
 };
 
 QByteArray TestHttpServer::get() const
@@ -24,19 +24,18 @@ QByteArray TestHttpServer::get() const
     return "/";
 }
 
-QByteArray TestHttpServer::getEcho(const QNetworkRequest &request, bool first) const
+QByteArray TestHttpServer::getEcho(const QNetworkRequest &request) const
 {
     QUrlQuery query(request.url().query());
     return query.queryItemValue("message").toUtf8();
 }
 
-QByteArray TestHttpServer::post(const QNetworkRequest &request, const QByteArray &body, bool first) const
+QByteArray TestHttpServer::post(const QNetworkRequest &request, const QByteArray &body) const
 {
     return "";
 }
 
-// GET /echo
-QByteArray TestHttpServer::postEcho(const QNetworkRequest &request, const QByteArray &body, bool first) const
+QByteArray TestHttpServer::postEcho(const QNetworkRequest &request, const QByteArray &body) const
 {
     return body;
 }
@@ -94,7 +93,6 @@ void tst_QMcpAbstractHttpServer::testGet_data()
 
     QTest::newRow("root") << "/"_L1 << ""_L1 << "/"_ba;
     QTest::newRow("echo") << "/echo"_L1 << "message=abc"_L1 << "abc"_ba;
-
 }
 
 void tst_QMcpAbstractHttpServer::testGet()
@@ -109,7 +107,6 @@ void tst_QMcpAbstractHttpServer::testGet()
     if (!query.isEmpty())
         url.setQuery(query);
     QNetworkRequest request(url);
-    qDebug() << url;
 
     QNetworkReply *reply = nam.get(request);
     connect(reply, &QNetworkReply::errorOccurred, [reply](QNetworkReply::NetworkError error) {
@@ -120,11 +117,11 @@ void tst_QMcpAbstractHttpServer::testGet()
         loop.quit();
     });
     connect(reply, &QNetworkReply::finished, this, [reply, &loop]() {
-        qDebug() << "Finished";
         reply->deleteLater();
         loop.quit();
     });
     loop.exec();
+    QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
     QCOMPARE(reply->readAll(), expectedResponse);
 }
 
@@ -148,7 +145,7 @@ void tst_QMcpAbstractHttpServer::testPost()
     url.setPort(port);
     url.setPath(path);
     QNetworkRequest request(url);
-    qDebug() << url;
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded"_ba);
 
     QNetworkReply *reply = nam.post(request, data);
     connect(reply, &QNetworkReply::errorOccurred, [reply](QNetworkReply::NetworkError error) {
@@ -159,11 +156,11 @@ void tst_QMcpAbstractHttpServer::testPost()
         loop.quit();
     });
     connect(reply, &QNetworkReply::finished, this, [reply, &loop]() {
-        qDebug() << "Finished";
         reply->deleteLater();
         loop.quit();
     });
     loop.exec();
+    QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
     QCOMPARE(reply->readAll(), expectedResponse);
 }
 

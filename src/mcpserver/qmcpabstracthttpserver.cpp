@@ -25,11 +25,12 @@ public:
         QByteArray data;
         QNetworkRequest request;
         int indexOfMethod = -1;
-        bool first = true;
+        qint64 contentLength = -1;  // Store expected content length
+        qint64 receivedLength = 0;  // Track received data size
     };
 
     QMap<QTcpSocket*, ParseData> dataMap;
- };
+};
 
 QMcpAbstractHttpServer::Private::Private(QMcpAbstractHttpServer *parent)
     : q(parent)
@@ -43,7 +44,6 @@ void QMcpAbstractHttpServer::Private::handleNewConnection()
             parseHttpRequest(socket);
         });
         connect(socket, &QTcpSocket::disconnected, q, [this, socket]() {
-            qDebug() << socket;
             handleDisconnected(socket);
         });
 
@@ -66,12 +66,12 @@ void QMcpAbstractHttpServer::Private::handleDisconnected(QTcpSocket *socket)
 
 void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
 {
-    qDebug() << socket;
     const auto mo = q->metaObject();
 
     ParseData &data = dataMap[socket];
-    data.data.append(socket->readAll());
-    qDebug() << Q_FUNC_INFO << data.data;
+    QByteArray newData = socket->readAll();
+    data.data.append(newData);
+    data.receivedLength += newData.size();
 
     if (!data.request.url().isValid()) {
         int cr = data.data.indexOf('\r');
@@ -113,6 +113,16 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
             headers.append(QString::fromLatin1(header.left(colon)), QString::fromUtf8(header.mid(colon + 1).trimmed()));
         }
 
+        // Extract Content-Length if present
+        if (headers.contains("Content-Length"_L1)) {
+            bool ok;
+            const auto contentLengthStr = headers.value("Content-Length"_L1);
+            data.contentLength = contentLengthStr.toLongLong(&ok);
+            if (!ok) {
+                data.contentLength = -1;  // No valid Content-Length header
+            }
+        }
+
         QUrl url;
         int question = path.indexOf('?');
         if (question < 0) {
@@ -139,7 +149,11 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
                 break;
             }
         }
-        qDebug() << data.indexOfMethod << slotName;
+    }
+
+    // Check if we have received all expected data
+    if (data.contentLength >= 0 && data.receivedLength < data.contentLength) {
+        return;  // Wait for more data
     }
 
     if (data.indexOfMethod < 0) {
@@ -160,7 +174,7 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
         mm.invoke(q
                   , Qt::DirectConnection
                   , Q_RETURN_ARG(QByteArray, ret)
-                  , Q_ARG(bool, data.first)
+                  , Q_ARG(QNetworkRequest, data.request)
                   );
         break;
     case 2:
@@ -168,28 +182,14 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
                   , Qt::DirectConnection
                   , Q_RETURN_ARG(QByteArray, ret)
                   , Q_ARG(QNetworkRequest, data.request)
-                  , Q_ARG(bool, data.first)
-                  );
-        break;
-    case 3:
-        mm.invoke(q
-                  , Qt::DirectConnection
-                  , Q_RETURN_ARG(QByteArray, ret)
-                  , Q_ARG(QNetworkRequest, data.request)
                   , Q_ARG(QByteArray, data.data)
-                  , Q_ARG(bool, data.first)
                   );
         data.data.clear();
         break;
     default:
         qFatal();
     }
-    if (data.first) {
-        sendHttpResponse(socket, ret, "text/plain"_L1, 200);
-        data.first = false;
-    } else {
-        socket->write(ret);
-    }
+    sendHttpResponse(socket, ret, "text/plain"_L1, 200);
 }
 
 void QMcpAbstractHttpServer::Private::sendHttpResponse(QTcpSocket *socket, const QByteArray &data,
@@ -235,7 +235,6 @@ bool QMcpAbstractHttpServer::bind(QTcpServer *server)
 
     d->server = server;
     if (d->server) {
-        qDebug() << server->serverAddress() << server->serverPort();
         while (server->hasPendingConnections())
             d->handleNewConnection();
         connection = connect(server, &QTcpServer::newConnection, this, [this]() {
