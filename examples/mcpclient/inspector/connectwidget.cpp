@@ -4,14 +4,59 @@
 #include "connectwidget.h"
 #include "ui_connectwidget.h"
 
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtWidgets/QComboBox>
+
 class ConnectWidget::Private : public Ui::ConnectWidget
 {
 public:
     Private(::ConnectWidget *parent);
 
 private:
+    void loadServerHistory(const QString &backendName);
+    void saveServerToHistory(const QString &backendName, const QString &serverName);
+
+private:
     ::ConnectWidget *q;
+    static const int MaxHistoryItems = 10;
 };
+
+void ConnectWidget::Private::loadServerHistory(const QString &backendName)
+{
+    const auto settings = q->settings();
+    serverName->clear();
+    const QStringList history = settings->value(QString("history/%1").arg(backendName)).toStringList();
+    serverName->addItems(history);
+    
+    // Add default item if history is empty
+    if (history.isEmpty()) {
+        if (backendName == "stdio")
+            serverName->addItem("npx @modelcontextprotocol/server-everything");
+        if (backendName == "sse")
+            serverName->addItem("http://localhost:8080");
+    }
+}
+
+void ConnectWidget::Private::saveServerToHistory(const QString &backendName, const QString &server)
+{
+    if (server.isEmpty())
+        return;
+
+    const auto settings = q->settings();
+    const QString historyKey = QString("history/%1").arg(backendName);
+    QStringList history = settings->value(historyKey).toStringList();
+    
+    // Remove if exists and prepend to make it first
+    history.removeAll(server);
+    history.prepend(server);
+    
+    // Keep only MaxHistoryItems
+    while (history.size() > MaxHistoryItems)
+        history.removeLast();
+        
+    settings->setValue(historyKey, history);
+}
 
 ConnectWidget::Private::Private(::ConnectWidget *parent)
     : q(parent)
@@ -21,20 +66,34 @@ ConnectWidget::Private::Private(::ConnectWidget *parent)
     const auto settings = q->settings();
 
     backend->addItems(QMcpClient::backends());
-    backend->setCurrentText(settings->value("backend", backend->itemText(0)).toString());
-    serverName->setCurrentText(settings->value("serverName").toString());
+    const QString defaultBackend = backend->itemText(0);
+    const QString savedBackend = settings->value("backend", defaultBackend).toString();
+    backend->setCurrentText(savedBackend);
+    
+    // Load initial history
+    loadServerHistory(savedBackend);
+    
+    // Update history when backend changes
+    connect(backend, &QComboBox::currentTextChanged, q, [this](const QString &text) {
+        loadServerHistory(text);
+    });
 
     disconnectFromClient->setEnabled(false);
     connect(connectToServer, &QPushButton::clicked, q, [this]() {
-        if (serverName->currentText().isEmpty()) return;
+        const QString server = serverName->currentText();
+        if (server.isEmpty()) return;
+
         auto settings = q->settings();
         settings->setValue("backend", backend->currentText());
-        settings->setValue("serverName", serverName->currentText());
+        settings->setValue("serverName", server);
+        
+        // Save to history
+        saveServerToHistory(backend->currentText(), server);
 
         connectToServer->setEnabled(false);
         q->setLoading(true);
         auto client = new QMcpClient(backend->currentText(), q);
-        client->start(serverName->currentText());
+        client->start(server);
         q->setLoading(false);
         q->setClient(client);
         disconnectFromClient->setEnabled(true);
