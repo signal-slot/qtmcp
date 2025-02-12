@@ -11,7 +11,18 @@ QT_BEGIN_NAMESPACE
 
 class Q_MCPCOMMON_EXPORT QMcpEmptyResult : public QMcpResult
 {
-    using QMcpResult::QMcpResult;
+    Q_GADGET
+public:
+    QMcpEmptyResult() : QMcpResult(new Private) {}
+
+    const QMetaObject* metaObject() const override {
+        return &staticMetaObject;
+    }
+
+private:
+    struct Private : public QMcpResult::Private {
+        Private *clone() const override { return new Private(*this); }
+    };
 };
 
 QT_END_NAMESPACE
