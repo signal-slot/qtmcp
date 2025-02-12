@@ -11,6 +11,7 @@
 #include <QtMcpCommon/QMcpPrompt>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
+#include <QtMcpCommon/QMcpRoot>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResource>
 #include <QtMcpCommon/QMcpResult>
@@ -37,7 +38,7 @@ public:
     template<typename> struct CallbackArg;
 
     template<typename T, typename Arg>
-    struct CallbackArg<void(T::*)(const Arg &) const> {
+    struct CallbackArg<void(T::*)(const QUuid &, const Arg &) const> {
         using type = Arg;
     };
 
@@ -48,7 +49,7 @@ public:
     using CallbackResult = typename CallbackArg<Callback>::type;
 
     template<typename Request, typename Callback>
-        requires std::invocable<Callback, const CallbackResult<Callback>&>
+        requires std::invocable<Callback, const QUuid &, const CallbackResult<Callback>&>
     void request(const QUuid &session, const Request &request, Callback callback)
     {
         using Result = CallbackResult<Callback>;
@@ -57,10 +58,10 @@ public:
         static_assert(std::is_base_of<QMcpResult, Result>::value, "Result must inherit from QMcpResult");
 
         auto json = request.toJsonObject();
-        send(json, [callback](const QJsonObject &json) {
+        send(session, json, [callback](const QUuid & session, const QJsonObject &json) {
             Result result;
             result.fromJsonObject(json);
-            callback(result);
+            callback(session, result);
         });
     }
 
@@ -147,6 +148,8 @@ public:
     QList<QMcpCallToolResultContent> callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok = nullptr);
     virtual QHash<QString, QString> descriptions() const;
 
+    QList<QMcpRoot> roots(const QUuid &session) const;
+
 public slots:
     void setCapabilities(const QMcpServerCapabilities &capabilities);
     void setInstructions(const QString &instructions);
@@ -164,6 +167,11 @@ protected slots:
     void replacePrompt(const QUuid &session, int index, const QMcpPrompt prompt, const QMcpPromptMessage &message);
     void removePromptAt(const QUuid &session, int index);
 
+    void appendRoot(const QUuid &session, const QMcpRoot &root);
+    void insertRoot(const QUuid &session, int index, const QMcpRoot &root);
+    void replaceRoot(const QUuid &session, int index, const QMcpRoot &root);
+    void removeRootAt(const QUuid &session, int index);
+
 signals:
     void capabilitiesChanged(const QMcpServerCapabilities &capabilities);
     void instructionsChanged(const QString &instructions);
@@ -172,10 +180,11 @@ signals:
     void initialized(const QUuid &uuid);
     void received(const QUuid &session, const QJsonObject &object);
     void result(const QUuid &session, const QJsonObject &result);
+    void rootsChanged(const QUuid &session, const QList<QMcpRoot> &roots);
 
 private:
     void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);
-    void send(const QUuid &session, const QJsonObject &message, std::function<void(const QJsonObject &)> callback = nullptr);
+    void send(const QUuid &session, const QJsonObject &message, std::function<void(const QUuid &session, const QJsonObject &)> callback = nullptr);
     void registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
     void registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)>);
 

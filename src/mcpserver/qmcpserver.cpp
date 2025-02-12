@@ -28,12 +28,13 @@ public:
     QMcpServerCapabilities capabilities;
     QString instructions;
     QString protocolVersion = "2024-11-05"_L1;
-    QHash<QUuid, QHash<QJsonValue, std::function<void(const QJsonObject &)>>> callbacks;
+    QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, bool> initialized;
     QHash<QUuid, QList<QPair<QMcpResource, QMcpReadResourceResultContents>>> resources;
     QHash<QUuid, QList<QPair<QMcpPrompt, QMcpPromptMessage>>> prompts;
+    QHash<QUuid, QList<QMcpRoot>> roots;
     QMultiHash<QUuid, QUrl> subscriptions;
 };
 
@@ -59,13 +60,13 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             if (object.contains("result"_L1)) {
                 if (callbacks[session].contains(id)) {
                     const auto result = object.value("result"_L1).toObject();
-                    callbacks[session].take(id)(result);
+                    callbacks[session].take(id)(session, result);
                     return;
                 }
             } else if (object.contains("error"_L1)) {
                 qWarning() << "TODO: error handling" << object;;
                 if (callbacks[session].contains(id)) {
-                    callbacks[session].take(id)({});
+                    callbacks[session].take(id)(session, {});
                     return;
                 }
             }
@@ -290,6 +291,18 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         result.setMessages(messages);
         return result;
     });
+
+    addNotificationHandler([this](const QUuid &session, const QMcpRootsListChangedNotification &notification) {
+        Q_UNUSED(notification);
+        if (!d->initialized.value(session, false))
+            return;
+
+        QMcpListRootsRequest request;
+        this->request(session, request, [this](const QUuid &session, const QMcpListRootsResult &result) {
+            d->roots[session] = result.roots();
+            emit rootsChanged(session, result.roots());
+        });
+    });
 }
 
 QMcpServer::~QMcpServer() = default;
@@ -300,7 +313,7 @@ void QMcpServer::start(const QString &args)
     d->backend->start(args);
 }
 
-void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::function<void(const QJsonObject &)> callback)
+void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::function<void(const QUuid &session, const QJsonObject &)> callback)
 {
     if (!d->backend) return;
     static int id = 0;
@@ -423,6 +436,31 @@ void QMcpServer::removePromptAt(const QUuid &session, int index)
     const auto prompt = d->prompts[session][index].first;
     const auto content = d->prompts[session][index].second;
     d->prompts[session].removeAt(index);
+}
+
+QList<QMcpRoot> QMcpServer::roots(const QUuid &session) const
+{
+    return d->roots.value(session);
+}
+
+void QMcpServer::appendRoot(const QUuid &session, const QMcpRoot &root)
+{
+    d->roots[session].append(root);
+}
+
+void QMcpServer::insertRoot(const QUuid &session, int index, const QMcpRoot &root)
+{
+    d->roots[session].insert(index, root);
+}
+
+void QMcpServer::replaceRoot(const QUuid &session, int index, const QMcpRoot &root)
+{
+    d->roots[session][index] = root;
+}
+
+void QMcpServer::removeRootAt(const QUuid &session, int index)
+{
+    d->roots[session].removeAt(index);
 }
 
 QList<QMcpTool> QMcpServer::tools() const

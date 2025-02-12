@@ -5,7 +5,6 @@
 #define QMCPROOTSLISTCHANGEDNOTIFICATION_H
 
 #include <QtMcpCommon/qmcpnotification.h>
-#include <QtMcpCommon/qmcprootslistchangednotificationparams.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -19,22 +18,11 @@ class Q_MCPCOMMON_EXPORT QMcpRootsListChangedNotification : public QMcpNotificat
 {
     Q_GADGET
 
-    Q_PROPERTY(QMcpRootsListChangedNotificationParams params READ params WRITE setParams)
-
 public:
     QMcpRootsListChangedNotification() : QMcpNotification(new Private) {}
 
     QString method() const final {
         return "notifications/roots/list_changed"_L1;
-    }
-
-    QMcpRootsListChangedNotificationParams params() const {
-        return d<Private>()->params;
-    }
-
-    void setParams(const QMcpRootsListChangedNotificationParams &params) {
-        if (this->params() == params) return;
-        d<Private>()->params = params;
     }
 
     const QMetaObject* metaObject() const override {
@@ -43,7 +31,6 @@ public:
 
 private:
     struct Private : public QMcpNotification::Private {
-        QMcpRootsListChangedNotificationParams params;
 
         Private *clone() const override { return new Private(*this); }
     };
