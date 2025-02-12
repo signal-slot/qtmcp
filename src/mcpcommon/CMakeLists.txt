@@ -6,7 +6,6 @@
 #####################################################################
 
 qt_internal_add_module(McpCommon
-    INTERNAL_MODULE
     SOURCES
         qmcpcommonglobal.h
         qmcpgadget.h qmcpgadget.cpp
