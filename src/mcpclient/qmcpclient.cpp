@@ -29,6 +29,7 @@ public:
         }
 
         connect(backend, &QMcpClientBackendInterface::started, q, &QMcpClient::started);
+        connect(backend, &QMcpClientBackendInterface::errorOccurred, q, &QMcpClient::errorOccurred);
         connect(backend, &QMcpClientBackendInterface::received, q, [this](const QJsonObject &object) {
             if (object.contains("id"_L1)) {
                 const auto id = object.value("id"_L1);

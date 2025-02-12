@@ -139,6 +139,7 @@ public slots:
 
 signals:
     void started();
+    void errorOccurred(const QString &errorString);
     void received(const QJsonObject &object);
 
 private:

@@ -4,9 +4,7 @@
 #include "connectwidget.h"
 #include "ui_connectwidget.h"
 
-#include <QtCore/QString>
 #include <QtCore/QStringList>
-#include <QtWidgets/QComboBox>
 
 class ConnectWidget::Private : public Ui::ConnectWidget
 {
@@ -83,6 +81,15 @@ ConnectWidget::Private::Private(::ConnectWidget *parent)
         const QString server = serverName->currentText();
         if (server.isEmpty()) return;
 
+        // For SSE backend, validate URL format
+        if (backend->currentText() == "sse") {
+            QUrl url(server);
+            if (!url.isValid() || !url.scheme().startsWith("http"_L1)) {
+                emit q->errorOccurred(tr("Invalid server URL. For SSE backend, please provide a complete URL (e.g., http://localhost:8000)"));
+                return;
+            }
+        }
+
         auto settings = q->settings();
         settings->setValue("backend", backend->currentText());
         settings->setValue("serverName", server);
@@ -92,12 +99,26 @@ ConnectWidget::Private::Private(::ConnectWidget *parent)
 
         connectToServer->setEnabled(false);
         q->setLoading(true);
+        
         auto client = new QMcpClient(backend->currentText(), q);
+        
+        // Connect to error signal before starting
+        connect(client, &QMcpClient::errorOccurred, q, [this, client](const QString &error) {
+            qDebug() << "Error occurred:" << error;
+            q->setLoading(false);
+            emit q->errorOccurred(error);
+            client->deleteLater();
+            connectToServer->setEnabled(true);
+        });
+        
+        // Connect to started signal to update UI only after successful connection
+        connect(client, &QMcpClient::started, q, [this, client]() {
+            q->setLoading(false);
+            q->setClient(client);
+            disconnectFromClient->setEnabled(true);
+        });
+        
         client->start(server);
-        q->setLoading(false);
-        q->setClient(client);
-        disconnectFromClient->setEnabled(true);
-        // connect(client, &QMcpClient::stopped, ...)
     });
     connect(disconnectFromClient, &QPushButton::clicked, q, [this]() {
         disconnectFromClient->setEnabled(false);

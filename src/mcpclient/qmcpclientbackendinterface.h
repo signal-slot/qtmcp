@@ -25,6 +25,7 @@ public slots:
 
 signals:
     void started();
+    void errorOccurred(const QString &error);
     void finished();
     void received(const QJsonObject &object);
     void result(const QJsonObject &result);

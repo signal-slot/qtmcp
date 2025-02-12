@@ -102,6 +102,7 @@ void QMcpClientSse::Private::start(const QUrl &url)
                         message.setQuery(data.mid(question + 1));
                         qDebug() << message << sse;
                     }
+                    emit q->started();
                 } else if (key == "message") {
                     QJsonParseError error;
                     const auto json = QJsonDocument::fromJson(data, &error);
@@ -122,11 +123,10 @@ void QMcpClientSse::Private::start(const QUrl &url)
             qDebug() << error.errorString();
         eventStream->ignoreSslErrors();
     });
-    connect(eventStream.data(), &QNetworkReply::errorOccurred, q, [](QNetworkReply::NetworkError error) {
+    connect(eventStream.data(), &QNetworkReply::errorOccurred, q, [this](QNetworkReply::NetworkError error) {
         qWarning() << error;
+        emit q->errorOccurred(eventStream->errorString());
     });
-
-    emit q->started();
 }
 
 QMcpClientSse::QMcpClientSse(QObject *parent)
