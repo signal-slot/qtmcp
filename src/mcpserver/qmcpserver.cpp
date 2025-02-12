@@ -32,6 +32,8 @@ public:
     QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, bool> initialized;
+    QHash<QUuid, QList<QPair<QMcpResource, QMcpReadResourceResultContents>>> resources;
+    QMultiHash<QUuid, QUrl> subscriptions;
 };
 
 QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
@@ -157,6 +159,43 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         return result;
     });
 
+    addRequestHandler([this](const QUuid &session, const QMcpListResourcesRequest &, QMcpJSONRPCErrorError *error) {
+        QMcpListResourcesResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+        auto resources = result.resources();
+        for (const auto &pair : d->resources.value(session)) {
+            resources.append(pair.first);
+        }
+        result.setResources(resources);
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpReadResourceRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpReadResourceResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+
+        const auto params = request.params();
+        const auto uri = params.uri();
+        auto contents = result.contents();
+        const auto resources = d->resources.value(session);
+        for (const auto &pair : resources) {
+            if (pair.first.uri() == uri) {
+                contents.append(pair.second);
+            }
+        }
+        result.setContents(contents);
+        return result;
+    });
+
+
     addRequestHandler([this](const QUuid &session, const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
         QMcpListToolsResult result;
         if (!d->initialized.value(session, false)) {
@@ -165,6 +204,34 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
             return result;
         }
         result.setTools(tools());
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpSubscribeRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+
+        const auto params = request.params();
+        const auto uri = params.uri().toString();
+        d->subscriptions.insert(session, uri);
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpUnsubscribeRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+
+        const auto params = request.params();
+        const auto uri = params.uri().toString();
+        d->subscriptions.remove(session, uri);
         return result;
     });
 
@@ -260,6 +327,41 @@ void QMcpServer::setProtocolVersion(const QString &protocolVersion)
 bool QMcpServer::isInitialized(const QUuid &session) const
 {
     return d->initialized.value(session, false);
+}
+
+void QMcpServer::notifyResourceUpdated(const QUuid &session, const QMcpResource &resource)
+{
+    const auto uri = resource.uri();
+    if (d->subscriptions.contains(session, uri)) {
+        QMcpResourceUpdatedNotification notification;
+        auto params = notification.params();
+        params.setUri(uri);
+        notification.setParams(params);
+        send(session, notification.toJsonObject());
+    }
+}
+
+void QMcpServer::appendResource(const QUuid &session, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
+{
+    d->resources[session].append(std::make_pair(resource, content));
+}
+
+void QMcpServer::insertResource(const QUuid &session, int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
+{
+    d->resources[session].insert(index, std::make_pair(resource, content));
+}
+
+void QMcpServer::replaceResource(const QUuid &session, int index, const QMcpResource resource, const QMcpReadResourceResultContents &content)
+{
+    d->resources[session][index] = std::make_pair(resource, content);
+    notifyResourceUpdated(session, resource);
+}
+
+void QMcpServer::removeResourceAt(const QUuid &session, int index)
+{
+    const auto resource = d->resources[session][index].first;
+    const auto content = d->resources[session][index].second;
+    d->resources[session].removeAt(index);
 }
 
 QList<QMcpTool> QMcpServer::tools() const

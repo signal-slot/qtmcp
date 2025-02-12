@@ -19,6 +19,14 @@ class Q_MCPCOMMON_EXPORT QMcpReadResourceResultContents : public QMcpAnyOf
     Q_PROPERTY(QMcpBlobResourceContents blobResourceContents READ blobResourceContents WRITE setBlobResourceContents)
 public:
     QMcpReadResourceResultContents() : QMcpAnyOf(new Private) {}
+    QMcpReadResourceResultContents(const QMcpTextResourceContents &textResourceContents)
+        : QMcpAnyOf(new Private) {
+        setTextResourceContents(textResourceContents);
+    };
+    QMcpReadResourceResultContents(const QMcpBlobResourceContents &blobResourceContents)
+        : QMcpAnyOf(new Private) {
+        setBlobResourceContents(blobResourceContents);
+    };
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;

@@ -8,7 +8,9 @@
 #include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
 #include <QtMcpCommon/QMcpNotification>
+#include <QtMcpCommon/QMcpReadResourceResultContents>
 #include <QtMcpCommon/QMcpRequest>
+#include <QtMcpCommon/QMcpResource>
 #include <QtMcpCommon/QMcpResult>
 #include <QtMcpCommon/QMcpServerCapabilities>
 #include <QtMcpCommon/QMcpTool>
@@ -138,6 +140,7 @@ public:
     QString instructions() const;
     QString protocolVersion() const;
     bool isInitialized(const QUuid &session) const;
+
     QList<QMcpTool> tools() const;
     QList<QMcpCallToolResultContent> callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok = nullptr);
     virtual QHash<QString, QString> descriptions() const;
@@ -147,6 +150,12 @@ public slots:
     void setInstructions(const QString &instructions);
     void setProtocolVersion(const QString &protocolVersion);
     void start(const QString &args = QString());
+
+protected slots:
+    void appendResource(const QUuid &session, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
+    void insertResource(const QUuid &session, int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
+    void replaceResource(const QUuid &session, int index, const QMcpResource resource, const QMcpReadResourceResultContents &content);
+    void removeResourceAt(const QUuid &session, int index);
 
 signals:
     void capabilitiesChanged(const QMcpServerCapabilities &capabilities);
@@ -158,6 +167,7 @@ signals:
     void result(const QUuid &session, const QJsonObject &result);
 
 private:
+    void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);
     void send(const QUuid &session, const QJsonObject &message, std::function<void(const QJsonObject &)> callback = nullptr);
     void registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
     void registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)>);
