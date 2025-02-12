@@ -18,6 +18,7 @@
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
 #include <QtMcpCommon/QMcpResource>
+#include <QtMcpCommon/QMcpResourceTemplate>
 #include <QtMcpCommon/QMcpRoot>
 #include <QtMcpServer/qmcpserverglobal.h>
 
@@ -37,16 +38,14 @@ public:
     bool isInitialized() const;
     void setInitialized(bool initialized);
 
+    QList<QMcpResourceTemplate> resourceTemplates() const;
+
     // Resource management
     bool isSubscribed(const QUrl &uri) const;
     QList<QMcpResource> resources() const;
     QList<QMcpReadResourceResultContents> contents(const QUrl &uri) const;
 
     // Prompt management
-    void appendPrompt(const QMcpPrompt &prompt, const QMcpPromptMessage &message);
-    void insertPrompt(int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
-    void replacePrompt(int index, const QMcpPrompt prompt, const QMcpPromptMessage &message);
-    void removePromptAt(int index);
     QList<QMcpPrompt> prompts(QString *cursor) const;
     QList<QMcpPromptMessage> messages(const QString &name) const;
 
@@ -55,10 +54,20 @@ public:
     QList<QMcpRoot> roots() const;
 
 public slots:
+    void appendResourceTemplate(const QMcpResourceTemplate &resourceTemplate);
+    void insertResourceTemplate(int index, const QMcpResourceTemplate &resourceTemplate);
+    void replaceResourceTemplate(int index, const QMcpResourceTemplate resourceTemplate);
+    void removeResourceTemplateAt(int index);
+
     void appendResource(const QMcpResource &resource, const QMcpReadResourceResultContents &content);
     void insertResource(int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
     void replaceResource(int index, const QMcpResource resource, const QMcpReadResourceResultContents &content);
     void removeResourceAt(int index);
+
+    void appendPrompt(const QMcpPrompt &prompt, const QMcpPromptMessage &message);
+    void insertPrompt(int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
+    void replacePrompt(int index, const QMcpPrompt prompt, const QMcpPromptMessage &message);
+    void removePromptAt(int index);
 
     void subscribe(const QUrl &uri);
     void unsubscribe(const QUrl &uri);

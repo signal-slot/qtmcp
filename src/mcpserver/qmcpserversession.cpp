@@ -17,6 +17,7 @@ public:
 
     QUuid sessionId;
     bool initialized;
+    QList<QMcpResourceTemplate> resourceTemplates;
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
     QList<QMcpRoot> roots;
@@ -47,6 +48,26 @@ void QMcpServerSession::setInitialized(bool initialized)
     emit initializedChanged(initialized);
 }
 
+void QMcpServerSession::appendResourceTemplate(const QMcpResourceTemplate &resourceTemplate)
+{
+    d->resourceTemplates.append(resourceTemplate);
+}
+
+void QMcpServerSession::insertResourceTemplate(int index, const QMcpResourceTemplate &resourceTemplate)
+{
+    d->resourceTemplates.insert(index, resourceTemplate);
+}
+
+void QMcpServerSession::replaceResourceTemplate(int index, const QMcpResourceTemplate resourceTemplate)
+{
+    d->resourceTemplates[index] = resourceTemplate;
+}
+
+void QMcpServerSession::removeResourceTemplateAt(int index)
+{
+    d->resourceTemplates.removeAt(index);
+}
+
 void QMcpServerSession::appendResource(const QMcpResource &resource, const QMcpReadResourceResultContents &content)
 {
     d->resources.append(qMakePair(resource, content));
@@ -66,6 +87,11 @@ void QMcpServerSession::replaceResource(int index, const QMcpResource resource, 
 void QMcpServerSession::removeResourceAt(int index)
 {
     d->resources.removeAt(index);
+}
+
+QList<QMcpResourceTemplate> QMcpServerSession::resourceTemplates() const
+{
+    return d->resourceTemplates;
 }
 
 QList<QMcpResource> QMcpServerSession::resources() const

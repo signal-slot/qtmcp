@@ -203,6 +203,15 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         return result;
     });
 
+    addRequestHandler([this](const QUuid &sessionId, const QMcpListResourceTemplatesRequest &, QMcpJSONRPCErrorError *error) {
+        QMcpListResourceTemplatesResult result;
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
+            return result;
+        result.setResourceTemplates(session->resourceTemplates());
+        return result;
+    });
+
     addRequestHandler([this](const QUuid &sessionId, const QMcpListResourcesRequest &, QMcpJSONRPCErrorError *error) {
         QMcpListResourcesResult result;
         auto session = d->findSession(sessionId, true, error);
