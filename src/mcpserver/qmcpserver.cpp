@@ -203,7 +203,7 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
 
     addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
         Q_UNUSED(session); // ping can be accepted even before initialization
-        QMcpResult result;
+        QMcpEmptyResult result;
         return result;
     });
 
@@ -246,7 +246,7 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
     });
 
     addRequestHandler([this](const QUuid &sessionId, const QMcpSubscribeRequest &request, QMcpJSONRPCErrorError *error) {
-        QMcpResult result;
+        QMcpEmptyResult result;
         auto session = d->findSession(sessionId, true, error);
         if (!session)
             return result;
@@ -257,7 +257,7 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
     });
 
     addRequestHandler([this](const QUuid &sessionId, const QMcpUnsubscribeRequest &request, QMcpJSONRPCErrorError *error) {
-        QMcpResult result;
+        QMcpEmptyResult result;
         auto session = d->findSession(sessionId, true, error);
         if (!session)
             return result;
