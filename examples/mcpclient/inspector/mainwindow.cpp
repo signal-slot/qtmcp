@@ -2,23 +2,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
-#include "connectwidget.h"
-#include "initializewidget.h"
-#include "pingwidget.h"
-#include "listresourceswidget.h"
-#include "readresourcewidget.h"
-#include "listresourcetemplateswidget.h"
-#include "resourcetemplatewidget.h"
-#include "listtoolswidget.h"
 #include "calltoolwidget.h"
-#include "listpromptswidget.h"
+#include "connectwidget.h"
 #include "getpromptwidget.h"
+#include "initializewidget.h"
+#include "listpromptswidget.h"
+#include "listresourceswidget.h"
+#include "listresourcetemplateswidget.h"
+#include "listtoolswidget.h"
+#include "pingwidget.h"
+#include "readresourcewidget.h"
+#include "resourcetemplatewidget.h"
+#include "rootswidget.h"
 #include "samplingwidget.h"
+#include "ui_mainwindow.h"
 
 #include <QtCore/QSettings>
-#include <QtWidgets/QSplitter>
 #include <QtMcpClient/QMcpClient>
+#include <QtWidgets/QSplitter>
 
 class MainWindow::Private : public Ui::MainWindow
 {
@@ -39,7 +40,7 @@ public:
         ListTools,
         CallTool,
         Sampling,
-        // Roots,
+        Roots,
     };
 
 private:
@@ -100,6 +101,7 @@ MainWindow::Private::Private(::MainWindow *parent)
         treeWidget->addTopLevelItem(new QTreeWidgetItem({ "Prompts" }, Private::ListPrompts));
         treeWidget->addTopLevelItem(new QTreeWidgetItem({ "Tools" }, Private::ListTools));
         treeWidget->addTopLevelItem(new QTreeWidgetItem({ "Sampling" }, Private::Sampling));
+        treeWidget->addTopLevelItem(new QTreeWidgetItem({ "Roots" }, Private::Roots));
     });
     stackedWidget->addWidget(initializeWidget);
 
@@ -238,6 +240,7 @@ MainWindow::Private::Private(::MainWindow *parent)
     stackedWidget->addWidget(new CallToolWidget);
 
     stackedWidget->addWidget(new SamplingWidget);
+    stackedWidget->addWidget(new RootsWidget);
 
     connect(treeWidget, &QTreeWidget::currentItemChanged, q, [this](QTreeWidgetItem *current) {
         auto currentWidget = qobject_cast<AbstractWidget *>(stackedWidget->currentWidget());

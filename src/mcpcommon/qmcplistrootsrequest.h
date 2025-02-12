@@ -5,7 +5,6 @@
 #define QMCPLISTROOTSREQUEST_H
 
 #include <QtMcpCommon/qmcprequest.h>
-#include <QtMcpCommon/qmcplistrootsrequestparams.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -23,21 +22,10 @@ class Q_MCPCOMMON_EXPORT QMcpListRootsRequest : public QMcpRequest
 {
     Q_GADGET
 
-    Q_PROPERTY(QMcpListRootsRequestParams params READ params WRITE setParams)
-
 public:
     QMcpListRootsRequest() : QMcpRequest(new Private) {}
 
     QString method() const final { return "roots/list"_L1; }
-
-    QMcpListRootsRequestParams params() const {
-        return d<Private>()->params;
-    }
-
-    void setParams(const QMcpListRootsRequestParams &params) {
-        if (this->params() == params) return;
-        d<Private>()->params = params;
-    }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
@@ -45,8 +33,6 @@ public:
 
 private:
     struct Private : public QMcpRequest::Private {
-        QMcpListRootsRequestParams params;
-
         Private *clone() const override { return new Private(*this); }
     };
 };

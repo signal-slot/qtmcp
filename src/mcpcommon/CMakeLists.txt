@@ -72,7 +72,6 @@ qt_internal_add_module(McpCommon
         qmcplistresourcetemplatesrequestparams.h
         qmcplistresourcetemplatesresult.h
         qmcplistrootsrequest.h
-        qmcplistrootsrequestparams.h
         qmcplistrootsrequestparamsmeta.h
         qmcplistrootsresult.h
         qmcplisttoolsrequest.h

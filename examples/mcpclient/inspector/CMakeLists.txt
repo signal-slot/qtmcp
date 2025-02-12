@@ -23,6 +23,7 @@ qt_add_executable(mcpinspector
     listresourcetemplateswidget.h listresourcetemplateswidget.cpp listresourcetemplateswidget.ui
     resourcetemplatewidget.h resourcetemplatewidget.cpp resourcetemplatewidget.ui
     pingwidget.h pingwidget.cpp pingwidget.ui
+    rootswidget.h rootswidget.cpp rootswidget.ui
 )
 
 target_link_libraries(mcpinspector PRIVATE

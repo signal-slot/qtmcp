@@ -33,6 +33,11 @@ InitializeWidget::Private::Private(::InitializeWidget *parent)
 
         QMcpInitializeRequest request;
         auto params = request.params();
+        auto capabilities = params.capabilities();
+        auto roots = capabilities.roots();
+        roots.setListChanged(true);
+        capabilities.setRoots(roots);
+        params.setCapabilities(capabilities);
         auto clientInfo = params.clientInfo();
         clientInfo.setName(clientName->text());
         clientInfo.setVersion(clientVersion->text());
