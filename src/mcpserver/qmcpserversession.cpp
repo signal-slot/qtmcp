@@ -94,12 +94,37 @@ QList<QMcpResourceTemplate> QMcpServerSession::resourceTemplates() const
     return d->resourceTemplates;
 }
 
-QList<QMcpResource> QMcpServerSession::resources() const
+QList<QMcpResource> QMcpServerSession::resources(QString *cursor) const
 {
     QList<QMcpResource> ret;
-    ret.reserve(d->resources.count());
+    const int pageSize = 50; // Default page size
+    
+    // Collect all resources first
+    QList<QMcpResource> allResources;
+    allResources.reserve(d->resources.count());
     for (const auto &pair : std::as_const(d->resources))
-        ret.append(pair.first);
+        allResources.append(pair.first);
+    
+    // Start from the cursor position if provided
+    int startIndex = cursor && !cursor->isEmpty() ? cursor->toInt() : 0;
+    if (startIndex < 0 || startIndex >= allResources.count())
+        startIndex = 0;
+    
+    // Get one page of results
+    int endIndex = qMin(startIndex + pageSize, allResources.count());
+    ret.reserve(endIndex - startIndex);
+    
+    for (int i = startIndex; i < endIndex; ++i)
+        ret.append(allResources.at(i));
+    
+    // Update cursor for next page
+    if (cursor) {
+        if (endIndex < allResources.count())
+            *cursor = QString::number(endIndex);
+        else
+            cursor->clear(); // No more pages
+    }
+    
     return ret;
 }
 
@@ -134,10 +159,35 @@ void QMcpServerSession::removePromptAt(int index)
 
 QList<QMcpPrompt> QMcpServerSession::prompts(QString *cursor) const
 {
-    Q_UNUSED(cursor); // TODO
     QList<QMcpPrompt> ret;
+    const int pageSize = 50; // Default page size
+    
+    // Collect all prompts first
+    QList<QMcpPrompt> allPrompts;
+    allPrompts.reserve(d->prompts.count());
     for (const auto &pair : std::as_const(d->prompts))
-        ret.append(pair.first);
+        allPrompts.append(pair.first);
+    
+    // Start from the cursor position if provided
+    int startIndex = cursor && !cursor->isEmpty() ? cursor->toInt() : 0;
+    if (startIndex < 0 || startIndex >= allPrompts.count())
+        startIndex = 0;
+    
+    // Get one page of results
+    int endIndex = qMin(startIndex + pageSize, allPrompts.count());
+    ret.reserve(endIndex - startIndex);
+    
+    for (int i = startIndex; i < endIndex; ++i)
+        ret.append(allPrompts.at(i));
+    
+    // Update cursor for next page
+    if (cursor) {
+        if (endIndex < allPrompts.count())
+            *cursor = QString::number(endIndex);
+        else
+            cursor->clear(); // No more pages
+    }
+    
     return ret;
 }
 
@@ -312,9 +362,32 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
     return ret;
 }
 
-QList<QMcpRoot> QMcpServerSession::roots() const
+QList<QMcpRoot> QMcpServerSession::roots(QString *cursor) const
 {
-    return d->roots;
+    QList<QMcpRoot> ret;
+    const int pageSize = 50; // Default page size
+    
+    // Start from the cursor position if provided
+    int startIndex = cursor && !cursor->isEmpty() ? cursor->toInt() : 0;
+    if (startIndex < 0 || startIndex >= d->roots.count())
+        startIndex = 0;
+    
+    // Get one page of results
+    int endIndex = qMin(startIndex + pageSize, d->roots.count());
+    ret.reserve(endIndex - startIndex);
+    
+    for (int i = startIndex; i < endIndex; ++i)
+        ret.append(d->roots.at(i));
+    
+    // Update cursor for next page
+    if (cursor) {
+        if (endIndex < d->roots.count())
+            *cursor = QString::number(endIndex);
+        else
+            cursor->clear(); // No more pages
+    }
+    
+    return ret;
 }
 
 void QMcpServerSession::setRoots(const QList<QMcpRoot> &roots)

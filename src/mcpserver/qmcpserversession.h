@@ -100,14 +100,16 @@ public:
 
     /*!
         Returns the list of resources available in this session.
-    */
-    QList<QMcpResource> resources() const;
+        \param cursor Optional cursor for pagination
+        \return List of resources
+     */
+    QList<QMcpResource> resources(QString *cursor = nullptr) const;
 
     /*!
         Returns the contents of the resource at the given URI.
         \param uri The resource URI to get contents for
         \return List of resource contents
-    */
+     */
     QList<QMcpReadResourceResultContents> contents(const QUrl &uri) const;
 
     // Prompt management
@@ -115,14 +117,14 @@ public:
         Returns the list of prompts in this session.
         \param cursor Optional cursor for pagination
         \return List of prompts
-    */
-    QList<QMcpPrompt> prompts(QString *cursor) const;
+     */
+    QList<QMcpPrompt> prompts(QString *cursor = nullptr) const;
 
     /*!
         Returns the message history for a prompt.
         \param name Name of the prompt
         \return List of prompt messages
-    */
+     */
     QList<QMcpPromptMessage> messages(const QString &name) const;
 
     /*!
@@ -131,13 +133,15 @@ public:
         \param params Parameters for the tool
         \param ok Optional pointer to bool that will be set to true if successful
         \return List of tool execution results
-    */
+     */
     QList<QMcpCallToolResultContent> callTool(const QString &name, const QJsonObject &params, bool *ok = nullptr);
 
     /*!
         Returns the list of roots available in this session.
-    */
-    QList<QMcpRoot> roots() const;
+        \param cursor Optional cursor for pagination
+        \return List of roots
+     */
+    QList<QMcpRoot> roots(QString *cursor = nullptr) const;
 
 public slots:
     /*!
