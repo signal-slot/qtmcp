@@ -2,6 +2,19 @@
 
 Qt MCP is a Qt-based implementation of the Model Context Protocol, providing a robust framework for communication between clients and servers in model-driven applications. This library is part of the Qt framework, offering seamless integration with Qt applications.
 
+## Table of Contents
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Project Structure](#project-structure)
+- [Features](#features)
+- [Building from Source](#building-from-source)
+- [Getting Started](#getting-started)
+- [Development](#development)
+- [Testing](#testing)
+- [Protocol Specification](#protocol-specification)
+- [License](#license)
+- [Contributing](#contributing)
+
 ## Overview
 
 The Model Context Protocol (MCP) defines a standardized way for applications to communicate with language models and other AI services. This Qt implementation provides:
@@ -29,7 +42,6 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 - Qt Gui (for Image support)
 - Qt Widgets (for GUI examples)
 - Qt Network (for HTTP-based communication)
-- Qt HttpServer (for HTTP server capabilities)
 
 ## Project Structure
 
@@ -89,7 +101,7 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://gitlab.com/signal-slot/qtmcp.git
 cd qtmcp
 ```
 
@@ -128,12 +140,46 @@ Located in `examples/mcpclient/inspector/`, the MCP Inspector provides a compreh
 - Real-time protocol inspection
 - Experimental features testing
 
+Example usage:
+```cpp
+#include <QMcpClient>
+
+// Create and configure the client
+QMcpClient client;
+client.setServerUrl(QUrl("mcp://localhost:8080"));
+
+// Connect to server
+client.connectToServer();
+
+// Execute a tool
+QJsonObject args;
+args["input"] = "Hello, World!";
+client.callTool("echo", args);
+```
+
 ### Echo Server Example
 Located in `examples/mcpserver/echo/`, this example demonstrates:
 - Basic MCP server implementation
 - Standard input/output communication
 - Simple request-response pattern
 - Resource template usage
+
+Example implementation:
+```cpp
+#include <QMcpServer>
+
+class EchoServer : public QMcpServer
+{
+    Q_OBJECT
+public:
+    void handleToolCall(const QString &tool, const QJsonObject &args) override
+    {
+        if (tool == "echo") {
+            emit toolResult(args["input"].toString());
+        }
+    }
+};
+```
 
 ### Window Server Example
 Located in `examples/mcpserver/window/`, this example shows:
@@ -183,6 +229,28 @@ Tools can be implemented by creating a new tool definition that follows the MCP 
 - Implementation of the tool's functionality
 - Optional experimental features
 
+Example tool definition:
+```cpp
+QMcpTool tool;
+tool.setName("calculator");
+tool.setDescription("Performs basic arithmetic operations");
+tool.setInputSchema(R"({
+    "type": "object",
+    "properties": {
+        "operation": {
+            "type": "string",
+            "enum": ["add", "subtract", "multiply", "divide"]
+        },
+        "operands": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2
+        }
+    },
+    "required": ["operation", "operands"]
+})");
+```
+
 ### Resource Management
 Resources are identified by URIs and can be:
 - Static resources with direct URIs
@@ -231,6 +299,35 @@ The Model Context Protocol is defined using JSON Schema (see `spec/schema.json`)
   - Prompts: Template-based message generation
   - Roles: User and assistant roles in communication
   - Experimental Features: Optional protocol extensions
+
+Schema Structure:
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "method": { "type": "string" },
+        "params": { "type": "object" },
+        "id": { "type": ["string", "number"] }
+      },
+      "required": ["jsonrpc", "method", "id"]
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "result": { "type": "object" },
+        "error": { "$ref": "#/definitions/Error" },
+        "id": { "type": ["string", "number"] }
+      },
+      "required": ["jsonrpc", "id"]
+    }
+  }
+}
+```
 
 ## License
 

@@ -7,7 +7,7 @@ include(.cmake.conf)
 project(QtMcp
     VERSION "${QT_REPO_MODULE_VERSION}"
     DESCRIPTION "Qt Mcp Libraries"
-    HOMEPAGE_URL "https://signal-slot.co.jp/"
+    HOMEPAGE_URL "https://gitlab.com/signal-slot/qtmcp.git"
     LANGUAGES CXX C
 )
 
