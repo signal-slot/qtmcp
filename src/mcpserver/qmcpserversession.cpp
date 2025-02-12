@@ -190,7 +190,7 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
                 continue;
             break;
         case 1: // may contain session
-            if (!checkParams(params.keys() << "session"_L1, names))
+            if (!checkParams(params.keys() << "sessionId"_L1, names))
                 continue;
             break;
         default:
