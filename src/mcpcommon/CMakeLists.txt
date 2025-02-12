@@ -46,13 +46,11 @@ qt_internal_add_module(McpCommon
         qmcpcreatemessagerequestparamsmetadata.h
         qmcpcreatemessageresult.h
         qmcpcreatemessageresultcontent.h
-        qmcpcursor.h
         qmcpembeddedresource.h
         qmcpembeddedresourceresource.h
         qmcpemptyresult.h
         qmcpgetpromptrequest.h
         qmcpgetpromptrequestparams.h
-
         qmcpgetpromptresult.h
         qmcpimagecontent.h
         qmcpimplementation.h
