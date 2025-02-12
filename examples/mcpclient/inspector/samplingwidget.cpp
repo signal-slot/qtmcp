@@ -25,9 +25,9 @@ SamplingWidget::Private::Private(::SamplingWidget *parent)
     connect(q, &AbstractWidget::clientChanged, q, [this](QMcpClient *client) {
         if (client) {
             client->addRequestHandler(
-                [this](const QMcpCreateMessageRequest &resource, QMcpJSONRPCErrorError *) -> QMcpCreateMessageResult {
-                    qDebug() << resource;
-                    const auto params = resource.params();
+                [this](const QMcpCreateMessageRequest &request, QMcpJSONRPCErrorError *) -> QMcpCreateMessageResult {
+                    qDebug() << request;
+                    const auto params = request.params();
                     const auto messages = params.messages();
                     for (const auto &message : messages) {
                         plainTextEdit->appendPlainText(QString::fromUtf8(QJsonDocument(QMcpSamplingMessage(message).toJsonObject()).toJson()));
