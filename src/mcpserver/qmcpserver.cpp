@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "qmcpserver.h"
+#include "qmcpserversession.h"
 #include <QtCore/QMetaType>
 #include <QtCore/private/qfactoryloader_p.h>
 #include <QtCore/qjsonobject.h>
@@ -21,6 +22,7 @@ class QMcpServer::Private
 public:
     Private(const QString &type, QMcpServer *parent);
 
+    QMcpServerSession *findSession(const QUuid &sessionId, bool isInitialized, QMcpJSONRPCErrorError *error = nullptr) const;
 private:
     QMcpServer *q;
 public:
@@ -31,11 +33,7 @@ public:
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
-    QHash<QUuid, bool> initialized;
-    QHash<QUuid, QList<QPair<QMcpResource, QMcpReadResourceResultContents>>> resources;
-    QHash<QUuid, QList<QPair<QMcpPrompt, QMcpPromptMessage>>> prompts;
-    QHash<QUuid, QList<QMcpRoot>> roots;
-    QMultiHash<QUuid, QUrl> subscriptions;
+    QHash<QUuid, QMcpServerSession *> sessions;
 };
 
 QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
@@ -50,8 +48,21 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     }
 
     connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
-    connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &session) {
-        initialized.insert(session, false);
+    connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
+        auto session = new QMcpServerSession(sessionId, q);
+        sessions.insert(sessionId, session);
+        connect(session, &QMcpServerSession::resourceUpdated, q, [this, session](const QMcpResource &resource) {
+            const auto uri = resource.uri();
+            if (session->isSubscribed(uri)) {
+                QMcpResourceUpdatedNotification notification;
+                auto params = notification.params();
+                params.setUri(uri);
+                notification.setParams(params);
+                q->send(session->sessionId(), notification.toJsonObject());
+            }
+
+        });
+        emit q->newSession(session);
     });
     connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {
         // response
@@ -119,6 +130,26 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     });
 }
 
+QMcpServerSession *QMcpServer::Private::findSession(const QUuid &sessionId, bool isInitialized, QMcpJSONRPCErrorError *error) const
+{
+    if (!sessions.contains(sessionId)) {
+        if (error) {
+            error->setCode(1);
+            error->setMessage("No session found"_L1);
+        }
+        return nullptr;
+    }
+    auto session = sessions.value(sessionId);
+    if (session->isInitialized() != isInitialized) {
+        if (error) {
+            error->setCode(1);
+            error->setMessage("Initialized state mismatch"_L1);
+        }
+        return nullptr;
+    }
+    return session;
+}
+
 QStringList QMcpServer::backends()
 {
     return backendLoader()->keyMap().values();
@@ -128,13 +159,11 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
     : QObject(parent)
     , d(new Private(backend, this))
 {
-    addRequestHandler([this](const QUuid &session, const QMcpInitializeRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpInitializeRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpInitializeResult result;
-        if (d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Initialized"_L1);
+        auto session = d->findSession(sessionId, false, error);
+        if (!session)
             return result;
-        }
         if (request.params().protocolVersion() != "2024-11-05"_L1) {
             error->setCode(20241105);
             error->setMessage("Protocol Version %1 is not supported"_L1.arg(request.params().protocolVersion()));
@@ -149,10 +178,12 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         result.setProtocolVersion(d->protocolVersion);
         return result;
     });
-    addNotificationHandler([this](const QUuid &session, const QMcpInitializedNotification &notification) {
+    addNotificationHandler([this](const QUuid &sessionId, const QMcpInitializedNotification &notification) {
         Q_UNUSED(notification);
-        d->initialized[session] = true;
-        emit initialized(session);
+        auto session = d->findSession(sessionId, false);
+        if (!session)
+            return;
+        session->setInitialized(true);
     });
 
     addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
@@ -161,146 +192,105 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpListResourcesRequest &, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpListResourcesRequest &, QMcpJSONRPCErrorError *error) {
         QMcpListResourcesResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-        auto resources = result.resources();
-        for (const auto &pair : d->resources.value(session)) {
-            resources.append(pair.first);
-        }
-        result.setResources(resources);
+        result.setResources(session->resources());
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpReadResourceRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpReadResourceRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpReadResourceResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-
         const auto params = request.params();
         const auto uri = params.uri();
-        auto contents = result.contents();
-        const auto resources = d->resources.value(session);
-        for (const auto &pair : resources) {
-            if (pair.first.uri() == uri) {
-                contents.append(pair.second);
-            }
-        }
-        result.setContents(contents);
+        result.setContents(session->contents(uri));
         return result;
     });
 
-
-    addRequestHandler([this](const QUuid &session, const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
         QMcpListToolsResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
         result.setTools(tools());
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpSubscribeRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpSubscribeRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-
         const auto params = request.params();
         const auto uri = params.uri().toString();
-        d->subscriptions.insert(session, uri);
+        session->subscribe(uri);
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpUnsubscribeRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpUnsubscribeRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-
         const auto params = request.params();
         const auto uri = params.uri().toString();
-        d->subscriptions.remove(session, uri);
+        session->unsubscribe(uri);
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpCallToolResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-
         const auto params = request.params();
         bool ok;
-        auto contents = callTool(session, params.name(), params.arguments(), &ok);
+        auto contents = session->callTool(params.name(), params.arguments(), &ok);
         if (ok) {
             result.setContent(contents);
         }
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpListPromptsRequest &, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpListPromptsRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpListPromptsResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-        const auto pairs = d->prompts.value(session);
-        auto prompts = result.prompts();
-        prompts.reserve(pairs.length());
-        for (const auto &pair : pairs) {
-            prompts.append(pair.first);
-        }
+        auto cursor = request.params().cursor();
+        auto prompts = session->prompts(&cursor);
         result.setPrompts(prompts);
+        result.setNextCursor(cursor);
         return result;
     });
 
-    addRequestHandler([this](const QUuid &session, const QMcpGetPromptRequest &request, QMcpJSONRPCErrorError *error) {
+    addRequestHandler([this](const QUuid &sessionId, const QMcpGetPromptRequest &request, QMcpJSONRPCErrorError *error) {
         QMcpGetPromptResult result;
-        if (!d->initialized.value(session, false)) {
-            error->setCode(1);
-            error->setMessage("Not initialized"_L1);
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
             return result;
-        }
-
         const auto params = request.params();
         const auto name = params.name();
-        const auto pairs = d->prompts.value(session);
-        auto messages = result.messages();
-        for (const auto &pair : pairs) {
-            if (pair.first.name() == name) {
-                messages.append(pair.second);
-            }
-        }
-        result.setMessages(messages);
+        result.setMessages(session->messages(name));
         return result;
     });
 
-    addNotificationHandler([this](const QUuid &session, const QMcpRootsListChangedNotification &notification) {
+    addNotificationHandler([this](const QUuid &sessionId, const QMcpRootsListChangedNotification &notification) {
         Q_UNUSED(notification);
-        if (!d->initialized.value(session, false))
+        auto session = d->findSession(sessionId, true);
+        if (!session)
             return;
 
         QMcpListRootsRequest request;
-        this->request(session, request, [this](const QUuid &session, const QMcpListRootsResult &result) {
-            d->roots[session] = result.roots();
-            emit rootsChanged(session, result.roots());
+        this->request(sessionId, request, [this](const QUuid &sessionId, const QMcpListRootsResult &result) {
+            auto session = d->findSession(sessionId, true);
+            if (session)
+                session->setRoots(result.roots());
         });
     });
 }
@@ -376,93 +366,6 @@ void QMcpServer::setProtocolVersion(const QString &protocolVersion)
     emit protocolVersionChanged(protocolVersion);
 }
 
-bool QMcpServer::isInitialized(const QUuid &session) const
-{
-    return d->initialized.value(session, false);
-}
-
-void QMcpServer::notifyResourceUpdated(const QUuid &session, const QMcpResource &resource)
-{
-    const auto uri = resource.uri();
-    if (d->subscriptions.contains(session, uri)) {
-        QMcpResourceUpdatedNotification notification;
-        auto params = notification.params();
-        params.setUri(uri);
-        notification.setParams(params);
-        send(session, notification.toJsonObject());
-    }
-}
-
-void QMcpServer::appendResource(const QUuid &session, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
-{
-    d->resources[session].append(std::make_pair(resource, content));
-}
-
-void QMcpServer::insertResource(const QUuid &session, int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
-{
-    d->resources[session].insert(index, std::make_pair(resource, content));
-}
-
-void QMcpServer::replaceResource(const QUuid &session, int index, const QMcpResource resource, const QMcpReadResourceResultContents &content)
-{
-    d->resources[session][index] = std::make_pair(resource, content);
-    notifyResourceUpdated(session, resource);
-}
-
-void QMcpServer::removeResourceAt(const QUuid &session, int index)
-{
-    const auto resource = d->resources[session][index].first;
-    const auto content = d->resources[session][index].second;
-    d->resources[session].removeAt(index);
-}
-
-void QMcpServer::appendPrompt(const QUuid &session, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
-{
-    d->prompts[session].append(std::make_pair(prompt, message));
-}
-
-void QMcpServer::insertPrompt(const QUuid &session, int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
-{
-    d->prompts[session].insert(index, std::make_pair(prompt, message));
-}
-
-void QMcpServer::replacePrompt(const QUuid &session, int index, const QMcpPrompt prompt, const QMcpPromptMessage &message)
-{
-    d->prompts[session][index] = std::make_pair(prompt, message);
-}
-
-void QMcpServer::removePromptAt(const QUuid &session, int index)
-{
-    const auto prompt = d->prompts[session][index].first;
-    const auto content = d->prompts[session][index].second;
-    d->prompts[session].removeAt(index);
-}
-
-QList<QMcpRoot> QMcpServer::roots(const QUuid &session) const
-{
-    return d->roots.value(session);
-}
-
-void QMcpServer::appendRoot(const QUuid &session, const QMcpRoot &root)
-{
-    d->roots[session].append(root);
-}
-
-void QMcpServer::insertRoot(const QUuid &session, int index, const QMcpRoot &root)
-{
-    d->roots[session].insert(index, root);
-}
-
-void QMcpServer::replaceRoot(const QUuid &session, int index, const QMcpRoot &root)
-{
-    d->roots[session][index] = root;
-}
-
-void QMcpServer::removeRootAt(const QUuid &session, int index)
-{
-    d->roots[session].removeAt(index);
-}
-
 QList<QMcpTool> QMcpServer::tools() const
 {
     QList<QMcpTool> ret;
@@ -510,167 +413,6 @@ QList<QMcpTool> QMcpServer::tools() const
         tool.setInputSchema(inputSchema);
         ret.append(tool);
     }
-    return ret;
-}
-
-namespace {
-template<class T>
-T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &args)
-{
-    T result;
-    QGenericReturnArgument ret(method->returnMetaType().name(), &result);
-    switch (method->parameterCount()) {
-    case 0:
-        method->invoke(object,
-                  ret
-                  );
-        break;
-    case 1:
-        method->invoke(object,
-                  ret,
-                  QGenericArgument(args.at(0).typeName(), args.at(0).constData())
-                  );
-        break;
-    case 2:
-        method->invoke(object,
-                  ret,
-                  QGenericArgument(args.at(0).typeName(), args.at(0).constData()),
-                  QGenericArgument(args.at(1).typeName(), args.at(1).constData())
-                  );
-        break;
-    case 3:
-        method->invoke(object,
-                  ret,
-                  QGenericArgument(args.at(0).typeName(), args.at(0).constData()),
-                  QGenericArgument(args.at(1).typeName(), args.at(1).constData()),
-                  QGenericArgument(args.at(2).typeName(), args.at(2).constData())
-                  );
-        break;
-    default:
-        qFatal() << "callMethod: too many parameters, or not implemented in switch.";
-    }
-    return result;
-}
-}
-
-QList<QMcpCallToolResultContent> QMcpServer::callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok)
-{
-    QList<QMcpCallToolResultContent> ret;
-    bool found = false;
-    const auto *mo = metaObject();
-    for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
-        const auto mm = mo->method(i);
-        if (mm.name() != name.toUtf8())
-            continue;
-
-        auto checkParams = [](const QStringList &a, QByteArrayList b) {
-            QByteArrayList c;
-            for (const auto &s : a)
-                c.append(s.toUtf8());
-            std::sort(b.begin(), b.end(), std::less<QByteArray>());
-            std::sort(c.begin(), c.end(), std::less<QByteArray>());
-            return b == c;
-        };
-
-        const auto names = mm.parameterNames();
-        switch (mm.parameterCount() - params.size()) {
-        case 0: // exact match
-            if (!checkParams(params.keys(), names))
-                continue;
-            break;
-        case 1: // may contain session
-            if (!checkParams(params.keys() << "session"_L1, names))
-                continue;
-            break;
-        default:
-            continue;
-        }
-
-        QVariantList convertedArgs;
-        convertedArgs.reserve(mm.parameterCount());
-
-        const auto types = mm.parameterTypes();
-        for (int j = 0; j < mm.parameterCount(); j++) {
-            const auto type = types.at(j);
-            const auto name = QString::fromUtf8(names.at(j));
-
-            const auto metaType = QMetaType::fromName(type);
-            switch (metaType.id()) {
-            case QMetaType::UnknownType:
-                qWarning() << "Unknown or unsupported type:" << type;
-                break;
-            case QMetaType::QUuid:
-                convertedArgs.append(session);
-                continue;
-            default: {
-                auto value = params.value(name).toVariant();
-                if (!value.convert(mm.parameterMetaType(j))) {
-                    qWarning() << "Failed to convert JSON value to type:" << type;
-                    break;
-                }
-                convertedArgs.append(value);
-                break; }
-            }
-
-        }
-
-        if (convertedArgs.count() != mm.parameterCount())
-            continue;
-
-        switch (mm.returnMetaType().id()) {
-        case QMetaType::Void: {
-            switch (mm.parameterCount()) {
-            case 0:
-                mm.invoke(this,
-                          Qt::DirectConnection
-                          );
-                break;
-            case 1:
-                mm.invoke(this,
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData())
-                          );
-                break;
-            case 2:
-                mm.invoke(this,
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData())
-                          );
-                break;
-            case 3:
-                mm.invoke(this,
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
-                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData())
-                          );
-                break;
-            default:
-                qFatal() << "invokeMethodWithJson: too many parameters, or not implemented in switch.";
-            }
-            found = true;
-            return ret; }
-        case QMetaType::QString: {
-            found = true;
-            QString text = callMethod<QString>(this, &mm, convertedArgs);
-            ret.append(QMcpTextContent(text));
-            break; }
-#ifdef QT_GUI_LIB
-        case QMetaType::QImage: {
-            found = true;
-            QImage image = callMethod<QImage>(this, &mm, convertedArgs);
-            ret.append(QMcpImageContent(image));
-            break; }
-#endif // QT_GUI_LIB
-        default:
-            qFatal() << mm.returnMetaType() << "not supported yet";
-        }
-    }
-    if (ok)
-        *ok = found;
-    if (!found)
-        qWarning() << name << "not found for " << params;
     return ret;
 }
 

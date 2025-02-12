@@ -18,6 +18,7 @@
 #include <QtMcpCommon/QMcpServerCapabilities>
 #include <QtMcpCommon/QMcpTool>
 #include <QtMcpServer/qmcpserverglobal.h>
+#include <QtMcpServer/qmcpserversession.h>
 #include <concepts>
 #include <functional>
 
@@ -142,13 +143,9 @@ public:
     QMcpServerCapabilities capabilities() const;
     QString instructions() const;
     QString protocolVersion() const;
-    bool isInitialized(const QUuid &session) const;
 
     QList<QMcpTool> tools() const;
-    QList<QMcpCallToolResultContent> callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok = nullptr);
     virtual QHash<QString, QString> descriptions() const;
-
-    QList<QMcpRoot> roots(const QUuid &session) const;
 
 public slots:
     void setCapabilities(const QMcpServerCapabilities &capabilities);
@@ -156,31 +153,15 @@ public slots:
     void setProtocolVersion(const QString &protocolVersion);
     void start(const QString &args = QString());
 
-protected slots:
-    void appendResource(const QUuid &session, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
-    void insertResource(const QUuid &session, int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
-    void replaceResource(const QUuid &session, int index, const QMcpResource resource, const QMcpReadResourceResultContents &content);
-    void removeResourceAt(const QUuid &session, int index);
-
-    void appendPrompt(const QUuid &session, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
-    void insertPrompt(const QUuid &session, int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
-    void replacePrompt(const QUuid &session, int index, const QMcpPrompt prompt, const QMcpPromptMessage &message);
-    void removePromptAt(const QUuid &session, int index);
-
-    void appendRoot(const QUuid &session, const QMcpRoot &root);
-    void insertRoot(const QUuid &session, int index, const QMcpRoot &root);
-    void replaceRoot(const QUuid &session, int index, const QMcpRoot &root);
-    void removeRootAt(const QUuid &session, int index);
-
 signals:
     void capabilitiesChanged(const QMcpServerCapabilities &capabilities);
     void instructionsChanged(const QString &instructions);
     void protocolVersionChanged(const QString &protocolVersion);
     void started();
-    void initialized(const QUuid &uuid);
+    void newSession(QMcpServerSession *session);
+
     void received(const QUuid &session, const QJsonObject &object);
     void result(const QUuid &session, const QJsonObject &result);
-    void rootsChanged(const QUuid &session, const QList<QMcpRoot> &roots);
 
 private:
     void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);

@@ -1,8 +1,26 @@
 // Copyright (C) 2025 Signal Slot Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <QtCore>
-#include "mcpserver.h"
+#include <QtCore/QCoreApplication>
+#include <QtCore/QCommandLineParser>
+#include <QtMcpServer/QMcpServer>
+
+class McpServer : public QMcpServer
+{
+    Q_OBJECT
+public:
+    explicit McpServer(const QString &backend = "stdio", QObject *parent = nullptr)
+        : QMcpServer(backend, parent) {}
+
+    Q_INVOKABLE QString echo(const QString &message) const {
+        return message;
+    }
+
+    QHash<QString, QString> descriptions() const override {
+        return {  { "echo"_L1, "Echoes back the input"_L1 }
+                , { "echo/message"_L1, "Message to echo"_L1 } };
+    }
+};
 
 int main(int argc, char *argv[])
 {
@@ -28,11 +46,13 @@ int main(int argc, char *argv[])
 
     parser.process(app);
 
-    QString backend = parser.value(backendOption);
-    QString address = parser.value(addressOption);
+    const QString backend = parser.value(backendOption);
+    const QString address = parser.value(addressOption);
 
     McpServer server(backend);
     server.start(address);
 
     return app.exec();
 }
+
+#include "main.moc"

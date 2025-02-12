@@ -16,6 +16,7 @@ qt_internal_add_module(McpServer
         qmcpserverbackendplugin.h
         qmcpserverbackendinterface.h qmcpserverbackendinterface.cpp
         qmcpabstracthttpserver.h qmcpabstracthttpserver.cpp
+        qmcpserversession.h qmcpserversession.cpp
     INCLUDE_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC_LIBRARIES
