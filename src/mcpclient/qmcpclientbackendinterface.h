@@ -4,9 +4,9 @@
 #ifndef QMCPCLIENTBACKENDINTERFACE_H
 #define QMCPCLIENTBACKENDINTERFACE_H
 
+#include <QtCore/QObject>
+#include <QtCore/QJsonObject>
 #include <QtMcpClient/qmcpclientglobal.h>
-#include <QtMcpCommon/QMcpRequest>
-#include <QtMcpCommon/QMcpResult>
 
 QT_BEGIN_NAMESPACE
 

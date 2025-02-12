@@ -9,7 +9,10 @@
 
 QT_BEGIN_NAMESPACE
 
-using QMcpEmptyResult = QMcpResult Q_MCPCOMMON_EXPORT;
+class Q_MCPCOMMON_EXPORT QMcpEmptyResult : public QMcpResult
+{
+    using QMcpResult::QMcpResult;
+};
 
 QT_END_NAMESPACE
 

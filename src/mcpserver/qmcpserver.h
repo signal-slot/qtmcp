@@ -5,13 +5,8 @@
 #define QMCPSERVER_H
 
 #include <QtCore/QObject>
-#include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
 #include <QtMcpCommon/QMcpNotification>
-#include <QtMcpCommon/QMcpPrompt>
-#include <QtMcpCommon/QMcpPromptMessage>
-#include <QtMcpCommon/QMcpReadResourceResultContents>
-#include <QtMcpCommon/QMcpRoot>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResource>
 #include <QtMcpCommon/QMcpResult>

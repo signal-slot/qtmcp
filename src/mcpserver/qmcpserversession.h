@@ -4,13 +4,9 @@
 #ifndef QMCPSERVERSESSION_H
 #define QMCPSERVERSESSION_H
 
-#include <QtCore/QHash>
 #include <QtCore/QJsonObject>
-#include <QtCore/QJsonValue>
 #include <QtCore/QList>
 #include <QtCore/QObject>
-#include <QtCore/QPair>
-#include <QtCore/QScopedPointer>
 #include <QtCore/QUrl>
 #include <QtCore/QUuid>
 #include <QtMcpCommon/QMcpCallToolResultContent>

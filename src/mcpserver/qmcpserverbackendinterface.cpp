@@ -3,11 +3,6 @@
 
 #include "qmcpserverbackendinterface.h"
 
-#include <QtMcpCommon/QMcpRequest>
-#include <QtMcpCommon/QMcpResult>
-#include <QtMcpCommon/QMcpJSONRPCRequest>
-#include <QtMcpCommon/QMcpJSONRPCResponse>
-
 QT_BEGIN_NAMESPACE
 
 QMcpServerBackendInterface::QMcpServerBackendInterface(QObject *parent)

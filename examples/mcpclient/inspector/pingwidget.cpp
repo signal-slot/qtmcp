@@ -5,7 +5,7 @@
 #include "ui_pingwidget.h"
 
 #include <QtMcpCommon/QMcpPingRequest>
-#include <QtMcpCommon/QMcpResult>
+#include <QtMcpCommon/QMcpEmptyResult>
 
 class PingWidget::Private : public Ui::PingWidget
 {
@@ -25,7 +25,7 @@ PingWidget::Private::Private(::PingWidget *parent)
         ping->setEnabled(false);
         q->setLoading(true);
         QMcpPingRequest request;
-        q->client()->request(request, [this](const QMcpResult &result, const QMcpJSONRPCErrorError *) {
+        q->client()->request(request, [this](const QMcpEmptyResult &result, const QMcpJSONRPCErrorError *) {
             Q_UNUSED(result);
             q->setLoading(false);
             ping->setEnabled(true);
