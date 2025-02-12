@@ -46,20 +46,30 @@ void QMcpClientSse::Private::start(const QUrl &url)
         const auto received = eventStream->readAll();
         qDebug() << received;
         data.append(received);
+        QByteArray separator;
         while (true) {
-            int crlf2 = data.indexOf("\r\n\r\n");
-            if (crlf2 < 0)
+            if (separator.isEmpty()) {
+                if (data.contains("\r\n\r\n"))
+                    separator = "\r\n";
+                else if (data.contains("\n\n"))
+                    separator = "\n";
+                else
+                    break;
+            }
+            int separator2 = data.indexOf(QByteArray(separator + separator));
+            if (separator2 < 0)
                 break;
-            const auto chunk = data.left(crlf2);
-            data.remove(0, crlf2 + 4);
+
+            const auto chunk = data.left(separator2);
+            data.remove(0, separator2 + separator.length() * 2);
 
             QByteArrayList lines;
             int from = 0;
-            int crlf = chunk.indexOf("\r\n", from);
-            while (crlf > 0) {
-                lines.append(chunk.mid(from, crlf - from));
-                from = crlf + 2;
-                crlf = chunk.indexOf("\r\n", from);
+            int separator1 = chunk.indexOf(separator, from);
+            while (separator1 > 0) {
+                lines.append(chunk.mid(from, separator1 - from));
+                from = separator1 + separator.length();
+                separator1 = chunk.indexOf(separator, from);
             }
             lines.append(chunk.mid(from));
 
