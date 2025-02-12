@@ -39,6 +39,17 @@ public:
 QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     : q(parent)
 {
+    QMcpServerCapabilitiesResources resources;
+    resources.setListChanged(true);
+    resources.setSubscribe(true);
+    capabilities.setResources(resources);
+    QMcpServerCapabilitiesPrompts prompts;
+    prompts.setListChanged(true);
+    capabilities.setPrompts(prompts);
+    QMcpServerCapabilitiesTools tools;
+    tools.setListChanged(true);
+    capabilities.setTools(tools);
+
     backend = qLoadPlugin<QMcpServerBackendInterface, QMcpServerBackendPlugin>(backendLoader(), type);
     if (!backend) {
         qWarning() << type << "not found";
