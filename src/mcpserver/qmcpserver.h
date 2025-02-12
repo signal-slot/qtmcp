@@ -8,6 +8,8 @@
 #include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
 #include <QtMcpCommon/QMcpNotification>
+#include <QtMcpCommon/QMcpPrompt>
+#include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResource>
@@ -156,6 +158,11 @@ protected slots:
     void insertResource(const QUuid &session, int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
     void replaceResource(const QUuid &session, int index, const QMcpResource resource, const QMcpReadResourceResultContents &content);
     void removeResourceAt(const QUuid &session, int index);
+
+    void appendPrompt(const QUuid &session, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
+    void insertPrompt(const QUuid &session, int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message);
+    void replacePrompt(const QUuid &session, int index, const QMcpPrompt prompt, const QMcpPromptMessage &message);
+    void removePromptAt(const QUuid &session, int index);
 
 signals:
     void capabilitiesChanged(const QMcpServerCapabilities &capabilities);

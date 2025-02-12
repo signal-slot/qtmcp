@@ -33,6 +33,7 @@ public:
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, bool> initialized;
     QHash<QUuid, QList<QPair<QMcpResource, QMcpReadResourceResultContents>>> resources;
+    QHash<QUuid, QList<QPair<QMcpPrompt, QMcpPromptMessage>>> prompts;
     QMultiHash<QUuid, QUrl> subscriptions;
 };
 
@@ -251,6 +252,44 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         }
         return result;
     });
+
+    addRequestHandler([this](const QUuid &session, const QMcpListPromptsRequest &, QMcpJSONRPCErrorError *error) {
+        QMcpListPromptsResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+        const auto pairs = d->prompts.value(session);
+        auto prompts = result.prompts();
+        prompts.reserve(pairs.length());
+        for (const auto &pair : pairs) {
+            prompts.append(pair.first);
+        }
+        result.setPrompts(prompts);
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpGetPromptRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpGetPromptResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+
+        const auto params = request.params();
+        const auto name = params.name();
+        const auto pairs = d->prompts.value(session);
+        auto messages = result.messages();
+        for (const auto &pair : pairs) {
+            if (pair.first.name() == name) {
+                messages.append(pair.second);
+            }
+        }
+        result.setMessages(messages);
+        return result;
+    });
 }
 
 QMcpServer::~QMcpServer() = default;
@@ -362,6 +401,28 @@ void QMcpServer::removeResourceAt(const QUuid &session, int index)
     const auto resource = d->resources[session][index].first;
     const auto content = d->resources[session][index].second;
     d->resources[session].removeAt(index);
+}
+
+void QMcpServer::appendPrompt(const QUuid &session, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
+{
+    d->prompts[session].append(std::make_pair(prompt, message));
+}
+
+void QMcpServer::insertPrompt(const QUuid &session, int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
+{
+    d->prompts[session].insert(index, std::make_pair(prompt, message));
+}
+
+void QMcpServer::replacePrompt(const QUuid &session, int index, const QMcpPrompt prompt, const QMcpPromptMessage &message)
+{
+    d->prompts[session][index] = std::make_pair(prompt, message);
+}
+
+void QMcpServer::removePromptAt(const QUuid &session, int index)
+{
+    const auto prompt = d->prompts[session][index].first;
+    const auto content = d->prompts[session][index].second;
+    d->prompts[session].removeAt(index);
 }
 
 QList<QMcpTool> QMcpServer::tools() const
