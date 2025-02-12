@@ -10,6 +10,7 @@
 #include <QtMcpCommon/QMcpNotification>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResult>
+#include <QtMcpCommon/QMcpServerCapabilities>
 #include <QtMcpCommon/QMcpTool>
 #include <QtMcpServer/qmcpserverglobal.h>
 #include <concepts>
@@ -20,6 +21,9 @@ QT_BEGIN_NAMESPACE
 class Q_MCPSERVER_EXPORT QMcpServer : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QMcpServerCapabilities capabilities READ capabilities WRITE setCapabilities NOTIFY capabilitiesChanged FINAL)
+    Q_PROPERTY(QString instructions READ instructions WRITE setInstructions NOTIFY instructionsChanged FINAL)
+    Q_PROPERTY(QString protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
 public:
     static QStringList backends();
 
@@ -130,16 +134,26 @@ public:
         registerNotificationHandler(Notification().method(), wrapper);
     }
 
+    QMcpServerCapabilities capabilities() const;
+    QString instructions() const;
+    QString protocolVersion() const;
+    bool isInitialized(const QUuid &session) const;
     QList<QMcpTool> tools() const;
     QList<QMcpCallToolResultContent> callTool(const QUuid &session, const QString &name, const QJsonObject &params, bool *ok = nullptr);
     virtual QHash<QString, QString> descriptions() const;
 
 public slots:
+    void setCapabilities(const QMcpServerCapabilities &capabilities);
+    void setInstructions(const QString &instructions);
+    void setProtocolVersion(const QString &protocolVersion);
     void start(const QString &args = QString());
 
 signals:
+    void capabilitiesChanged(const QMcpServerCapabilities &capabilities);
+    void instructionsChanged(const QString &instructions);
+    void protocolVersionChanged(const QString &protocolVersion);
     void started();
-    void newSessionStarted(const QUuid &uuid);
+    void initialized(const QUuid &uuid);
     void received(const QUuid &session, const QJsonObject &object);
     void result(const QUuid &session, const QJsonObject &result);
 

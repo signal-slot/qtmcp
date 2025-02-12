@@ -8,13 +8,13 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    app.setApplicationName("Mcp Window Server");
+    app.setApplicationName("Qt Mcp Example Window Server");
     app.setApplicationVersion("1.0");
     app.setOrganizationName("Signal Slot Inc.");
     app.setOrganizationDomain("signal-slot.co.jp");
 
     QCommandLineParser parser;
-    parser.setApplicationDescription("MCP Window Server Example");
+    parser.setApplicationDescription(app.applicationName());
     parser.addHelpOption();
     parser.addVersionOption();
 

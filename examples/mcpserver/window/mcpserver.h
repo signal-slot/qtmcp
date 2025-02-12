@@ -12,14 +12,9 @@ class McpServer : public QMcpServer
     Q_OBJECT
 public:
     explicit McpServer(const QString &backend = "stdio", QObject *parent = nullptr);
-    ~McpServer() override;
 
     Q_INVOKABLE QImage screenShot() const;
     Q_INVOKABLE void moveCursor(int x, int y);
-
-private:
-    class Private;
-    QScopedPointer<Private> d;
 };
 
 #endif // MCPSERVER_H

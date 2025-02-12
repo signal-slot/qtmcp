@@ -7,13 +7,12 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("Mcp Echo Server");
+    app.setApplicationName("Qt Mcp Example Echo Server");
     app.setApplicationVersion("1.0");
     app.setOrganizationName("Signal Slot Inc.");
     app.setOrganizationDomain("signal-slot.co.jp");
 
     QCommandLineParser parser;
-    parser.setApplicationDescription("MCP Echo Server Example");
     parser.addHelpOption();
     parser.addVersionOption();
 

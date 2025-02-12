@@ -19,93 +19,101 @@ Q_GLOBAL_STATIC_WITH_ARGS(QFactoryLoader, backendLoader,
 class QMcpServer::Private
 {
 public:
-    Private(const QString &type, QMcpServer *parent)
-        : q(parent)
-    {
-        backend = qLoadPlugin<QMcpServerBackendInterface, QMcpServerBackendPlugin>(backendLoader(), type);
-        if (!backend) {
-            qWarning() << type << "not found";
-            qWarning() << "call QMcpServer::backends() to get a list of available backends";
-            qWarning() << QMcpServer::backends();
-            return;
-        }
-
-        connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
-        connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, &QMcpServer::newSessionStarted);
-        connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {
-            // response
-            if (object.contains("id"_L1)) {
-                const auto id = object.value("id"_L1);
-                if (object.contains("result"_L1)) {
-                    if (callbacks[session].contains(id)) {
-                        const auto result = object.value("result"_L1).toObject();
-                        callbacks[session].take(id)(result);
-                        return;
-                    }
-                } else if (object.contains("error"_L1)) {
-                    qWarning() << "TODO: error handling" << object;;
-                    if (callbacks[session].contains(id)) {
-                        callbacks[session].take(id)({});
-                        return;
-                    }
-                }
-            }
-            if (object.contains("method"_L1)) {
-                const auto method = object.value("method"_L1).toString();
-
-                // request
-                if (object.contains("id"_L1)) {
-                    const auto id = object.value("id"_L1);
-                    if (requestHandlers.contains(method)) {
-                        const auto handler = requestHandlers.value(method);
-                        QMcpJSONRPCErrorError error;
-                        const auto result = handler(session, object, &error);
-                        if (error.code() > 0) {
-                            QMcpJSONRPCError response;
-                            response.setId(id);
-                            response.setError(error);
-                            q->send(session, response.toJsonObject());
-                        } else {
-                            QMcpJSONRPCResponse response;
-                            response.setId(id);
-                            auto object = response.toJsonObject();
-                            object.insert("result"_L1, result);
-                            q->send(session, object);
-                        }
-                    } else {
-                        // Respond with error
-                        QMcpJSONRPCError response;
-                        response.setId(id.toVariant());
-                        auto error = response.error();
-                        error.setMessage("Server doesn't handle the request"_L1);
-                        response.setError(error);
-                        q->send(session, response.toJsonObject());
-                    }
-                    return;
-                }
-
-                // notification
-                if (notificationHandlers.contains(method)) {
-                    const auto handlers = notificationHandlers.values(method);
-                    for (auto &handler : handlers) {
-                        handler(session, object);
-                    }
-                    return;
-                }
-            }
-
-            qWarning() << "not handled" << object;
-        });
-    }
+    Private(const QString &type, QMcpServer *parent);
 
 private:
     QMcpServer *q;
 public:
     QMcpServerBackendInterface *backend = nullptr;
+    QMcpServerCapabilities capabilities;
+    QString instructions;
+    QString protocolVersion = "2024-11-05"_L1;
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
+    QHash<QUuid, bool> initialized;
 };
+
+QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
+    : q(parent)
+{
+    backend = qLoadPlugin<QMcpServerBackendInterface, QMcpServerBackendPlugin>(backendLoader(), type);
+    if (!backend) {
+        qWarning() << type << "not found";
+        qWarning() << "call QMcpServer::backends() to get a list of available backends";
+        qWarning() << QMcpServer::backends();
+        return;
+    }
+
+    connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
+    connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &session) {
+        initialized.insert(session, false);
+    });
+    connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {
+        // response
+        if (object.contains("id"_L1)) {
+            const auto id = object.value("id"_L1);
+            if (object.contains("result"_L1)) {
+                if (callbacks[session].contains(id)) {
+                    const auto result = object.value("result"_L1).toObject();
+                    callbacks[session].take(id)(result);
+                    return;
+                }
+            } else if (object.contains("error"_L1)) {
+                qWarning() << "TODO: error handling" << object;;
+                if (callbacks[session].contains(id)) {
+                    callbacks[session].take(id)({});
+                    return;
+                }
+            }
+        }
+        if (object.contains("method"_L1)) {
+            const auto method = object.value("method"_L1).toString();
+
+            // request
+            if (object.contains("id"_L1)) {
+                const auto id = object.value("id"_L1);
+                if (requestHandlers.contains(method)) {
+                    const auto handler = requestHandlers.value(method);
+                    QMcpJSONRPCErrorError error;
+                    const auto result = handler(session, object, &error);
+                    if (error.code() > 0) {
+                        QMcpJSONRPCError response;
+                        response.setId(id);
+                        response.setError(error);
+                        q->send(session, response.toJsonObject());
+                    } else {
+                        QMcpJSONRPCResponse response;
+                        response.setId(id);
+                        auto object = response.toJsonObject();
+                        object.insert("result"_L1, result);
+                        q->send(session, object);
+                    }
+                } else {
+                    // Respond with error
+                    QMcpJSONRPCError response;
+                    response.setId(id.toVariant());
+                    auto error = response.error();
+                    error.setMessage("Server doesn't handle the request"_L1);
+                    response.setError(error);
+                    q->send(session, response.toJsonObject());
+                }
+                return;
+            }
+
+            // notification
+            if (notificationHandlers.contains(method)) {
+                const auto handlers = notificationHandlers.values(method);
+                for (auto &handler : handlers) {
+                    handler(session, object);
+                }
+                return;
+            }
+        }
+
+        qWarning() << "not handled" << object;
+    });
+}
 
 QStringList QMcpServer::backends()
 {
@@ -115,7 +123,68 @@ QStringList QMcpServer::backends()
 QMcpServer::QMcpServer(const QString &backend, QObject *parent)
     : QObject(parent)
     , d(new Private(backend, this))
-{}
+{
+    addRequestHandler([this](const QUuid &session, const QMcpInitializeRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpInitializeResult result;
+        if (d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Initialized"_L1);
+            return result;
+        }
+        if (request.params().protocolVersion() != "2024-11-05"_L1) {
+            error->setCode(20241105);
+            error->setMessage("Protocol Version %1 is not supported"_L1.arg(request.params().protocolVersion()));
+            return result;
+        }
+        result.setCapabilities(d->capabilities);
+        result.setInstructions(d->instructions);
+        auto serverInfo = result.serverInfo();
+        serverInfo.setName(QCoreApplication::applicationName());
+        serverInfo.setVersion(QCoreApplication::applicationVersion());
+        result.setServerInfo(serverInfo);
+        result.setProtocolVersion(d->protocolVersion);
+        return result;
+    });
+    addNotificationHandler([this](const QUuid &session, const QMcpInitializedNotification &notification) {
+        Q_UNUSED(notification);
+        d->initialized[session] = true;
+        emit initialized(session);
+    });
+
+    addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
+        Q_UNUSED(session); // ping can be accepted even before initialization
+        QMcpResult result;
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpListToolsRequest &, QMcpJSONRPCErrorError *error) {
+        QMcpListToolsResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+        result.setTools(tools());
+        return result;
+    });
+
+    addRequestHandler([this](const QUuid &session, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpCallToolResult result;
+        if (!d->initialized.value(session, false)) {
+            error->setCode(1);
+            error->setMessage("Not initialized"_L1);
+            return result;
+        }
+
+        const auto params = request.params();
+        bool ok;
+        auto contents = callTool(session, params.name(), params.arguments(), &ok);
+        if (ok) {
+            result.setContent(contents);
+        }
+        return result;
+    });
+}
 
 QMcpServer::~QMcpServer() = default;
 
@@ -150,6 +219,47 @@ void QMcpServer::registerRequestHandler(const QString &method, std::function<QJs
 void QMcpServer::registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)> callback)
 {
     d->notificationHandlers.insert(method, callback);
+}
+
+QMcpServerCapabilities QMcpServer::capabilities() const
+{
+    return d->capabilities;
+}
+
+void QMcpServer::setCapabilities(const QMcpServerCapabilities &capabilities)
+{
+    if (d->capabilities == capabilities) return;
+    d->capabilities = capabilities;
+    emit capabilitiesChanged(capabilities);
+}
+
+QString QMcpServer::instructions() const
+{
+    return d->instructions;
+}
+
+void QMcpServer::setInstructions(const QString &instructions)
+{
+    if (d->instructions == instructions) return;
+    d->instructions = instructions;
+    emit instructionsChanged(instructions);
+}
+
+QString QMcpServer::protocolVersion() const
+{
+    return d->protocolVersion;
+}
+
+void QMcpServer::setProtocolVersion(const QString &protocolVersion)
+{
+    if (d->protocolVersion == protocolVersion) return;
+    d->protocolVersion = protocolVersion;
+    emit protocolVersionChanged(protocolVersion);
+}
+
+bool QMcpServer::isInitialized(const QUuid &session) const
+{
+    return d->initialized.value(session, false);
 }
 
 QList<QMcpTool> QMcpServer::tools() const
