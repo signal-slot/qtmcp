@@ -5,7 +5,6 @@
 #define QMCPRESOURCELISTCHANGEDNOTIFICATION_H
 
 #include <QtMcpCommon/qmcpnotification.h>
-#include <QtMcpCommon/qmcpresourcelistchangednotificationparams.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -17,8 +16,6 @@ class Q_MCPCOMMON_EXPORT QMcpResourceListChangedNotification : public QMcpNotifi
 {
     Q_GADGET
 
-    Q_PROPERTY(QMcpResourceListChangedNotificationParams params READ params WRITE setParams)
-
 public:
     QMcpResourceListChangedNotification() : QMcpNotification(new Private) {}
 
@@ -27,23 +24,12 @@ public:
         return "notifications/resources/list_changed"_L1;
     }
 
-    QMcpResourceListChangedNotificationParams params() const {
-        return d<Private>()->params;
-    }
-
-    void setParams(const QMcpResourceListChangedNotificationParams &params) {
-        if (this->params() == params) return;
-        d<Private>()->params = params;
-    }
-
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
 
 private:
     struct Private : public QMcpNotification::Private {
-        QMcpResourceListChangedNotificationParams params;
-
         Private *clone() const override { return new Private(*this); }
     };
 };

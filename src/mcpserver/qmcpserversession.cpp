@@ -71,11 +71,13 @@ void QMcpServerSession::removeResourceTemplateAt(int index)
 void QMcpServerSession::appendResource(const QMcpResource &resource, const QMcpReadResourceResultContents &content)
 {
     d->resources.append(qMakePair(resource, content));
+    emit resourceListChanged();
 }
 
 void QMcpServerSession::insertResource(int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
 {
     d->resources.insert(index, qMakePair(resource, content));
+    emit resourceListChanged();
 }
 
 void QMcpServerSession::replaceResource(int index, const QMcpResource resource, const QMcpReadResourceResultContents &content)
@@ -87,6 +89,7 @@ void QMcpServerSession::replaceResource(int index, const QMcpResource resource, 
 void QMcpServerSession::removeResourceAt(int index)
 {
     d->resources.removeAt(index);
+    emit resourceListChanged();
 }
 
 QList<QMcpResourceTemplate> QMcpServerSession::resourceTemplates() const

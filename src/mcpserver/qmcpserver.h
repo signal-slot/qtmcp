@@ -187,12 +187,12 @@ public:
         \param notification Notification object inheriting from QMcpNotification
     */
     template<typename Notification>
-    void notify(const Notification &notification)
+    void notify(const QUuid &session, const Notification &notification)
     {
         static_assert(std::is_base_of<QMcpNotification, Notification>::value, "Notification must inherit from QMcpNotification");
 
         auto json = notification.toJsonObject();
-        send(json);
+        send(session, json);
     }
 
 

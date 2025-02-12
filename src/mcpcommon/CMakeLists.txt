@@ -113,7 +113,6 @@ qt_internal_add_module(McpCommon
         qmcpresource.h
         qmcpresourcecontents.h
         qmcpresourcelistchangednotification.h
-        qmcpresourcelistchangednotificationparams.h
         qmcpresourcelistchangednotificationparamsmeta.h
         qmcpresourcereference.h
         qmcpresourcetemplate.h

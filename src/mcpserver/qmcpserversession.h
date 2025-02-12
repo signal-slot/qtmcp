@@ -188,6 +188,7 @@ public slots:
 signals:
     void initializedChanged(bool initialized);
     void resourceUpdated(const QMcpResource &resource);
+    void resourceListChanged();
     void rootsChanged(const QList<QMcpRoot> &roots);
 
 private:

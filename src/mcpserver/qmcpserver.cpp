@@ -69,9 +69,13 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                 auto params = notification.params();
                 params.setUri(uri);
                 notification.setParams(params);
-                q->send(session->sessionId(), notification.toJsonObject());
+                q->notify(session->sessionId(), notification);
             }
 
+        });
+        connect(session, &QMcpServerSession::resourceListChanged, q, [this, session]() {
+            QMcpResourceListChangedNotification notification;
+            q->notify(session->sessionId(), notification);
         });
         emit q->newSession(session);
     });
