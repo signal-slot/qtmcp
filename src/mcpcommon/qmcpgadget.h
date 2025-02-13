@@ -161,14 +161,18 @@ public:
     QMcpGadget &operator=(const QMcpGadget &) = default;
     void swap(QMcpGadget &other) { data.swap(other.data); }
 
-    template <class T>
-    bool operator!=(const T &other) const {
+    bool operator!=(const QMcpGadget &other) const {
         return !operator==(other);
     }
 
-    template <class T>
-    bool operator==(const T &other) const {
-        static const auto mo = metaObject();
+    bool operator==(const QMcpGadget &other) const {
+        if (typeid(*this) != typeid(other)) {
+            return false;
+        }
+        if (data == other.data) {
+            return true;
+        }
+        const auto mo = metaObject();
         for (int i = 0; i < mo->propertyCount(); ++i) {
             const auto property = mo->property(i);
             const auto value = property.readOnGadget(&other);

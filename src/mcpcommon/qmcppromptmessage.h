@@ -32,7 +32,7 @@ public:
         return d<Private>()->content;
     }
 
-    void setContent(const QMcpPromptMessageContent& content) {
+    void setContent(const QMcpPromptMessageContent &content) {
         if (this->content() == content) return;
         d<Private>()->content = content;
     }
@@ -41,7 +41,7 @@ public:
         return d<Private>()->role;
     }
 
-    void setRole(const QMcpRole::QMcpRole& role) {
+    void setRole(const QMcpRole::QMcpRole &role) {
         if (this->role() == role) return;
         d<Private>()->role = role;
     }

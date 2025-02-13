@@ -517,6 +517,8 @@ bool QMcpServerSession::isSubscribed(const QUrl &uri) const
 void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &params)
 {
     auto server = qobject_cast<QMcpServer *>(parent());
+    if (!server)
+        return;
     QMcpCreateMessageRequest request;
     request.setParams(params);
     server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {

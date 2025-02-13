@@ -21,6 +21,24 @@ class Q_MCPCOMMON_EXPORT QMcpPromptMessageContent : public QMcpAnyOf
     Q_PROPERTY(QMcpEmbeddedResource embeddedResource READ embeddedResource WRITE setEmbeddedResource)
 public:
     QMcpPromptMessageContent() : QMcpAnyOf(new Private) {}
+    QMcpPromptMessageContent(const QMcpTextContent &textContent)
+        : QMcpAnyOf(new Private)
+    {
+        setRefType("textContent"_ba);
+        d<Private>()->textContent = textContent;
+    }
+    QMcpPromptMessageContent(const QMcpImageContent &imageContent)
+        : QMcpAnyOf(new Private)
+    {
+        setRefType("imageContent"_ba);
+        d<Private>()->imageContent = imageContent;
+    }
+    QMcpPromptMessageContent(const QMcpEmbeddedResource &embeddedResource)
+        : QMcpAnyOf(new Private)
+    {
+        setRefType("embeddedResource"_ba);
+        d<Private>()->embeddedResource = embeddedResource;
+    }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;

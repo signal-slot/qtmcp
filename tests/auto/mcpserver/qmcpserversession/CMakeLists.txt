@@ -4,9 +4,9 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-qt_internal_add_test(tst_qmcpserver
+qt_internal_add_test(tst_qmcpserversession
     SOURCES
-        tst_qmcpserver.cpp
+        tst_qmcpserversession.cpp
     LIBRARIES
         Qt::McpServer
         Qt::Test
