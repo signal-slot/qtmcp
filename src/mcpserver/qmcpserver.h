@@ -297,6 +297,9 @@ public slots:
     */
     void start(const QString &args = QString());
 
+    void registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions = {});
+    void unregisterToolSet(QObject *toolSet);
+
 signals:
     /*!
         Emitted when the server capabilities change.

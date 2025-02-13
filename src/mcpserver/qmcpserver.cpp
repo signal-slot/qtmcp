@@ -34,6 +34,7 @@ public:
     QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, QMcpServerSession *> sessions;
+    QHash<QObject *, QHash<QString, QString>> toolSets;
 };
 
 QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
@@ -62,6 +63,15 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
     connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
         auto session = new QMcpServerSession(sessionId, q);
+
+        // register self as tool set if it inherits from QMcpServer
+        if (q->metaObject() != &QMcpServer::staticMetaObject)
+            session->registerToolSet(q, q->toolDescriptions());
+
+        // register known tool set
+        for (auto i = toolSets.cbegin(), end = toolSets.cend(); i != end; ++i)
+            session->registerToolSet(i.key(), i.value());
+
         sessions.insert(sessionId, session);
         connect(session, &QMcpServerSession::resourceUpdated, q, [this, session](const QMcpResource &resource) {
             const auto uri = resource.uri();
@@ -335,6 +345,24 @@ void QMcpServer::start(const QString &args)
 {
     if (!d->backend) return;
     d->backend->start(args);
+}
+
+void QMcpServer::registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions)
+{
+    d->toolSets.insert(toolSet, descriptions);
+    const auto sessions = d->sessions.values();
+    for (auto *session : sessions) {
+        session->registerToolSet(toolSet, descriptions);
+    }
+}
+
+void QMcpServer::unregisterToolSet(QObject *toolSet)
+{
+    d->toolSets.remove(toolSet);
+    const auto sessions = d->sessions.values();
+    for (auto *session : sessions) {
+        session->unregisterToolSet(toolSet);
+    }
 }
 
 void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::function<void(const QUuid &session, const QJsonObject &)> callback)

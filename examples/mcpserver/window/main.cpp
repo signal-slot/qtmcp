@@ -3,7 +3,8 @@
 
 #include <QtCore>
 #include <QtGui/QGuiApplication>
-#include "mcpserver.h"
+#include <QtMcpServer/QMcpServer>
+#include "tools.h"
 
 int main(int argc, char *argv[])
 {
@@ -33,7 +34,14 @@ int main(int argc, char *argv[])
     QString backend = parser.value(backendOption);
     QString address = parser.value(addressOption);
 
-    McpServer server(backend);
+    QMcpServer server(backend);
+    server.registerToolSet(new Tools(&server)
+                           , {
+                            { "screenShot", "Take screen shot of whole screen" },
+                            { "moveCursor", "Move cursor to specified position" },
+                            { "moveCursor/x", "X coordinate of cursor" },
+                            { "moveCursor/y", "Y coordinate of cursor" },
+                            });
     server.start(address);
 
     return app.exec();

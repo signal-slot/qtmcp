@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 qt_add_executable(window
     main.cpp
-    mcpserver.h mcpserver.cpp
+    tools.h tools.cpp
 )
 
 target_link_libraries(window PRIVATE

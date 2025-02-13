@@ -28,9 +28,7 @@ public:
 QMcpServerSession::QMcpServerSession(const QUuid &sessionId, QMcpServer *parent)
     : QObject(parent)
     , d(new Private(sessionId))
-{
-    registerToolSet(parent, parent->toolDescriptions());
-}
+{}
 
 QMcpServerSession::~QMcpServerSession() = default;
 
@@ -223,6 +221,7 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         const auto mm = mo->method(i);
         QMcpTool tool;
         const auto name = QString::fromUtf8(mm.name());
+        qDebug() << name;
         tool.setName(prefix + name);
         if (descriptions.contains(name)) {
             tool.setDescription(descriptions.value(name));
@@ -407,25 +406,25 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
             case QMetaType::Void: {
                 switch (mm.parameterCount()) {
                 case 0:
-                    mm.invoke(parent(),
+                    mm.invoke(pair.second,
                               Qt::DirectConnection
                               );
                     break;
                 case 1:
-                    mm.invoke(parent(),
+                    mm.invoke(pair.second,
                               Qt::DirectConnection,
                               QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData())
                               );
                     break;
                 case 2:
-                    mm.invoke(parent(),
+                    mm.invoke(pair.second,
                               Qt::DirectConnection,
                               QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
                               QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData())
                               );
                     break;
                 case 3:
-                    mm.invoke(parent(),
+                    mm.invoke(pair.second,
                               Qt::DirectConnection,
                               QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
                               QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
@@ -439,13 +438,13 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
                 break; }
             case QMetaType::QString: {
                 found = true;
-                QString text = callMethod<QString>(parent(), &mm, convertedArgs);
+                QString text = callMethod<QString>(pair.second, &mm, convertedArgs);
                 ret.append(QMcpTextContent(text));
                 break; }
 #ifdef QT_GUI_LIB
             case QMetaType::QImage: {
                 found = true;
-                QImage image = callMethod<QImage>(parent(), &mm, convertedArgs);
+                QImage image = callMethod<QImage>(pair.second, &mm, convertedArgs);
                 ret.append(QMcpImageContent(image));
                 break; }
 #endif // QT_GUI_LIB
