@@ -17,22 +17,11 @@ class Q_MCPCOMMON_EXPORT QMcpToolListChangedNotification : public QMcpNotificati
 {
     Q_GADGET
 
-    Q_PROPERTY(QMcpToolListChangedNotificationParams params READ params WRITE setParams)
-
 public:
     QMcpToolListChangedNotification() : QMcpNotification(new Private) {}
 
     QString method() const final {
         return "notifications/tools/list_changed"_L1;
-    }
-
-    QMcpToolListChangedNotificationParams params() const {
-        return d<Private>()->params;
-    }
-
-    void setParams(const QMcpToolListChangedNotificationParams &params) {
-        if (this->params() == params) return;
-        d<Private>()->params = params;
     }
 
     const QMetaObject* metaObject() const override {
@@ -41,8 +30,6 @@ public:
 
 private:
     struct Private : public QMcpNotification::Private {
-        QMcpToolListChangedNotificationParams params;
-
         Private *clone() const override { return new Private(*this); }
     };
 };

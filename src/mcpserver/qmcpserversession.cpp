@@ -401,7 +401,7 @@ void QMcpServerSession::setRoots(const QList<QMcpRoot> &roots)
 {
     if (d->roots == roots) return;
     d->roots = roots;
-    emit rootsChanged(roots);
+    emit rootsListChanged(roots);
 }
 
 void QMcpServerSession::subscribe(const QUrl &uri)

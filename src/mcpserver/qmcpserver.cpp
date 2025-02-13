@@ -46,9 +46,10 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     QMcpServerCapabilitiesPrompts prompts;
     prompts.setListChanged(true);
     capabilities.setPrompts(prompts);
-    QMcpServerCapabilitiesTools tools;
-    tools.setListChanged(true);
-    capabilities.setTools(tools);
+    // Tools are statically defined in subclasses as invokable methods
+    // QMcpServerCapabilitiesTools tools;
+    // tools.setListChanged(true);
+    // capabilities.setTools(tools);
 
     backend = qLoadPlugin<QMcpServerBackendInterface, QMcpServerBackendPlugin>(backendLoader(), type);
     if (!backend) {
@@ -81,6 +82,11 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             QMcpPromptListChangedNotification notification;
             q->notify(session->sessionId(), notification);
         });
+        connect(session, &QMcpServerSession::toolListChanged, q, [this, session]() {
+            QMcpToolListChangedNotification notification;
+            q->notify(session->sessionId(), notification);
+        });
+
         emit q->newSession(session);
     });
     connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {

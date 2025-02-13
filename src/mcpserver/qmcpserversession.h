@@ -186,6 +186,7 @@ signals:
     void resourceUpdated(const QMcpResource &resource);
     void resourceListChanged();
     void promptListChanged();
+    void toolListChanged();
     void rootsChanged(const QList<QMcpRoot> &roots);
 
 private:

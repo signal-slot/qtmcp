@@ -142,7 +142,6 @@ qt_internal_add_module(McpCommon
         qmcptool.h
         qmcptoolinputschema.h
         qmcptoollistchangednotification.h
-        qmcptoollistchangednotificationparams.h
         qmcptoollistchangednotificationparamsmeta.h
         qmcpunsubscriberequest.h
         qmcpunsubscriberequestparams.h
