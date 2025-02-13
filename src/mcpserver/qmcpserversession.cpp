@@ -4,6 +4,7 @@
 #include "qmcpserversession.h"
 #include "qmcpserver.h"
 #include <QtCore/QMultiHash>
+#include <QtMcpCommon/QMcpCreateMessageRequest>
 
 QT_BEGIN_NAMESPACE
 
@@ -512,5 +513,17 @@ bool QMcpServerSession::isSubscribed(const QUrl &uri) const
 {
     return d->subscriptions.contains(uri);
 }
+
+void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &params)
+{
+    auto server = qobject_cast<QMcpServer *>(parent());
+    QMcpCreateMessageRequest request;
+    request.setParams(params);
+    server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
+        Q_ASSERT(d->sessionId == sessionId);
+        emit createMessageFinished(result);
+    });
+}
+
 
 QT_END_NAMESPACE

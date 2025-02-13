@@ -10,6 +10,8 @@
 #include <QtCore/QUrl>
 #include <QtCore/QUuid>
 #include <QtMcpCommon/QMcpCallToolResultContent>
+#include <QtMcpCommon/QMcpCreateMessageRequestParams>
+#include <QtMcpCommon/QMcpCreateMessageResult>
 #include <QtMcpCommon/QMcpPrompt>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
@@ -193,6 +195,8 @@ public slots:
 
     void setRoots(const QList<QMcpRoot> &roots);
 
+    void createMessage(const QMcpCreateMessageRequestParams &params);
+
 signals:
     void initializedChanged(bool initialized);
     void resourceUpdated(const QMcpResource &resource);
@@ -200,6 +204,7 @@ signals:
     void promptListChanged();
     void toolListChanged();
     void rootsChanged(const QList<QMcpRoot> &roots);
+    void createMessageFinished(const QMcpCreateMessageResult &result);
 
 private:
     class Private;

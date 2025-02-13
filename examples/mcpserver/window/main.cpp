@@ -1,7 +1,7 @@
 // Copyright (C) 2025 Signal Slot Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <QtCore>
+#include <QtCore/QCommandLineParser>
 #include <QtGui/QGuiApplication>
 #include <QtMcpServer/QMcpServer>
 #include "tools.h"
