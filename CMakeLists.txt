@@ -24,8 +24,4 @@ find_package(Qt6 ${PROJECT_VERSION} CONFIG OPTIONAL_COMPONENTS
 
 qt_internal_project_setup()
 
-if(APPLE)
-    add_compile_options(-Wno-unused-lambda-capture)
-endif()
-
 qt_build_repo()
