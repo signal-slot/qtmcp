@@ -162,12 +162,12 @@ public:
         \param request Request object inheriting from QMcpRequest
     */
     template<typename Request>
-    void request(const Request &request)
+    void request(const QUuid &session, const Request &request)
     {
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
 
         auto json = request.toJsonObject();
-        send(json);
+        send(session, json);
     }
 
     /*!
