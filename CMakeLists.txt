@@ -21,7 +21,6 @@ find_package(Qt6 ${PROJECT_VERSION} CONFIG OPTIONAL_COMPONENTS
     Network
 )
 
-
 qt_internal_project_setup()
 
 qt_build_repo()
