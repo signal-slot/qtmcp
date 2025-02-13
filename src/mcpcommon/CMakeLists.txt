@@ -95,7 +95,6 @@ qt_internal_add_module(McpCommon
         qmcpprompt.h
         qmcppromptargument.h
         qmcppromptlistchangednotification.h
-        qmcppromptlistchangednotificationparams.h
         qmcppromptlistchangednotificationparamsmeta.h
         qmcppromptmessage.h
         qmcppromptmessagecontent.h

@@ -77,6 +77,10 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             QMcpResourceListChangedNotification notification;
             q->notify(session->sessionId(), notification);
         });
+        connect(session, &QMcpServerSession::promptListChanged, q, [this, session]() {
+            QMcpPromptListChangedNotification notification;
+            q->notify(session->sessionId(), notification);
+        });
         emit q->newSession(session);
     });
     connect(backend, &QMcpServerBackendInterface::received, q, [this](const QUuid &session, const QJsonObject &object) {

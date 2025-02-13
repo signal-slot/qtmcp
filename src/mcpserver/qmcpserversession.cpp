@@ -143,21 +143,25 @@ QList<QMcpReadResourceResultContents> QMcpServerSession::contents(const QUrl &ur
 void QMcpServerSession::appendPrompt(const QMcpPrompt &prompt, const QMcpPromptMessage &message)
 {
     d->prompts.append(qMakePair(prompt, message));
+    emit promptListChanged();
 }
 
 void QMcpServerSession::insertPrompt(int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
 {
     d->prompts.insert(index, qMakePair(prompt, message));
+    emit promptListChanged();
 }
 
 void QMcpServerSession::replacePrompt(int index, const QMcpPrompt prompt, const QMcpPromptMessage &message)
 {
     d->prompts[index] = qMakePair(prompt, message);
+    emit promptListChanged();
 }
 
 void QMcpServerSession::removePromptAt(int index)
 {
     d->prompts.removeAt(index);
+    emit promptListChanged();
 }
 
 QList<QMcpPrompt> QMcpServerSession::prompts(QString *cursor) const
