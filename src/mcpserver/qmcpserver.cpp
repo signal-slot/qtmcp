@@ -251,7 +251,7 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         auto session = d->findSession(sessionId, true, error);
         if (!session)
             return result;
-        result.setTools(tools());
+        result.setTools(session->tools());
         return result;
     });
 
@@ -400,57 +400,7 @@ void QMcpServer::setProtocolVersion(const QString &protocolVersion)
     emit protocolVersionChanged(protocolVersion);
 }
 
-QList<QMcpTool> QMcpServer::tools() const
-{
-    QList<QMcpTool> ret;
-    const auto *mo = metaObject();
-    qDebug() << mo->className();
-
-    for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
-        const auto mm = mo->method(i);
-        QMcpTool tool;
-        const auto name = QString::fromUtf8(mm.name());
-        tool.setName(name);
-        if (descriptions().contains(name)) {
-            tool.setDescription(descriptions().value(name));
-        }
-        QMcpToolInputSchema inputSchema;
-        auto required = inputSchema.required();
-        auto properties = inputSchema.properties();
-        const auto types = mm.parameterTypes();
-        const auto names = mm.parameterNames();
-        for (int j = 0; j < mm.parameterCount(); j++) {
-            const auto type = QString::fromUtf8(types.at(j));
-            const auto name = QString::fromUtf8(names.at(j));
-            // message
-            QHash<QString, QString> mcpTypes {
-                                             { "QString", "string" },
-                                             { "int", "number" },
-                                             };
-            QSet<QString> internalTypes { "QUuid"_L1 };
-            QJsonObject object;
-            if (mcpTypes.contains(type))
-                object.insert("type"_L1, mcpTypes.value(type));
-            else if (internalTypes.contains(type))
-                continue;
-            else
-                qWarning() << "Unknown type" << type;
-
-            if (descriptions().contains("%1/%2"_L1.arg(tool.name(), name))) {
-                object.insert("description"_L1, descriptions().value("%1/%2"_L1.arg(tool.name(), name)));
-            }
-            properties.insert(name, object);
-            required.append(name);
-        }
-        inputSchema.setProperties(properties);
-        inputSchema.setRequired(required);
-        tool.setInputSchema(inputSchema);
-        ret.append(tool);
-    }
-    return ret;
-}
-
-QHash<QString, QString> QMcpServer::descriptions() const
+QHash<QString, QString> QMcpServer::toolDescriptions() const
 {
     return {};
 }

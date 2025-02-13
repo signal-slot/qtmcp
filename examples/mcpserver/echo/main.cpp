@@ -16,7 +16,7 @@ public:
         return message;
     }
 
-    QHash<QString, QString> descriptions() const override {
+    QHash<QString, QString> toolDescriptions() const override {
         return {  { "echo"_L1, "Echoes back the input"_L1 }
                 , { "echo/message"_L1, "Message to echo"_L1 } };
     }

@@ -16,6 +16,7 @@
 #include <QtMcpCommon/QMcpResource>
 #include <QtMcpCommon/QMcpResourceTemplate>
 #include <QtMcpCommon/QMcpRoot>
+#include <QtMcpCommon/QMcpTool>
 #include <QtMcpServer/qmcpserverglobal.h>
 
 QT_BEGIN_NAMESPACE
@@ -123,6 +124,14 @@ public:
      */
     QList<QMcpPromptMessage> messages(const QString &name) const;
 
+    // Tool management
+    /*!
+        Returns the list of tools in this session.
+        \param cursor Optional cursor for pagination
+        \return List of tools
+     */
+    QList<QMcpTool> tools(QString *cursor = nullptr) const;
+
     /*!
         Executes a tool with the given parameters.
         \param name Name of the tool to execute
@@ -178,6 +187,9 @@ public slots:
 
     void subscribe(const QUrl &uri);
     void unsubscribe(const QUrl &uri);
+
+    void registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions = {});
+    void unregisterToolSet(const QObject *toolSet);
 
     void setRoots(const QList<QMcpRoot> &roots);
 

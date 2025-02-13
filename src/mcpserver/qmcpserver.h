@@ -265,15 +265,10 @@ public:
     QString protocolVersion() const;
 
     /*!
-        Returns the list of tools provided by this server.
+        Returns a mapping of feature identifiers to their toolDescriptions.
+        Can be overridden by derived classes to provide custom toolDescriptions.
     */
-    QList<QMcpTool> tools() const;
-
-    /*!
-        Returns a mapping of feature identifiers to their descriptions.
-        Can be overridden by derived classes to provide custom descriptions.
-    */
-    virtual QHash<QString, QString> descriptions() const;
+    virtual QHash<QString, QString> toolDescriptions() const;
 
 public slots:
     /*!

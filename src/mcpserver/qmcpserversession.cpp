@@ -20,6 +20,7 @@ public:
     QList<QMcpResourceTemplate> resourceTemplates;
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
+    QList<QPair<QMcpTool, QObject *>> tools;
     QList<QMcpRoot> roots;
     QMultiHash<QUrl, QUrl> subscriptions;
 };
@@ -27,7 +28,9 @@ public:
 QMcpServerSession::QMcpServerSession(const QUuid &sessionId, QMcpServer *parent)
     : QObject(parent)
     , d(new Private(sessionId))
-{}
+{
+    registerToolSet(parent, parent->toolDescriptions());
+}
 
 QMcpServerSession::~QMcpServerSession() = default;
 
@@ -207,6 +210,75 @@ QList<QMcpPromptMessage> QMcpServerSession::messages(const QString &name) const
     return ret;
 }
 
+void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions)
+{
+    const auto *mo = toolSet->metaObject();
+
+    QString prefix = toolSet->objectName();
+    if (!prefix.isEmpty())
+        prefix.prepend('/'_L1);
+
+    bool changed = false;
+    for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
+        const auto mm = mo->method(i);
+        QMcpTool tool;
+        const auto name = QString::fromUtf8(mm.name());
+        tool.setName(prefix + name);
+        if (descriptions.contains(name)) {
+            tool.setDescription(descriptions.value(name));
+        }
+        QMcpToolInputSchema inputSchema;
+        auto required = inputSchema.required();
+        auto properties = inputSchema.properties();
+        const auto types = mm.parameterTypes();
+        const auto names = mm.parameterNames();
+        for (int j = 0; j < mm.parameterCount(); j++) {
+            const auto type = QString::fromUtf8(types.at(j));
+            const auto name = QString::fromUtf8(names.at(j));
+            // message
+            QHash<QString, QString> mcpTypes {
+                                             { "QString", "string" },
+                                             { "int", "number" },
+                                             };
+            QSet<QString> internalTypes { "QUuid"_L1 };
+            QJsonObject object;
+            if (mcpTypes.contains(type))
+                object.insert("type"_L1, mcpTypes.value(type));
+            else if (internalTypes.contains(type))
+                continue;
+            else
+                qWarning() << "Unknown type" << type;
+
+            if (descriptions.contains("%1/%2"_L1.arg(tool.name(), name))) {
+                object.insert("description"_L1, descriptions.value("%1/%2"_L1.arg(tool.name(), name)));
+            }
+            properties.insert(name, object);
+            required.append(name);
+        }
+        inputSchema.setProperties(properties);
+        inputSchema.setRequired(required);
+        tool.setInputSchema(inputSchema);
+        d->tools.append(std::make_pair(tool, toolSet));
+        changed = true;
+    }
+    if (changed)
+        emit toolListChanged();
+}
+
+void QMcpServerSession::unregisterToolSet(const QObject *toolSet)
+{
+    bool changed = false;
+    for (int i = d->tools.length() - 1; i >= 0; i--) {
+        if (d->tools.at(i).second == toolSet) {
+            d->tools.removeAt(i);
+            changed = true;
+        }
+    }
+    if (changed)
+        emit toolListChanged();
+}
+
+
 namespace {
 template<class T>
 T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &args)
@@ -247,121 +319,144 @@ T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &arg
 }
 }
 
+QList<QMcpTool> QMcpServerSession::tools(QString *cursor) const
+{
+    Q_UNUSED(cursor);
+    QList<QMcpTool> ret;
+    for (const auto &pair : std::as_const(d->tools))
+        ret.append(pair.first);
+    return ret;
+}
+
 QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name, const QJsonObject &params, bool *ok)
 {
-    QList<QMcpCallToolResultContent> ret;
     bool found = false;
-    const auto *mo = parent()->metaObject();
-    for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
-        const auto mm = mo->method(i);
-        if (mm.name() != name.toUtf8())
+    QList<QMcpCallToolResultContent> ret;
+    for (const auto &pair : std::as_const(d->tools)) {
+        const auto tool = pair.first;
+        // check name first
+        if (tool.name() != name)
             continue;
 
-        auto checkParams = [](const QStringList &a, QByteArrayList b) {
-            QByteArrayList c;
-            for (const auto &s : a)
-                c.append(s.toUtf8());
-            std::sort(b.begin(), b.end(), std::less<QByteArray>());
-            std::sort(c.begin(), c.end(), std::less<QByteArray>());
-            return b == c;
-        };
+        QString prefix = pair.second->objectName();
+        if (!prefix.isEmpty())
+            prefix.prepend('/'_L1);
 
-        const auto names = mm.parameterNames();
-        switch (mm.parameterCount() - params.size()) {
-        case 0: // exact match
-            if (!checkParams(params.keys(), names))
+        // check params next
+        const auto *mo = pair.second->metaObject();
+        for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
+            const auto mm = mo->method(i);
+            if (prefix + QString::fromUtf8(mm.name()) != name)
                 continue;
-            break;
-        case 1: // may contain session
-            if (!checkParams(params.keys() << "sessionId"_L1, names))
-                continue;
-            break;
-        default:
-            continue;
-        }
 
-        QVariantList convertedArgs;
-        convertedArgs.reserve(mm.parameterCount());
+            auto checkParams = [](const QStringList &a, QByteArrayList b) {
+                QByteArrayList c;
+                for (const auto &s : a)
+                    c.append(s.toUtf8());
+                std::sort(b.begin(), b.end(), std::less<QByteArray>());
+                std::sort(c.begin(), c.end(), std::less<QByteArray>());
+                return b == c;
+            };
 
-        const auto types = mm.parameterTypes();
-        for (int j = 0; j < mm.parameterCount(); j++) {
-            const auto type = types.at(j);
-            const auto name = QString::fromUtf8(names.at(j));
-
-            const auto metaType = QMetaType::fromName(type);
-            switch (metaType.id()) {
-            case QMetaType::UnknownType:
-                qWarning() << "Unknown or unsupported type:" << type;
+            const auto names = mm.parameterNames();
+            switch (mm.parameterCount() - params.size()) {
+            case 0: // exact match
+                if (!checkParams(params.keys(), names))
+                    continue;
                 break;
-            case QMetaType::QUuid:
-                convertedArgs.append(d->sessionId);
-                continue;
-            default: {
-                auto value = params.value(name).toVariant();
-                if (!value.convert(mm.parameterMetaType(j))) {
-                    qWarning() << "Failed to convert JSON value to type:" << type;
-                    break;
-                }
-                convertedArgs.append(value);
-                break; }
-            }
-
-        }
-
-        if (convertedArgs.count() != mm.parameterCount())
-            continue;
-
-        switch (mm.returnMetaType().id()) {
-        case QMetaType::Void: {
-            switch (mm.parameterCount()) {
-            case 0:
-                mm.invoke(parent(),
-                          Qt::DirectConnection
-                          );
-                break;
-            case 1:
-                mm.invoke(parent(),
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData())
-                          );
-                break;
-            case 2:
-                mm.invoke(parent(),
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData())
-                          );
-                break;
-            case 3:
-                mm.invoke(parent(),
-                          Qt::DirectConnection,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
-                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData())
-                          );
+            case 1: // may contain session
+                if (!checkParams(params.keys() << "sessionId"_L1, names))
+                    continue;
                 break;
             default:
-                qFatal() << "invokeMethodWithJson: too many parameters, or not implemented in switch.";
+                continue;
             }
-            found = true;
-            break; }
-        case QMetaType::QString: {
-            found = true;
-            QString text = callMethod<QString>(parent(), &mm, convertedArgs);
-            ret.append(QMcpTextContent(text));
-            break; }
+
+            QVariantList convertedArgs;
+            convertedArgs.reserve(mm.parameterCount());
+
+            const auto types = mm.parameterTypes();
+            for (int j = 0; j < mm.parameterCount(); j++) {
+                const auto type = types.at(j);
+                const auto name = QString::fromUtf8(names.at(j));
+
+                const auto metaType = QMetaType::fromName(type);
+                switch (metaType.id()) {
+                case QMetaType::UnknownType:
+                    qWarning() << "Unknown or unsupported type:" << type;
+                    break;
+                case QMetaType::QUuid:
+                    convertedArgs.append(d->sessionId);
+                    continue;
+                default: {
+                    auto value = params.value(name).toVariant();
+                    if (!value.convert(mm.parameterMetaType(j))) {
+                        qWarning() << "Failed to convert JSON value to type:" << type;
+                        break;
+                    }
+                    convertedArgs.append(value);
+                    break; }
+                }
+
+            }
+
+            if (convertedArgs.count() != mm.parameterCount())
+                continue;
+
+            switch (mm.returnMetaType().id()) {
+            case QMetaType::Void: {
+                switch (mm.parameterCount()) {
+                case 0:
+                    mm.invoke(parent(),
+                              Qt::DirectConnection
+                              );
+                    break;
+                case 1:
+                    mm.invoke(parent(),
+                              Qt::DirectConnection,
+                              QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData())
+                              );
+                    break;
+                case 2:
+                    mm.invoke(parent(),
+                              Qt::DirectConnection,
+                              QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                              QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData())
+                              );
+                    break;
+                case 3:
+                    mm.invoke(parent(),
+                              Qt::DirectConnection,
+                              QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                              QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                              QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData())
+                              );
+                    break;
+                default:
+                    qFatal() << "invokeMethodWithJson: too many parameters, or not implemented in switch.";
+                }
+                found = true;
+                break; }
+            case QMetaType::QString: {
+                found = true;
+                QString text = callMethod<QString>(parent(), &mm, convertedArgs);
+                ret.append(QMcpTextContent(text));
+                break; }
 #ifdef QT_GUI_LIB
-        case QMetaType::QImage: {
-            found = true;
-            QImage image = callMethod<QImage>(parent(), &mm, convertedArgs);
-            ret.append(QMcpImageContent(image));
-            break; }
+            case QMetaType::QImage: {
+                found = true;
+                QImage image = callMethod<QImage>(parent(), &mm, convertedArgs);
+                ret.append(QMcpImageContent(image));
+                break; }
 #endif // QT_GUI_LIB
-        default:
-            qFatal() << mm.returnMetaType() << "not supported yet";
+            default:
+                qFatal() << mm.returnMetaType() << "not supported yet";
+            }
+
+            break;
         }
-        break;
     }
+
     if (ok)
         *ok = found;
     if (!found)
@@ -401,7 +496,7 @@ void QMcpServerSession::setRoots(const QList<QMcpRoot> &roots)
 {
     if (d->roots == roots) return;
     d->roots = roots;
-    emit rootsListChanged(roots);
+    emit rootsChanged(roots);
 }
 
 void QMcpServerSession::subscribe(const QUrl &uri)
