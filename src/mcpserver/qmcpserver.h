@@ -4,8 +4,11 @@
 #ifndef QMCPSERVER_H
 #define QMCPSERVER_H
 
+#include <QtConcurrent/QtConcurrent>
+#include <QtCore/QFuture>
 #include <QtCore/QObject>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
+#include <QtMcpCommon/QMcpJSONRPCResponse>
 #include <QtMcpCommon/QMcpNotification>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResource>
@@ -16,6 +19,7 @@
 #include <QtMcpServer/qmcpserversession.h>
 #include <concepts>
 #include <functional>
+#include <type_traits>
 
 QT_BEGIN_NAMESPACE
 
@@ -193,6 +197,13 @@ public:
 
     template <typename T> struct RequestHandlerTraits;
 
+    // Helper to detect QFuture
+    template<typename T>
+    struct is_future : std::false_type {};
+    
+    template<typename T>
+    struct is_future<QFuture<T>> : std::true_type {};
+    
     template <typename R, typename C, typename Arg>
     struct RequestHandlerTraits<R(C::*)(const QUuid &, Arg, QMcpJSONRPCErrorError *) const> {
         using RequestType = std::decay_t<Arg>;
@@ -204,18 +215,46 @@ public:
     {
         using Traits = RequestHandlerTraits<decltype(&Handler::operator())>;
         using Req = typename Traits::RequestType;
-        using Res = typename Traits::ResultType;
+        using Result = typename Traits::ResultType;
 
         static_assert(std::is_base_of<QMcpRequest, Req>::value,
                       "Request type must inherit from QMcpRequest");
-        static_assert(std::is_base_of<QMcpResult, Res>::value,
-                      "Result type must inherit from QMcpResult");
+        
+        if constexpr (is_future<Result>::value) {
+            static_assert(std::is_base_of<QMcpResult, typename Result::value_type>::value,
+                          "Future result type must inherit from QMcpResult");
+        } else {
+            static_assert(std::is_base_of<QMcpResult, std::decay_t<Result>>::value,
+                          "Result type must inherit from QMcpResult");
+        }
 
-        auto wrapper = [handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
+        auto wrapper = [this, handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
             Req req;
             req.fromJsonObject(json);
-            Res res = handler(session, req, error);
-            return res.toJsonObject();
+            
+            if constexpr (is_future<Result>::value) {
+                // For async handlers
+                auto future = handler(session, req, error);
+                
+                // Get the request ID from the JSON object
+                const auto id = json.value("id"_L1);
+                
+                // Set up continuation to send response when ready
+                future.then([this, session, id](const auto &result) {
+                    QMcpJSONRPCResponse response;
+                    response.setId(id.toVariant());
+                    auto object = response.toJsonObject();
+                    object.insert("result"_L1, result.toJsonObject());
+                    send(session, object);
+                });
+                
+                // Return empty value since we'll send response later
+                return QJsonValue();
+            } else {
+                // For sync handlers
+                auto res = handler(session, req, error);
+                return QJsonValue(res.toJsonObject());
+            }
         };
 
         registerRequestHandler(Req().method(), wrapper);
@@ -346,7 +385,7 @@ signals:
 private:
     void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);
     void send(const QUuid &session, const QJsonObject &message, std::function<void(const QUuid &session, const QJsonObject &)> callback = nullptr);
-    void registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
+    void registerRequestHandler(const QString &method, std::function<QJsonValue(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
     void registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)>);
 
 private:

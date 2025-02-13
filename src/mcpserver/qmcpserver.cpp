@@ -31,7 +31,7 @@ public:
     QString instructions;
     QString protocolVersion = "2024-11-05"_L1;
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
-    QHash<QString, std::function<QJsonObject(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
+    QHash<QString, std::function<QJsonValue(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, QMcpServerSession *> sessions;
     QHash<QObject *, QHash<QString, QString>> toolSets;
@@ -132,11 +132,11 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                         response.setId(id);
                         response.setError(error);
                         q->send(session, response.toJsonObject());
-                    } else {
+                    } else if (result.isObject()){
                         QMcpJSONRPCResponse response;
                         response.setId(id);
                         auto object = response.toJsonObject();
-                        object.insert("result"_L1, result);
+                        object.insert("result"_L1, result.toObject());
                         q->send(session, object);
                     }
                 } else {
@@ -382,7 +382,7 @@ void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::fun
     }
 }
 
-void QMcpServer::registerRequestHandler(const QString &method, std::function<QJsonObject(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)> callback)
+void QMcpServer::registerRequestHandler(const QString &method, std::function<QJsonValue(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)> callback)
 {
     d->requestHandlers.insert(method, callback);
 }
