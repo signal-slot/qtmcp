@@ -228,7 +228,7 @@ public:
                           "Result type must inherit from QMcpResult");
         }
 
-        auto wrapper = [this, handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
+        auto wrapper = [handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
             Req req;
             req.fromJsonObject(json);
             
