@@ -5,7 +5,6 @@
 #define QMCPTOOLLISTCHANGEDNOTIFICATION_H
 
 #include <QtMcpCommon/qmcpnotification.h>
-#include <QtMcpCommon/qmcptoollistchangednotificationparams.h>
 
 QT_BEGIN_NAMESPACE
 
