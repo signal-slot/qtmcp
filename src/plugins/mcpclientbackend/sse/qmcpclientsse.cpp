@@ -5,10 +5,13 @@
 
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QLoggingCategory>
 #include <QtCore/QUrl>
 #include <QtNetwork/QNetworkRequest>
 
 QT_BEGIN_NAMESPACE
+
+Q_LOGGING_CATEGORY(lcQMcpClientSsePlugin, "qt.mcpclient.plugins.backend.sse")
 
 class QMcpClientSse::Private
 {
@@ -44,7 +47,7 @@ void QMcpClientSse::Private::start(const QUrl &url)
     connect(eventStream.data(), &QNetworkReply::readyRead, q, [this]() {
         static QByteArray data;
         const auto received = eventStream->readAll();
-        qDebug() << received;
+        qCDebug(lcQMcpClientSsePlugin) << received;
         data.append(received);
         QByteArray separator;
         while (true) {
@@ -81,38 +84,38 @@ void QMcpClientSse::Private::start(const QUrl &url)
                 if (key.startsWith("ping")) {
                     continue;
                 }
-                qWarning() << "unknown type" << key;
+                qCWarning(lcQMcpClientSsePlugin) << "unknown type" << key;
             } else if (type == "event") {
                 auto data = lines.at(1);
                 if (!data.startsWith("data: ")) {
-                    qWarning() << data;
+                    qCWarning(lcQMcpClientSsePlugin) << data;
                     continue;
                 }
                 data = data.mid(6);
                 if (key == "endpoint") {
                     message = sse;
-                    qDebug() << message << sse;
+                    qCDebug(lcQMcpClientSsePlugin) << message << sse;
                     int question = data.indexOf('?');
                     if (question < 0) {
                         message.setPath(data);
-                        qDebug() << message << sse;
+                        qCDebug(lcQMcpClientSsePlugin) << message << sse;
                     } else {
                         message.setPath(data.left(question));
-                        qDebug() << message << sse;
+                        qCDebug(lcQMcpClientSsePlugin) << message << sse;
                         message.setQuery(data.mid(question + 1));
-                        qDebug() << message << sse;
+                        qCDebug(lcQMcpClientSsePlugin) << message << sse;
                     }
                     emit q->started();
                 } else if (key == "message") {
                     QJsonParseError error;
                     const auto json = QJsonDocument::fromJson(data, &error);
                     if (error.error) {
-                        qWarning() << error.errorString();
+                        qCWarning(lcQMcpClientSsePlugin) << error.errorString();
                     } else {
                         emit q->received(json.object());
                     }
                 } else {
-                    qWarning() << "unknown key" << key;
+                    qCWarning(lcQMcpClientSsePlugin) << "unknown key" << key;
                 }
             }
         }
@@ -120,11 +123,11 @@ void QMcpClientSse::Private::start(const QUrl &url)
     connect(eventStream.data(), &QNetworkReply::finished, q, &QMcpClientSse::finished);
     connect(eventStream.data(), &QNetworkReply::sslErrors, q, [this](const QList<QSslError> &errors) {
         for (const QSslError &error : errors)
-            qDebug() << error.errorString();
+            qCDebug(lcQMcpClientSsePlugin) << error.errorString();
         eventStream->ignoreSslErrors();
     });
     connect(eventStream.data(), &QNetworkReply::errorOccurred, q, [this](QNetworkReply::NetworkError error) {
-        qWarning() << error;
+        qCWarning(lcQMcpClientSsePlugin) << error;
         emit q->errorOccurred(eventStream->errorString());
     });
 }
@@ -144,7 +147,7 @@ void QMcpClientSse::start(const QString &server)
 void QMcpClientSse::send(const QJsonObject &object)
 {
     if (d->message.isEmpty()) {
-        qWarning() << d->message;
+        qCWarning(lcQMcpClientSsePlugin) << d->message;
         return;
     }
     QNetworkRequest request(d->message);
@@ -152,17 +155,17 @@ void QMcpClientSse::send(const QJsonObject &object)
 
     QJsonDocument doc(object);
     QByteArray data = doc.toJson(QJsonDocument::Compact);
-    qDebug() << data;
+    qCDebug(lcQMcpClientSsePlugin) << data;
 
     auto *reply = d->networkAccessManager.post(request, data);
     connect(reply, &QNetworkReply::sslErrors, this, [reply](const QList<QSslError> &errors) {
         for (const QSslError &error : errors)
-            qDebug() << error.errorString();
+            qCDebug(lcQMcpClientSsePlugin) << error.errorString();
         reply->ignoreSslErrors();
     });
     connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     connect(reply, &QNetworkReply::errorOccurred, this, [reply](QNetworkReply::NetworkError error) {
-        qDebug() << error << reply->errorString();
+        qCDebug(lcQMcpClientSsePlugin) << error << reply->errorString();
     });
 }
 
