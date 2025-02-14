@@ -23,6 +23,10 @@
 
 QT_BEGIN_NAMESPACE
 
+#ifdef QT_GUI_LIB
+class QAction;
+#endif
+
 /*!
     \class QMcpServer
     \inmodule QtMcpServer
@@ -338,6 +342,10 @@ public slots:
 
     void registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions = {});
     void unregisterToolSet(QObject *toolSet);
+#ifdef QT_GUI_LIB
+    void registerTool(QAction *action, const QString &name = QString());
+    void unregisterTool(QAction *action);
+#endif
 
 signals:
     /*!

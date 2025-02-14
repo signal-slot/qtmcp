@@ -7,6 +7,7 @@
 #include <QtCore/private/qfactoryloader_p.h>
 #include <QtCore/qjsonobject.h>
 #ifdef QT_GUI_LIB
+#include <QtGui/QAction>
 #include <QtGui/QImage>
 #endif
 #include <QtMcpCommon>
@@ -35,6 +36,9 @@ public:
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, QMcpServerSession *> sessions;
     QHash<QObject *, QHash<QString, QString>> toolSets;
+#ifdef QT_GUI_LIB
+    QHash<QAction *, QString> actions;
+#endif
 };
 
 QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
@@ -71,6 +75,10 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
         // register known tool set
         for (auto i = toolSets.cbegin(), end = toolSets.cend(); i != end; ++i)
             session->registerToolSet(i.key(), i.value());
+#ifdef QT_GUI_LIB
+        for (auto i = actions.cbegin(), end = actions.cend(); i != end; ++i)
+            session->registerTool(i.key(), i.value());
+#endif
 
         sessions.insert(sessionId, session);
         connect(session, &QMcpServerSession::resourceUpdated, q, [this, session](const QMcpResource &resource) {
@@ -358,12 +366,33 @@ void QMcpServer::registerToolSet(QObject *toolSet, const QHash<QString, QString>
 
 void QMcpServer::unregisterToolSet(QObject *toolSet)
 {
-    d->toolSets.remove(toolSet);
     const auto sessions = d->sessions.values();
     for (auto *session : sessions) {
         session->unregisterToolSet(toolSet);
     }
+    d->toolSets.remove(toolSet);
 }
+
+#ifdef QT_GUI_LIB
+void QMcpServer::registerTool(QAction *action, const QString &name)
+{
+    QString name2 = name.isEmpty() ? action->text() : name;
+    d->actions.insert(action, name2);
+    const auto sessions = d->sessions.values();
+    for (auto *session : sessions) {
+        session->registerTool(action, name2);
+    }
+}
+
+void QMcpServer::unregisterTool(QAction *action)
+{
+    const auto sessions = d->sessions.values();
+    for (auto *session : sessions) {
+        session->unregisterTool(action);
+    }
+    d->actions.remove(action);
+}
+#endif
 
 void QMcpServer::send(const QUuid &session, const QJsonObject &request, std::function<void(const QUuid &session, const QJsonObject &)> callback)
 {

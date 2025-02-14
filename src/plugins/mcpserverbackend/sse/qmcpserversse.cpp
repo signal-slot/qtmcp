@@ -62,6 +62,7 @@ void QMcpServerSse::start(const QString &server)
         return;
     }
     qCDebug(lcQMcpServerSsePlugin) << "Listening on port" << d->tcpServer.serverPort();
+    emit started();
 }
 
 void QMcpServerSse::send(const QUuid &session, const QJsonObject &object)

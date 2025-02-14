@@ -23,6 +23,10 @@
 
 QT_BEGIN_NAMESPACE
 
+#ifdef QT_GUI_LIB
+class QAction;
+#endif
+
 class QMcpServer;
 
 /*!
@@ -192,6 +196,10 @@ public slots:
 
     void registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions = {});
     void unregisterToolSet(const QObject *toolSet);
+#ifdef QT_GUI_LIB
+    void registerTool(QAction *action, const QString &name);
+    void unregisterTool(const QAction *action);
+#endif
 
     void setRoots(const QList<QMcpRoot> &roots);
 

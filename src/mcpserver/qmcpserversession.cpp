@@ -22,6 +22,9 @@ public:
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
     QList<QPair<QMcpTool, QObject *>> tools;
+#ifdef QT_GUI_LIB
+    QList<QPair<QMcpTool, QAction *>> actions;
+#endif
     QList<QMcpRoot> roots;
     QMultiHash<QUrl, QUrl> subscriptions;
 };
@@ -278,6 +281,27 @@ void QMcpServerSession::unregisterToolSet(const QObject *toolSet)
         emit toolListChanged();
 }
 
+#ifdef QT_GUI_LIB
+void QMcpServerSession::registerTool(QAction *action, const QString &name)
+{
+    QMcpTool tool;
+    tool.setName(name);
+    tool.setDescription(action->toolTip());
+    d->actions.append(std::make_pair(tool, action));
+    emit toolListChanged();
+}
+
+void QMcpServerSession::unregisterTool(const QAction *action)
+{
+    for (int i = d->actions.length() - 1; i >= 0; i--) {
+        if (d->actions.at(i).second == action) {
+            d->actions.removeAt(i);
+            emit toolListChanged();
+            return;
+        }
+    }
+}
+#endif
 
 namespace {
 template<class T>
@@ -325,6 +349,13 @@ QList<QMcpTool> QMcpServerSession::tools(QString *cursor) const
     QList<QMcpTool> ret;
     for (const auto &pair : std::as_const(d->tools))
         ret.append(pair.first);
+#ifdef QT_GUI_LIB
+    for (const auto &pair : std::as_const(d->actions))
+        ret.append(pair.first);
+    std::sort(ret.begin(), ret.end(), [](const QMcpTool &tool1, const QMcpTool &tool2) {
+        return tool1.name() < tool2.name();
+    });
+#endif
     return ret;
 }
 
@@ -456,6 +487,20 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
             break;
         }
     }
+
+#ifdef QT_GUI_LIB
+    if (!found) {
+        for (const auto &pair : std::as_const(d->actions)) {
+            const auto tool = pair.first;
+            if (tool.name() != name)
+                continue;
+            auto action = pair.second;
+            action->trigger();
+            found = true;
+            break;
+        }
+    }
+#endif
 
     if (ok)
         *ok = found;
