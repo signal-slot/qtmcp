@@ -4,6 +4,7 @@
 #include "qmcpserversession.h"
 #include "qmcpserver.h"
 #include <QtCore/QMultiHash>
+#include <QtCore/QTimer>
 #include <QtMcpCommon/QMcpCreateMessageRequest>
 
 QT_BEGIN_NAMESPACE
@@ -11,13 +12,14 @@ QT_BEGIN_NAMESPACE
 class QMcpServerSession::Private
 {
 public:
-    Private(const QUuid &id)
-        : sessionId(id)
-        , initialized(false)
-    {}
+    Private(const QUuid &id, QMcpServerSession *parent);
 
+private:
+    QMcpServerSession *q;
+
+public:
     QUuid sessionId;
-    bool initialized;
+    bool initialized = false;
     QList<QMcpResourceTemplate> resourceTemplates;
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
@@ -27,11 +29,32 @@ public:
 #endif
     QList<QMcpRoot> roots;
     QMultiHash<QUrl, QUrl> subscriptions;
+
+    QTimer notifyResourceListChanged;
+    QTimer notifyPromptListChanged;
+    QTimer notifyToolListChanged;
 };
+
+QMcpServerSession::Private::Private(const QUuid &id, QMcpServerSession *parent)
+    : q(parent)
+    , sessionId(id)
+{
+    notifyResourceListChanged.setInterval(0);
+    notifyResourceListChanged.setSingleShot(true);
+    connect(&notifyResourceListChanged, &QTimer::timeout, q, &QMcpServerSession::resourceListChanged);
+
+    notifyPromptListChanged.setInterval(0);
+    notifyPromptListChanged.setSingleShot(true);
+    connect(&notifyPromptListChanged, &QTimer::timeout, q, &QMcpServerSession::promptListChanged);
+
+    notifyToolListChanged.setInterval(0);
+    notifyToolListChanged.setSingleShot(true);
+    connect(&notifyToolListChanged, &QTimer::timeout, q, &QMcpServerSession::toolListChanged);
+}
 
 QMcpServerSession::QMcpServerSession(const QUuid &sessionId, QMcpServer *parent)
     : QObject(parent)
-    , d(new Private(sessionId))
+    , d(new Private(sessionId, this))
 {}
 
 QMcpServerSession::~QMcpServerSession() = default;
@@ -76,13 +99,24 @@ void QMcpServerSession::removeResourceTemplateAt(int index)
 void QMcpServerSession::appendResource(const QMcpResource &resource, const QMcpReadResourceResultContents &content)
 {
     d->resources.append(qMakePair(resource, content));
-    emit resourceListChanged();
+    d->notifyResourceListChanged.start();
 }
 
 void QMcpServerSession::insertResource(int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content)
 {
     d->resources.insert(index, qMakePair(resource, content));
-    emit resourceListChanged();
+    d->notifyResourceListChanged.start();
+}
+
+void QMcpServerSession::replaceResource(const QUrl &uri, const QMcpResource resource, const QMcpReadResourceResultContents &content)
+{
+    for (int i = 0; i < d->resources.count(); ++i) {
+        if (d->resources.at(i).first.uri() == uri) {
+            d->resources[i] = qMakePair(resource, content);
+            emit resourceUpdated(resource);
+            break;
+        }
+    }
 }
 
 void QMcpServerSession::replaceResource(int index, const QMcpResource resource, const QMcpReadResourceResultContents &content)
@@ -91,10 +125,21 @@ void QMcpServerSession::replaceResource(int index, const QMcpResource resource, 
     emit resourceUpdated(resource);
 }
 
+void QMcpServerSession::removeResource(const QUrl &uri)
+{
+    for (int i = 0; i < d->resources.count(); ++i) {
+        if (d->resources.at(i).first.uri() == uri) {
+            d->resources.removeAt(i);
+            d->notifyResourceListChanged.start();
+            break;
+        }
+    }
+}
+
 void QMcpServerSession::removeResourceAt(int index)
 {
     d->resources.removeAt(index);
-    emit resourceListChanged();
+    d->notifyResourceListChanged.start();
 }
 
 QList<QMcpResourceTemplate> QMcpServerSession::resourceTemplates() const
@@ -138,35 +183,38 @@ QList<QMcpResource> QMcpServerSession::resources(QString *cursor) const
 
 QList<QMcpReadResourceResultContents> QMcpServerSession::contents(const QUrl &uri) const
 {
+    qDebug() << Q_FUNC_INFO << __LINE__ << uri;
     QList<QMcpReadResourceResultContents> ret;
-    for (const auto &pair : std::as_const(d->resources))
+    for (const auto &pair : std::as_const(d->resources)) {
+        qDebug() << Q_FUNC_INFO << __LINE__ << pair.first.name() << pair.first.size() << pair.first.uri();
         if (pair.first.uri() == uri)
             ret.append(pair.second);
+    }
     return ret;
 }
 
 void QMcpServerSession::appendPrompt(const QMcpPrompt &prompt, const QMcpPromptMessage &message)
 {
     d->prompts.append(qMakePair(prompt, message));
-    emit promptListChanged();
+    d->notifyPromptListChanged.start();
 }
 
 void QMcpServerSession::insertPrompt(int index, const QMcpPrompt &prompt, const QMcpPromptMessage &message)
 {
     d->prompts.insert(index, qMakePair(prompt, message));
-    emit promptListChanged();
+    d->notifyPromptListChanged.start();
 }
 
 void QMcpServerSession::replacePrompt(int index, const QMcpPrompt prompt, const QMcpPromptMessage &message)
 {
     d->prompts[index] = qMakePair(prompt, message);
-    emit promptListChanged();
+    d->notifyPromptListChanged.start();
 }
 
 void QMcpServerSession::removePromptAt(int index)
 {
     d->prompts.removeAt(index);
-    emit promptListChanged();
+    d->notifyPromptListChanged.start();
 }
 
 QList<QMcpPrompt> QMcpServerSession::prompts(QString *cursor) const
@@ -265,7 +313,7 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         changed = true;
     }
     if (changed)
-        emit toolListChanged();
+        d->notifyToolListChanged.start();
 }
 
 void QMcpServerSession::unregisterToolSet(const QObject *toolSet)
@@ -278,7 +326,7 @@ void QMcpServerSession::unregisterToolSet(const QObject *toolSet)
         }
     }
     if (changed)
-        emit toolListChanged();
+        d->notifyToolListChanged.start();
 }
 
 #ifdef QT_GUI_LIB
@@ -288,7 +336,7 @@ void QMcpServerSession::registerTool(QAction *action, const QString &name)
     tool.setName(name);
     tool.setDescription(action->toolTip());
     d->actions.append(std::make_pair(tool, action));
-    emit toolListChanged();
+    d->notifyToolListChanged.start();
 }
 
 void QMcpServerSession::unregisterTool(const QAction *action)
@@ -296,7 +344,7 @@ void QMcpServerSession::unregisterTool(const QAction *action)
     for (int i = d->actions.length() - 1; i >= 0; i--) {
         if (d->actions.at(i).second == action) {
             d->actions.removeAt(i);
-            emit toolListChanged();
+            d->notifyToolListChanged.start();
             return;
         }
     }

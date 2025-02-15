@@ -183,7 +183,9 @@ public slots:
 
     void appendResource(const QMcpResource &resource, const QMcpReadResourceResultContents &content);
     void insertResource(int index, const QMcpResource &resource, const QMcpReadResourceResultContents &content);
+    void replaceResource(const QUrl &uri, const QMcpResource resource, const QMcpReadResourceResultContents &content);
     void replaceResource(int index, const QMcpResource resource, const QMcpReadResourceResultContents &content);
+    void removeResource(const QUrl &uri);
     void removeResourceAt(int index);
 
     void appendPrompt(const QMcpPrompt &prompt, const QMcpPromptMessage &message);
