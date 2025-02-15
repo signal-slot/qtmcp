@@ -8,6 +8,7 @@
 #include <QtCore/QString>
 #include <QtCore/QUrl>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qmcpresource.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -40,6 +41,14 @@ class Q_MCPCOMMON_EXPORT QMcpBlobResourceContents : public QMcpGadget
 
 public:
     QMcpBlobResourceContents() : QMcpGadget(new Private) {}
+    QMcpBlobResourceContents(const QMcpResource &resource, const QByteArray &blob)
+        : QMcpGadget(new Private)
+    {
+        d<Private>()->mimeType = resource.mimeType();
+        d<Private>()->blob = blob;
+        d<Private>()->uri = resource.uri();
+        d<Private>()->name = resource.name();
+    }
 
     QByteArray blob() const {
         return d<Private>()->blob;
