@@ -104,6 +104,9 @@ void ReadResourceWidget::Private::readResource()
     read->setEnabled(false);
     q->setLoading(true);
     q->client()->request(request, [this](const QMcpReadResourceResult &result, const QMcpJSONRPCErrorError *error) {
+        auto contentsLayout = qobject_cast<QFormLayout *>(this->contents->layout());
+        while (contentsLayout->rowCount() > 0)
+            contentsLayout->removeRow(0);
         if (error) {
             emit q->errorOccurred(error->message());
             q->setLoading(false);
@@ -111,8 +114,6 @@ void ReadResourceWidget::Private::readResource()
             return;
         }
         const auto contents = result.contents();
-        qDebug() << contents;
-        auto contentsLayout = qobject_cast<QFormLayout *>(this->contents->layout());
         for (const auto &content : contents) {
             if (content.refType() == "textResourceContents"_L1) {
                 const auto textResourceContents = content.textResourceContents();
