@@ -42,6 +42,7 @@ ReadResourceWidget::Private::Private(::ReadResourceWidget *parent)
     });
 
     connect(q, &AbstractWidget::clientChanged, q, [this](QMcpClient *client) {
+        subscribing.clear();
         if (client) {
             client->addNotificationHandler(
                 [this](const QMcpResourceUpdatedNotification &notification) {
