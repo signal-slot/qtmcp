@@ -161,6 +161,7 @@ void tst_QMcpServerSession::testResourceOperations()
     QSignalSpy resourceListSpy(m_session, &QMcpServerSession::resourceListChanged);
     m_session->appendResource(resource, content);
     
+    QTest::qWait(10);
     QCOMPARE(m_session->resources().size(), 1);
     QCOMPARE(m_session->resources().first().name(), QStringLiteral("Test Resource"));
     QCOMPARE(m_session->contents(resource.uri()).first().textResourceContents().text(), QStringLiteral("Test content"));
@@ -195,7 +196,8 @@ void tst_QMcpServerSession::testPromptOperations()
 
     QSignalSpy promptListSpy(m_session, &QMcpServerSession::promptListChanged);
     m_session->appendPrompt(prompt, message);
-    
+    QTest::qWait(10);
+
     QCOMPARE(m_session->prompts().size(), 1);
     QCOMPARE(m_session->prompts().first().name(), QStringLiteral("test"));
     QCOMPARE(promptListSpy.count(), 1);
@@ -242,7 +244,7 @@ void tst_QMcpServerSession::testRoots()
 
     QSignalSpy rootsSpy(m_session, &QMcpServerSession::rootsChanged);
     m_session->setRoots(roots);
-    
+
     QCOMPARE(m_session->roots().size(), 1);
     QCOMPARE(m_session->roots().first().name(), QStringLiteral("test"));
     QCOMPARE(rootsSpy.count(), 1);
