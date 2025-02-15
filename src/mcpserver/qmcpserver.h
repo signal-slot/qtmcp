@@ -313,6 +313,8 @@ public:
     */
     virtual QHash<QString, QString> toolDescriptions() const;
 
+    QList<QMcpServerSession *> sessions() const;
+
 public slots:
     /*!
         Sets the server capabilities.

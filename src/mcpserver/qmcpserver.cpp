@@ -90,7 +90,6 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                 notification.setParams(params);
                 q->notify(session->sessionId(), notification);
             }
-
         });
         connect(session, &QMcpServerSession::resourceListChanged, q, [this, session]() {
             QMcpResourceListChangedNotification notification;
@@ -461,5 +460,11 @@ QHash<QString, QString> QMcpServer::toolDescriptions() const
 {
     return {};
 }
+
+QList<QMcpServerSession *> QMcpServer::sessions() const
+{
+    return d->sessions.values();
+}
+
 
 QT_END_NAMESPACE
