@@ -82,6 +82,7 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
 
         sessions.insert(sessionId, session);
         connect(session, &QMcpServerSession::resourceUpdated, q, [this, session](const QMcpResource &resource) {
+            if (!session->isInitialized()) return;
             const auto uri = resource.uri();
             if (session->isSubscribed(uri)) {
                 QMcpResourceUpdatedNotification notification;
@@ -92,14 +93,17 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             }
         });
         connect(session, &QMcpServerSession::resourceListChanged, q, [this, session]() {
+            if (!session->isInitialized()) return;
             QMcpResourceListChangedNotification notification;
             q->notify(session->sessionId(), notification);
         });
         connect(session, &QMcpServerSession::promptListChanged, q, [this, session]() {
+            if (!session->isInitialized()) return;
             QMcpPromptListChangedNotification notification;
             q->notify(session->sessionId(), notification);
         });
         connect(session, &QMcpServerSession::toolListChanged, q, [this, session]() {
+            if (!session->isInitialized()) return;
             QMcpToolListChangedNotification notification;
             q->notify(session->sessionId(), notification);
         });
