@@ -271,9 +271,10 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
     bool changed = false;
     for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
         const auto mm = mo->method(i);
+        if (mm.access() != QMetaMethod::Public)
+            continue;
         QMcpTool tool;
         const auto name = QString::fromUtf8(mm.name());
-        qDebug() << name;
         tool.setName(prefix + name);
         if (descriptions.contains(name)) {
             tool.setDescription(descriptions.value(name));
