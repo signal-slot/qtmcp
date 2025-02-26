@@ -7,9 +7,10 @@
 #include <QtCore/QMimeDatabase>
 #include <QtMcpCommon/QMcpCallToolRequest>
 #include <QtMcpCommon/QMcpCallToolResult>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPlainTextEdit>
-#include <QtWidgets/QDoubleSpinBox>
 
 class CallToolWidget::Private : public Ui::CallToolWidget
 {
@@ -57,9 +58,13 @@ CallToolWidget::Private::Private(::CallToolWidget *parent)
             } else if (type == "number"_L1) {
                 auto spinBox = new QDoubleSpinBox;
                 spinBox->setMinimum(-1000);
-                spinBox->setMaximum(1000);
+                spinBox->setMaximum(10000);
                 spinBox->setObjectName(key);
                 paramsLayout->addRow(title, spinBox);
+            } else if (type == "bool"_L1) {
+                auto checkBox = new QCheckBox;
+                checkBox->setObjectName(key);
+                paramsLayout->addRow(title, checkBox);
             } else {
                 qWarning() << "type" << type << "not supported";
             }
@@ -107,6 +112,10 @@ CallToolWidget::Private::Private(::CallToolWidget *parent)
                 } else if (!qFuzzyIsNull(value)) {
                     arguments.insert(key, value);
                 }
+            } else if (type == "bool"_L1) {
+                const auto checkBox = this->params->findChild<QCheckBox *>(key);
+                const auto value = checkBox->isChecked();
+                arguments.insert(key, value);
             } else {
                 qWarning() << "type" << type << "not supported";
             }
