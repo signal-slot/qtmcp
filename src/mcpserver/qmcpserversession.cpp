@@ -289,6 +289,7 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             // message
             QHash<QString, QString> mcpTypes {
                                              { "QString", "string" },
+                                             { "bool", "bool" },
                                              { "int", "number" },
                                              };
             QSet<QString> internalTypes { "QUuid"_L1 };
@@ -515,6 +516,11 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
                     qFatal() << "invokeMethodWithJson: too many parameters, or not implemented in switch.";
                 }
                 found = true;
+                break; }
+            case QMetaType::Bool: {
+                found = true;
+                bool boolean = callMethod<bool>(pair.second, &mm, convertedArgs);
+                ret.append(QMcpTextContent(boolean ? "true"_L1 : "false"_L1));
                 break; }
             case QMetaType::QString: {
                 found = true;
