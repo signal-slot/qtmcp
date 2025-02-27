@@ -8,7 +8,6 @@
 #include <QtCore/qjsonobject.h>
 #ifdef QT_GUI_LIB
 #include <QtGui/QAction>
-#include <QtGui/QImage>
 #endif
 #include <QtMcpCommon>
 #include <QtMcpServer/qmcpserverbackendinterface.h>
@@ -51,10 +50,9 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     QMcpServerCapabilitiesPrompts prompts;
     prompts.setListChanged(true);
     capabilities.setPrompts(prompts);
-    // Tools are statically defined in subclasses as invokable methods
-    // QMcpServerCapabilitiesTools tools;
-    // tools.setListChanged(true);
-    // capabilities.setTools(tools);
+    QMcpServerCapabilitiesTools tools;
+    tools.setListChanged(true);
+    capabilities.setTools(tools);
 
     backend = qLoadPlugin<QMcpServerBackendInterface, QMcpServerBackendPlugin>(backendLoader(), type);
     if (!backend) {
