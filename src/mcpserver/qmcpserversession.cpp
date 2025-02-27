@@ -402,10 +402,10 @@ QList<QMcpTool> QMcpServerSession::tools(QString *cursor) const
 #ifdef QT_GUI_LIB
     for (const auto &pair : std::as_const(d->actions))
         ret.append(pair.first);
+#endif
     std::sort(ret.begin(), ret.end(), [](const QMcpTool &tool1, const QMcpTool &tool2) {
         return tool1.name() < tool2.name();
     });
-#endif
     return ret;
 }
 
