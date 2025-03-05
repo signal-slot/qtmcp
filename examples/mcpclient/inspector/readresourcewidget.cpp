@@ -129,7 +129,16 @@ void ReadResourceWidget::Private::readResource()
                 }
             } else if (content.refType() == "blobResourceContents"_L1) {
                 const auto blobResourceContents = content.blobResourceContents();
-                contentsLayout->addRow(blobResourceContents.mimeType() + ":", new QWidget);
+                const auto mimeType = blobResourceContents.mimeType();
+                if (mimeType.startsWith("image/")) {
+                    const auto blob = blobResourceContents.blob();
+                    const auto image = QImage::fromData(QByteArray::fromBase64(blob), mimeType.mid(6).toUtf8().constData());
+                    auto label = new QLabel;
+                    label->setPixmap(QPixmap::fromImage(image));
+                    contentsLayout->addRow(blobResourceContents.mimeType() + ":", label);
+                } else {
+                    contentsLayout->addRow(blobResourceContents.mimeType() + ":", new QWidget);
+                }
             } else {
                 qWarning() << content.refType() << "not supported";
             }
