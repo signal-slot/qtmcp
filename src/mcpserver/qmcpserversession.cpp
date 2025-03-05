@@ -273,6 +273,8 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         const auto mm = mo->method(i);
         if (mm.access() != QMetaMethod::Public)
             continue;
+        if (mm.methodType() == QMetaMethod::Signal || mm.methodType() == QMetaMethod::Constructor)
+            continue;
         QMcpTool tool;
         const auto name = QString::fromUtf8(mm.name());
         tool.setName(prefix + name);
