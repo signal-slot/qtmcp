@@ -530,6 +530,12 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
                 QString text = callMethod<QString>(pair.second, &mm, convertedArgs);
                 ret.append(QMcpTextContent(text));
                 break; }
+            case QMetaType::QStringList: {
+                found = true;
+                const QStringList texts = callMethod<QStringList>(pair.second, &mm, convertedArgs);
+                for (const auto &text : texts)
+                    ret.append(QMcpTextContent(text));
+                break; }
 #ifdef QT_GUI_LIB
             case QMetaType::QImage: {
                 found = true;
