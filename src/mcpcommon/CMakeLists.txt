@@ -11,6 +11,8 @@ qt_internal_add_module(McpCommon
         qmcpgadget.h qmcpgadget.cpp
         qmcpanyof.h qmcpanyof.cpp
         qmcpjsonrpcmessage.h
+        qmcpjsonrpcbatchrequest.h
+        qmcpjsonrpcbatchresponse.h
         qmcpjsonrpcerror.h
         qmcpjsonrpcerrorerror.h
         qmcpjsonrpcnotification.h
@@ -53,6 +55,7 @@ qt_internal_add_module(McpCommon
         qmcpgetpromptrequestparams.h
         qmcpgetpromptresult.h
         qmcpimagecontent.h
+        qmcpaudiocontent.h
         qmcpimplementation.h
         qmcpinitializednotification.h
         qmcpinitializednotificationparams.h

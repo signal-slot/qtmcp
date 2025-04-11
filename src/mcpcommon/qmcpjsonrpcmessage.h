@@ -10,6 +10,13 @@
 
 QT_BEGIN_NAMESPACE
 
+/*! \class QMcpJSONRPCMessage
+    \inmodule QtMcpCommon
+    \brief Base class for JSON-RPC messages.
+    
+    This class represents a JSON-RPC message as defined in the JSON-RPC 2.0 specification.
+    It can be a single message or a batch of messages.
+*/
 class Q_MCPCOMMON_EXPORT QMcpJSONRPCMessage : public QMcpGadget
 {
     Q_GADGET
@@ -36,6 +43,12 @@ protected:
 
 Q_DECLARE_SHARED(QMcpJSONRPCMessage)
 
+/*! \class QMcpJSONRPCMessageWithId
+    \inmodule QtMcpCommon
+    \brief Base class for JSON-RPC messages that include an ID.
+    
+    This class represents a JSON-RPC message that includes an ID, such as a request or response.
+*/
 class Q_MCPCOMMON_EXPORT QMcpJSONRPCMessageWithId : public QMcpJSONRPCMessage
 {
     Q_GADGET
@@ -68,6 +81,13 @@ protected:
 };
 
 Q_DECLARE_SHARED(QMcpJSONRPCMessageWithId)
+
+// Forward declarations for batch message types
+class QMcpJSONRPCBatchRequest;
+class QMcpServerJSONRPCBatchRequest;
+class QMcpClientJSONRPCBatchRequest;
+class QMcpJSONRPCBatchResponse;
+class QMcpJSONRPCBatchErrorResponse;
 
 QT_END_NAMESPACE
 

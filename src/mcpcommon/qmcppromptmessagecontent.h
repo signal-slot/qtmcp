@@ -8,6 +8,7 @@
 #include <QtMcpCommon/qmcpanyof.h>
 #include <QtMcpCommon/qmcptextcontent.h>
 #include <QtMcpCommon/qmcpimagecontent.h>
+#include <QtMcpCommon/qmcpaudiocontent.h>
 #include <QtMcpCommon/qmcpembeddedresource.h>
 
 QT_BEGIN_NAMESPACE
@@ -18,6 +19,7 @@ class Q_MCPCOMMON_EXPORT QMcpPromptMessageContent : public QMcpAnyOf
 
     Q_PROPERTY(QMcpTextContent textContent READ textContent WRITE setTextContent)
     Q_PROPERTY(QMcpImageContent imageContent READ imageContent WRITE setImageContent)
+    Q_PROPERTY(QMcpAudioContent audioContent READ audioContent WRITE setAudioContent)
     Q_PROPERTY(QMcpEmbeddedResource embeddedResource READ embeddedResource WRITE setEmbeddedResource)
 public:
     QMcpPromptMessageContent() : QMcpAnyOf(new Private) {}
@@ -32,6 +34,12 @@ public:
     {
         setRefType("imageContent"_ba);
         d<Private>()->imageContent = imageContent;
+    }
+    QMcpPromptMessageContent(const QMcpAudioContent &audioContent)
+        : QMcpAnyOf(new Private)
+    {
+        setRefType("audioContent"_ba);
+        d<Private>()->audioContent = audioContent;
     }
     QMcpPromptMessageContent(const QMcpEmbeddedResource &embeddedResource)
         : QMcpAnyOf(new Private)
@@ -64,6 +72,16 @@ public:
         d<Private>()->imageContent = imageContent;
     }
 
+    QMcpAudioContent audioContent() const {
+        return d<Private>()->audioContent;
+    }
+
+    void setAudioContent(const QMcpAudioContent &audioContent) {
+        if (this->audioContent() == audioContent) return;
+        setRefType("audioContent"_ba);
+        d<Private>()->audioContent = audioContent;
+    }
+
     QMcpEmbeddedResource embeddedResource() const {
         return d<Private>()->embeddedResource;
     }
@@ -77,6 +95,7 @@ private:
     struct Private : public QMcpAnyOf::Private {
         QMcpTextContent textContent;
         QMcpImageContent imageContent;
+        QMcpAudioContent audioContent;
         QMcpEmbeddedResource embeddedResource;
 
         Private *clone() const override { return new Private(*this); }

@@ -8,6 +8,7 @@
 #include <QtMcpCommon/qmcpanyof.h>
 #include <QtMcpCommon/qmcptextcontent.h>
 #include <QtMcpCommon/qmcpimagecontent.h>
+#include <QtMcpCommon/qmcpaudiocontent.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -17,6 +18,7 @@ class Q_MCPCOMMON_EXPORT QMcpCreateMessageResultContent : public QMcpAnyOf
 
     Q_PROPERTY(QMcpTextContent textContent READ textContent WRITE setTextContent)
     Q_PROPERTY(QMcpImageContent imageContent READ imageContent WRITE setImageContent)
+    Q_PROPERTY(QMcpAudioContent audioContent READ audioContent WRITE setAudioContent)
 public:
     QMcpCreateMessageResultContent() : QMcpAnyOf(new Private) {}
 
@@ -44,10 +46,21 @@ public:
         d<Private>()->imageContent = imageContent;
     }
 
+    QMcpAudioContent audioContent() const {
+        return d<Private>()->audioContent;
+    }
+
+    void setAudioContent(const QMcpAudioContent &audioContent) {
+        if (this->audioContent() == audioContent) return;
+        setRefType("audioContent"_ba);
+        d<Private>()->audioContent = audioContent;
+    }
+
 private:
     struct Private : public QMcpAnyOf::Private {
         QMcpTextContent textContent;
         QMcpImageContent imageContent;
+        QMcpAudioContent audioContent;
 
         Private *clone() const override { return new Private(*this); }
     };
