@@ -5,6 +5,9 @@
 #include "qmcpserver.h"
 #include <QtCore/QMultiHash>
 #include <QtCore/QTimer>
+#ifdef QT_GUI_LIB
+#include <QtGui/QAction>
+#endif
 #include <QtMcpCommon/QMcpCreateMessageRequest>
 
 QT_BEGIN_NAMESPACE
