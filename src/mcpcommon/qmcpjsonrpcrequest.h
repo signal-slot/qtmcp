@@ -27,6 +27,7 @@ protected:
     QMcpJSONRPCRequest(Private *d) : QMcpJSONRPCMessageWithId(d) {}
 
 public:
+    // TODO: This should be non pure virtual in Qt 6.9
     virtual QString method() const = 0;
 
     QMcpJSONRPCRequestParams params() const {
