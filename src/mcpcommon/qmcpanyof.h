@@ -47,6 +47,11 @@ protected:
     struct Private : public QMcpGadget::Private {
         QByteArray refType;
         Private *clone() const override { return new Private(*this); }
+
+        virtual int findPropertyIndex(const QJsonObject &object) const {
+            Q_UNUSED(object);
+            return -1;
+        }
     };
 };
 

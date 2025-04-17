@@ -7,54 +7,64 @@ QT_BEGIN_NAMESPACE
 
 bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
 {
-    auto typeMatches = [&object](const QMcpGadget *gadget) -> bool {
-        auto keys = object.keys();
-        const auto mo = gadget->metaObject();
-        for (int j = 0; j < mo->propertyCount(); j++) {
-            const auto property = mo->property(j);
-            const auto propertyName = QString::fromLatin1(property.name());
-            const auto isConstant = property.isConstant();
-            const auto isRequired = property.isRequired();
-            if (keys.contains(propertyName)) {
-                keys.removeOne(propertyName);
-            } else if (isRequired) {
-                // object must contain required property
-                return false;
-            } else if (isConstant) {
-                // const property must match
-                const auto propertyValue = property.readOnGadget(gadget);
-                if (object.value(propertyName).toVariant() != propertyValue) {
-                    qWarning() << mo->className() << propertyName << object.value(propertyName) << propertyValue;
+    const auto mo = metaObject();
+    int propertyIndex = d<Private>()->findPropertyIndex(object);
+    if (propertyIndex < 0) {
+        auto typeMatches = [&object](const QMcpGadget *gadget) -> bool {
+            auto keys = object.keys();
+            const auto mo = gadget->metaObject();
+            for (int j = 0; j < mo->propertyCount(); j++) {
+                const auto property = mo->property(j);
+                const auto propertyName = QString::fromLatin1(property.name());
+                const auto isConstant = property.isConstant();
+                const auto isRequired = property.isRequired();
+                if (keys.contains(propertyName)) {
+                    keys.removeOne(propertyName);
+                } else if (isRequired) {
+                    // object must contain required property
                     return false;
+                } else if (isConstant) {
+                    // const property must match
+                    const auto propertyValue = property.readOnGadget(gadget);
+                    if (object.value(propertyName).toVariant() != propertyValue) {
+                        qWarning() << mo->className() << propertyName << object.value(propertyName) << propertyValue;
+                        return false;
+                    }
                 }
             }
-        }
-        // if object contains unknown property, return false
-        return keys.isEmpty();
-    };
+            // if object contains unknown property, return false
+            return keys.isEmpty();
+        };
 
-    QList<int> matched;
-    const auto mo = metaObject();
-    const auto mo2 = &staticMetaObject;
-    for (int i = mo2->propertyOffset() + mo2->propertyCount(); i < mo->propertyCount(); i++) {
-        const auto property = mo->property(i);
-        auto propertyValue = property.readOnGadget(this);
-        if (propertyValue.canConvert<QMcpGadget>()) {
-            auto *gadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-            if (!typeMatches(gadget))
-                continue;
-            matched.append(i);
-        } else {
-            qFatal();
+        QList<int> matched;
+        const auto mo2 = &staticMetaObject;
+        for (int i = mo2->propertyOffset() + mo2->propertyCount(); i < mo->propertyCount(); i++) {
+            const auto property = mo->property(i);
+            auto propertyValue = property.readOnGadget(this);
+            if (propertyValue.canConvert<QMcpGadget>()) {
+                auto *gadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
+                if (!typeMatches(gadget))
+                    continue;
+                matched.append(i);
+            } else {
+                qFatal();
+            }
         }
+
+        if (matched.count() != 1) {
+            QStringList propertyNames;
+            for (const auto index : matched) {
+                const auto property = mo->property(index);
+                propertyNames.append(QString::fromLatin1(property.name()));
+            }
+            qWarning() << "More than one property candidates found" << propertyNames;
+            qWarning() << "Please implement findPropertyIndex() to specify the property";
+            return false;
+        }
+        propertyIndex = matched.first();
     }
 
-    if (matched.count() != 1) {
-        qWarning() << matched;
-        return false;
-    }
-
-    const auto property = mo->property(matched.first());
+    const auto property = mo->property(propertyIndex);
     setRefType(property.name());
     auto propertyValue = property.readOnGadget(this);
     if (propertyValue.canConvert<QMcpGadget>()) {
@@ -76,7 +86,7 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
 
             if (value.isObject()) {
                 auto propertyValue = property.readOnGadget(gadget);
-
+                
                 if (propertyValue.canConvert<QMcpGadget>()) {
                     auto *newGadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
                     if (!newGadget->fromJsonObject(value.toObject()))
