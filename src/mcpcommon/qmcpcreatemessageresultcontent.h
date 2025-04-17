@@ -4,64 +4,28 @@
 #ifndef QMCPCREATEMESSAGERESULTCONTENT_H
 #define QMCPCREATEMESSAGERESULTCONTENT_H
 
-#include <QtMcpCommon/qmcpcommonglobal.h>
-#include <QtMcpCommon/qmcpanyof.h>
-#include <QtMcpCommon/qmcptextcontent.h>
-#include <QtMcpCommon/qmcpimagecontent.h>
-#include <QtMcpCommon/qmcpaudiocontent.h>
+#include <QtMcpCommon/qmcpmessagecontentbase.h>
 
 QT_BEGIN_NAMESPACE
 
-class Q_MCPCOMMON_EXPORT QMcpCreateMessageResultContent : public QMcpAnyOf
+class Q_MCPCOMMON_EXPORT QMcpCreateMessageResultContent : public QMcpMessageContentBase
 {
     Q_GADGET
-
-    Q_PROPERTY(QMcpTextContent textContent READ textContent WRITE setTextContent)
-    Q_PROPERTY(QMcpImageContent imageContent READ imageContent WRITE setImageContent)
-    Q_PROPERTY(QMcpAudioContent audioContent READ audioContent WRITE setAudioContent)
 public:
-    QMcpCreateMessageResultContent() : QMcpAnyOf(new Private) {}
+    QMcpCreateMessageResultContent() : QMcpMessageContentBase(new Private) {}
+    QMcpCreateMessageResultContent(const QMcpTextContent &textContent)
+        : QMcpMessageContentBase(new Private) { setTextContent(textContent); }
+    QMcpCreateMessageResultContent(const QMcpImageContent &imageContent)
+        : QMcpMessageContentBase(new Private) { setImageContent(imageContent); }
+    QMcpCreateMessageResultContent(const QMcpAudioContent &audioContent)
+        : QMcpMessageContentBase(new Private) { setAudioContent(audioContent); }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
 
-    QMcpTextContent textContent() const {
-        return d<Private>()->textContent;
-    }
-
-    void setTextContent(const QMcpTextContent &textContent) {
-        if (this->textContent() == textContent) return;
-        setRefType("textContent"_ba);
-        d<Private>()->textContent = textContent;
-    }
-
-    QMcpImageContent imageContent() const {
-        return d<Private>()->imageContent;
-    }
-
-    void setImageContent(const QMcpImageContent &imageContent) {
-        if (this->imageContent() == imageContent) return;
-        setRefType("imageContent"_ba);
-        d<Private>()->imageContent = imageContent;
-    }
-
-    QMcpAudioContent audioContent() const {
-        return d<Private>()->audioContent;
-    }
-
-    void setAudioContent(const QMcpAudioContent &audioContent) {
-        if (this->audioContent() == audioContent) return;
-        setRefType("audioContent"_ba);
-        d<Private>()->audioContent = audioContent;
-    }
-
 private:
-    struct Private : public QMcpAnyOf::Private {
-        QMcpTextContent textContent;
-        QMcpImageContent imageContent;
-        QMcpAudioContent audioContent;
-
+    struct Private : public QMcpMessageContentBase::Private {
         Private *clone() const override { return new Private(*this); }
     };
 };

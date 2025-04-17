@@ -57,6 +57,8 @@ qt_internal_add_module(McpCommon
         qmcpimagecontent.h
         qmcpaudiocontent.h
         qmcpimplementation.h
+        qmcpmessagecontentbase.h
+        qmcpextendedmessagecontent.h
         qmcpinitializednotification.h
         qmcpinitializednotificationparams.h
         qmcpinitializednotificationparamsmeta.h
