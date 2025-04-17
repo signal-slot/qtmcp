@@ -75,10 +75,11 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
                 continue;
 
             if (value.isObject()) {
-                auto propertyValue = property.readOnGadget(this);
+                auto propertyValue = property.readOnGadget(gadget);
+
                 if (propertyValue.canConvert<QMcpGadget>()) {
-                    auto *gadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-                    if (!gadget->fromJsonObject(value.toObject()))
+                    auto *newGadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
+                    if (!newGadget->fromJsonObject(value.toObject()))
                         return false;
                     if (!property.writeOnGadget(gadget, propertyValue))
                         qFatal() << gadget;
