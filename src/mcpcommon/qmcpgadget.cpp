@@ -170,6 +170,47 @@ QJsonObject QMcpGadget::toJsonObject() const
         const auto mt = mp.metaType();
         const auto name = QString::fromLatin1(mp.name());
         auto value = mp.readOnGadget(this);
+        
+        // Handle QList types first to ensure empty lists are properly serialized
+        if (QString::fromUtf8(mt.name()).startsWith(QStringLiteral("QList<")) ||
+            QString::fromUtf8(mt.name()).endsWith(QStringLiteral("List"))) {
+            // Always convert to a JSON array even if the list is empty
+            QJsonArray array;
+            if (value.canConvert<QVariantList>()) {
+                const QVariantList list = value.toList();
+                for (const auto &item : list) {
+                    const QMetaType itemType = item.metaType();
+                    switch (itemType.id()) {
+                    case QMetaType::QByteArray:
+                        array.append(QString::fromUtf8(item.toByteArray()));
+                        break;
+                    default:
+                        if (itemType.flags() & QMetaType::IsEnumeration) {
+                            const auto mo = itemType.metaObject();
+                            for (int i = 0; i < mo->enumeratorCount(); i++) {
+                                const auto me = mo->enumerator(i);
+                                if (itemType.name() == QByteArray(mo->className()) + "::" + me.enumName()) {
+                                    const auto v = item.toInt();
+                                    array.append(QString::fromUtf8(me.valueToKey(v)));
+                                    break;
+                                }
+                            }
+                        } else if (item.canConvert<QMcpGadget>()) {
+                            const auto gadget = reinterpret_cast<const QMcpGadget *>(item.constData());
+                            const auto object = gadget->toJsonObject();
+                            array.append(object);
+                        } else {
+                            array.append(item.toJsonValue());
+                        }
+                        break;
+                    }
+                }
+            }
+            ret.insert(name, array);
+            continue;
+        }
+        
+        // Handle other types
         switch (mt.id()) {
         case QMetaType::Bool:
         case QMetaType::Int:
@@ -199,37 +240,6 @@ QJsonObject QMcpGadget::toJsonObject() const
                 const auto *gadget = reinterpret_cast<const QMcpGadget *>(value.constData());
                 const auto object = gadget->toJsonObject();
                 value = object.toVariantMap();
-            } else if (value.canConvert<QVariantList>()) {
-                QJsonArray array;
-                const QVariantList list = value.toList();
-                for (const auto &value : list) {
-                    const QMetaType mt = value.metaType();
-                    switch (mt.id()) {
-                    case QMetaType::QByteArray:
-                        array.append(QString::fromUtf8(value.toByteArray()));
-                        break;
-                    default:
-                        if (mt.flags() & QMetaType::IsEnumeration) {
-                            const auto mo = mt.metaObject();
-                            for (int i = 0; i < mo->enumeratorCount(); i++) {
-                                const auto me = mo->enumerator(i);
-                                if (mt.name() == QByteArray(mo->className()) + "::" + me.enumName()) {
-                                    const auto v = value.toInt();
-                                    array.append(QString::fromUtf8(me.valueToKey(v)));
-                                    break;
-                                }
-                            }
-                        } else if (value.canConvert<QMcpGadget>()) {
-                            const auto gadget = reinterpret_cast<const QMcpGadget *>(value.constData());
-                            const auto object = gadget->toJsonObject();
-                            array.append(object);
-                        } else {
-                            array.append(value.toJsonValue());
-                        }
-                        break;
-                    }
-                }
-                value = array;
             }
         }
         ret.insert(name, value.toJsonValue());
