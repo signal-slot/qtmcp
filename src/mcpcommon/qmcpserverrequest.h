@@ -15,8 +15,43 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCOMMON_EXPORT QMcpServerRequest : public QMcpAnyOf
 {
     Q_GADGET
+
+    Q_PROPERTY(QMcpPingRequest pingRequest READ pingRequest WRITE setPingRequest)
+    Q_PROPERTY(QMcpCreateMessageRequest createMessageRequest READ createMessageRequest WRITE setCreateMessageRequest)
+    Q_PROPERTY(QMcpListRootsRequest listRootsRequest READ listRootsRequest WRITE setListRootsRequest)
+
 public:
     QMcpServerRequest() : QMcpAnyOf(new Private) {}
+
+    QMcpPingRequest pingRequest() const {
+        return d<Private>()->pingRequest;
+    }
+
+    void setPingRequest(const QMcpPingRequest &request) {
+        if (this->pingRequest() == request) return;
+        setRefType("pingRequest");
+        d<Private>()->pingRequest = request;
+    }
+
+    QMcpCreateMessageRequest createMessageRequest() const {
+        return d<Private>()->createMessageRequest;
+    }
+
+    void setCreateMessageRequest(const QMcpCreateMessageRequest &request) {
+        if (this->createMessageRequest() == request) return;
+        setRefType("createMessageRequest");
+        d<Private>()->createMessageRequest = request;
+    }
+
+    QMcpListRootsRequest listRootsRequest() const {
+        return d<Private>()->listRootsRequest;
+    }
+
+    void setListRootsRequest(const QMcpListRootsRequest &request) {
+        if (this->listRootsRequest() == request) return;
+        setRefType("listRootsRequest");
+        d<Private>()->listRootsRequest = request;
+    }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
