@@ -13,6 +13,12 @@ class Q_MCPCOMMON_EXPORT QMcpSamplingMessageContent : public QMcpMessageContentB
     Q_GADGET
 public:
     QMcpSamplingMessageContent() : QMcpMessageContentBase(new Private) {}
+    QMcpSamplingMessageContent(const QMcpTextContent &textContent)
+        : QMcpMessageContentBase(new Private) { setTextContent(textContent); }
+    QMcpSamplingMessageContent(const QMcpImageContent &imageContent)
+        : QMcpMessageContentBase(new Private) { setImageContent(imageContent); }
+    QMcpSamplingMessageContent(const QMcpAudioContent &audioContent)
+        : QMcpMessageContentBase(new Private) { setAudioContent(audioContent); }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
