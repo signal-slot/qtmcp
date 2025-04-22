@@ -1,214 +1,192 @@
-# Update Plan for Qt MCP Implementation
+# Updated Implementation Plan for Qt MCP 2025-03-26
 
-## 1. Key Changes in the 2025-03-26 Schema
+## 1. Implementation Status
 
-Based on analysis of both schema files, here are the key differences that need to be addressed:
+### 1.1. Completed Tasks
 
-### 1.1. Audio Content Support
-- New `AudioContent` type added
-- `AudioContent` included as a possible content type in:
-  - `CallToolResult`
-  - `CreateMessageResult`
-  - `PromptMessage`
-  - `SamplingMessage`
+#### 1.1.1. Code Analysis Phase ✅ COMPLETE
+- Analyzed current implementation mapping to 2024-11-05 schema
+- Identified classes needing updates
+- Understood inheritance structure for QMcpAnnotated
 
-### 1.2. Annotations Structure Change
-- `Annotated` base type replaced with direct references to `Annotations`
-- All objects that previously inherited from `Annotated` now have an explicit `annotations` property
+#### 1.1.2. Core Implementation Phase ✅ COMPLETE
 
-### 1.3. JSON-RPC Batch Support
-- New types added:
-  - `JSONRPCBatchRequest`
-  - `JSONRPCBatchResponse`
-- `JSONRPCMessage` updated to include batch operations
-
-### 1.4. Model Hints
-- New `ModelHint` type added
-- `ModelPreferences` updated to include hints
-
-### 1.5. Other Changes
-- Various minor updates to existing types
-- Possible removal of `ListResourceTemplatesRequest` from `ClientRequest`
-
-## 2. Implementation Plan
-
-### 2.1. Code Analysis Phase
-
-1. **Analyze Current Implementation**
-   - Review how the current implementation maps to the 2024-11-05 schema
-   - Identify all classes that will need to be updated
-   - Understand the inheritance structure, especially for `Annotated`
-
-2. **Dependency Analysis**
-   - Identify dependencies between components
-   - Create a dependency graph to determine the order of updates
-
-### 2.2. Implementation Phase
-
-#### 2.2.1. Update Core Types
-
-1. **Create Annotations Structure**
-   - Create/update `qmcpannotations.h` to implement the new Annotations structure
-   - Update or deprecate the existing `qmcpannotated.h`
-
-2. **Add AudioContent Support**
-   - Create new `qmcpaudiocontent.h` file
-   - Implement the AudioContent class with required properties
-
-3. **Update Content Types**
-   - Update `qmcptextcontent.h`, `qmcpimagecontent.h` to use the new Annotations reference
-   - Update content containers to include AudioContent:
+1. **Audio Content Support** ✅ COMPLETE
+   - Created and implemented `qmcpaudiocontent.h`
+   - Audio content support added to all content containers:
      - `qmcpcalltoolresultcontent.h`
      - `qmcpcreatemessageresultcontent.h`
      - `qmcppromptmessagecontent.h`
-     - `qmcpsamplingmessagecontent.h`
+     - `qmcpsamplingmessagecontent.h` - Added constructors for text, image, and audio content
 
-4. **Implement JSON-RPC Batch Support**
-   - Create new files:
+2. **Annotations Structure Change** ✅ COMPLETE
+   - Added direct annotations properties to all classes
+   - Maintained QMcpAnnotated for backward compatibility with 2024-11-05 schema servers
+
+3. **JSON-RPC Batch Support** ✅ COMPLETE
+   - Created new files:
      - `qmcpjsonrpcbatchrequest.h`
      - `qmcpjsonrpcbatchresponse.h`
-   - Update `qmcpjsonrpcmessage.h` to include batch operations
+   - Updated `qmcpjsonrpcmessage.h` documentation to include batch operations
 
-5. **Implement Model Hints**
-   - Create new `qmcpmodelhint.h` file
-   - Update `qmcpmodelpreferences.h` to include hints
+4. **Model Hints** ✅ COMPLETE
+   - Created `qmcpmodelhint.h` with name property
+   - Updated `qmcpmodelpreferences.h` to include hints
 
-#### 2.2.2. Update Dependent Components
+5. **Other Changes** ✅ COMPLETE
+   - Maintained `ListResourceTemplatesRequest` in `ClientRequest` for backward compatibility
 
-1. **Update Client Implementation**
-   - Update client code to handle new message types
-   - Update client capabilities
+#### 1.1.3. Dependent Components Update ✅ COMPLETE
+- Client and server implementations updated to handle new message types
+- Updated capabilities for both client and server
+- Shared components updated to work with modified types
 
-2. **Update Server Implementation**
-   - Update server code to handle new message types
-   - Update server capabilities
+### 1.2. Remaining Tasks
 
-3. **Update Common Components**
-   - Update any shared components that depend on the modified types
+#### 1.2.1. Testing Phase
 
-### 2.3. Testing Phase
-
-1. **Update Existing Tests**
+1. **Update Existing Tests** ⏳ IN PROGRESS
    - Update tests to reflect changes in the API
-   - Ensure all existing functionality still works
+   - Ensure all existing functionality still works with both schema versions
+   - Estimated completion: 1 week
 
-2. **Add New Tests**
+2. **Add New Tests** ⏳ IN PROGRESS
    - Add tests for new features:
-     - AudioContent
+     - AudioContent functionality
      - JSON-RPC Batch operations
-     - Model Hints
+     - Model Hints usage
+   - Estimated completion: 1 week
 
-3. **Integration Testing**
+3. **Integration Testing** 🔜 PLANNED
    - Test client-server communication with the updated protocol
+   - Test with MCP servers supporting both schema versions (2024-11-05 and 2025-03-26)
    - Test with example applications
+   - Estimated completion: 1-2 weeks
 
-### 2.4. Documentation Phase
+#### 1.2.2. Documentation Phase 🔜 PLANNED
 
 1. **Update API Documentation**
-   - Document new classes and methods
+   - Document all new classes and methods
    - Update existing documentation to reflect changes
+   - Highlight backward compatibility considerations
+   - Estimated completion: 1 week
 
-2. **Update Examples**
-   - Update example code to demonstrate new features
-   - Add new examples specifically for new features
+2. **Developer Guidelines**
+   - Create guidelines for developers on how to use the new features
+   - Provide migration path for applications using the older API
+   - Estimated completion: 3-5 days
 
-## 3. File Changes
+#### 1.2.3. Example Updates 🔜 PLANNED
 
-Here's a list of files that will likely need to be modified or created:
+1. **Update Existing Examples**
+   - Modify existing examples to use new features where appropriate
+   - Ensure all examples still work with the updated implementation
+   - Estimated completion: 3-5 days
 
-### 3.1. New Files
-- `src/mcpcommon/qmcpaudiocontent.h`
-- `src/mcpcommon/qmcpaudiocontent.cpp`
-- `src/mcpcommon/qmcpjsonrpcbatchrequest.h`
-- `src/mcpcommon/qmcpjsonrpcbatchresponse.h`
-- `src/mcpcommon/qmcpmodelhint.h`
-- `src/mcpcommon/qmcpmodelhint.cpp`
+2. **Create New Examples**
+   - Add examples demonstrating:
+     - Audio content handling
+     - JSON-RPC batch operations
+     - Model hint usage
+   - Estimated completion: 1 week
 
-### 3.2. Modified Files
-- `src/mcpcommon/qmcpannotations.h`
-- `src/mcpcommon/qmcpannotated.h` (possibly deprecated)
-- `src/mcpcommon/qmcptextcontent.h`
-- `src/mcpcommon/qmcpimagecontent.h`
-- `src/mcpcommon/qmcpcalltoolresult.h`
-- `src/mcpcommon/qmcpcalltoolresultcontent.h`
-- `src/mcpcommon/qmcpcreatemessageresult.h`
-- `src/mcpcommon/qmcpcreatemessageresultcontent.h`
-- `src/mcpcommon/qmcppromptmessage.h`
-- `src/mcpcommon/qmcppromptmessagecontent.h`
-- `src/mcpcommon/qmcpsamplingmessage.h`
-- `src/mcpcommon/qmcpsamplingmessagecontent.h`
-- `src/mcpcommon/qmcpjsonrpcmessage.h`
-- `src/mcpcommon/qmcpmodelpreferences.h`
-- `src/mcpcommon/qmcpclientrequest.h`
-- `src/mcpclient/qmcpclient.cpp`
-- `src/mcpclient/qmcpclient.h`
-- `src/mcpserver/qmcpserver.cpp`
-- `src/mcpserver/qmcpserver.h`
-- Various test files in `tests/auto/`
-
-## 4. Implementation Strategy
+## 2. Updated Implementation Strategy
 
 ```mermaid
 graph TD
-    A[Analyze Current Implementation] --> B[Update Core Types]
-    B --> C[Update Dependent Components]
+    A[Analyze Current Implementation] -->|COMPLETED| B[Update Core Types]
+    B -->|COMPLETED| C[Update Dependent Components]
     C --> D[Update Tests]
     D --> E[Update Documentation]
     E --> F[Update Examples]
-    
-    B --> B1[Create Annotations Structure]
-    B --> B2[Add AudioContent Support]
-    B --> B3[Update Content Types]
-    B --> B4[Implement JSON-RPC Batch Support]
-    B --> B5[Implement Model Hints]
-    
-    C --> C1[Update Client Implementation]
-    C --> C2[Update Server Implementation]
-    C --> C3[Update Common Components]
+    F --> G[Release Preparation]
     
     D --> D1[Update Existing Tests]
     D --> D2[Add New Tests]
     D --> D3[Integration Testing]
+    
+    E --> E1[Update API Documentation]
+    E --> E2[Developer Guidelines]
+    
+    F --> F1[Update Existing Examples]
+    F --> F2[Create New Examples]
+    
+    G --> G1[Performance Testing]
+    G --> G2[Final Review]
+    G --> G3[Release Notes]
+    
+    classDef completed fill:#bff,stroke:#070;
+    classDef inProgress fill:#ffc,stroke:#850;
+    classDef planned fill:#fee,stroke:#c00;
+    
+    class A,B,C completed;
+    class D,D1,D2 inProgress;
+    class D3,E,E1,E2,F,F1,F2,G,G1,G2,G3 planned;
 ```
 
-## 5. Timeline
+## 3. Revised Timeline
 
-Given the scope of changes, here's a proposed timeline:
+1. ~~**Week 1-3**: Code Analysis and Implementation~~ ✅ COMPLETED
+   - ~~Detailed analysis of current implementation~~
+   - ~~Implement core type changes~~
+   - ~~Update dependent components~~
 
-1. **Week 1**: Code Analysis and Planning
-   - Detailed analysis of current implementation
-   - Finalize implementation plan
-   - Set up test environment
-
-2. **Week 2-3**: Core Implementation
-   - Implement core type changes
-   - Update dependent components
-   - Initial testing
-
-3. **Week 4**: Testing and Documentation
+2. **Week 4-5**: Testing (Current Phase)
    - Complete test suite updates
-   - Update documentation
-   - Update examples
+   - Add tests for new features
+   - Begin integration testing
 
-4. **Week 5**: Final Testing and Release
-   - Integration testing
-   - Address any issues found
-   - Prepare for release
+3. **Week 6**: Documentation and Examples
+   - Update API documentation
+   - Create developer guidelines
+   - Update and create examples
 
-## 6. Risks and Mitigation
+4. **Week 7**: Final Testing and Release
+   - Complete integration testing
+   - Performance testing
+   - Final review and release notes
 
-1. **API Compatibility**
-   - **Risk**: Changes to core types might break existing code
-   - **Mitigation**: Maintain backward compatibility where possible, provide clear migration guides
+## 4. Backward Compatibility Strategy
 
-2. **Performance Impact**
-   - **Risk**: New features might impact performance
-   - **Mitigation**: Benchmark before and after changes, optimize if necessary
+To ensure compatibility with both 2024-11-05 and 2025-03-26 schema versions:
 
-3. **Testing Coverage**
-   - **Risk**: Incomplete testing might miss issues
-   - **Mitigation**: Ensure comprehensive test coverage, especially for new features
+1. **Dual-Structure Support**
+   - Maintain QMcpAnnotated while also supporting direct annotations properties
+   - Support both old and new content type mechanisms
 
-4. **Integration Issues**
-   - **Risk**: Updated client might not work with older servers and vice versa
-   - **Mitigation**: Implement version negotiation, test with mixed versions
+2. **Version Detection**
+   - Client should detect server schema version during initialization
+   - Use appropriate message formats based on detected version
+
+3. **Graceful Degradation**
+   - When communicating with older servers, exclude new features like audio content
+   - When receiving data with new features from newer servers, handle it appropriately if possible
+
+## 5. Testing Focus Areas
+
+1. **Cross-Version Communication**
+   - Test communication between clients and servers with different schema versions
+   - Verify graceful handling of unsupported features
+
+2. **New Feature Verification**
+   - Thorough testing of audio content handling
+   - Batch request processing
+   - Model hint interpretation
+
+3. **Performance Impact**
+   - Benchmark performance with both schema versions
+   - Ensure no significant degradation with either version
+
+## 6. Remaining Risks and Mitigation
+
+1. **Integration Issues**
+   - **Risk**: Unforeseen issues when different versions interact
+   - **Mitigation**: Extensive cross-version testing
+
+2. **User Adoption**
+   - **Risk**: Developers confused by dual support mechanisms
+   - **Mitigation**: Clear documentation and migration guides
+
+3. **Feature Discoverability**
+   - **Risk**: New features may be difficult to discover or use correctly
+   - **Mitigation**: Comprehensive examples and improved documentation
