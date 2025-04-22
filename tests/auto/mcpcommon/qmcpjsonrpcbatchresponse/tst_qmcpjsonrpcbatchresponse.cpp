@@ -42,34 +42,39 @@ void tst_QMcpJSONRPCBatchResponse::batchResponse()
     // Create a batch of JSON-RPC responses
     QMcpJSONRPCBatchResponse batchResponse;
     
-    QList<QMcpJSONRPCResponse> responses;
+    QList<QMcpJSONRPCResponse *> responses;
     
+    // Create response objects on the heap to avoid dangling pointers
     // Create first response
-    QMcpJSONRPCResponse response1;
-    response1.setId(1);
+    QMcpJSONRPCResponse *response1 = new QMcpJSONRPCResponse();
+    response1->setId(1);
     QMcpResult result1;
     QJsonObject resultData1{{"key1", "value1"}};
     result1.setAdditionalProperties(resultData1);
-    response1.setResult(result1);
+    response1->setResult(result1);
     responses.append(response1);
     
     // Create second response
-    QMcpJSONRPCResponse response2;
-    response2.setId("resp-2");
+    QMcpJSONRPCResponse *response2 = new QMcpJSONRPCResponse();
+    response2->setId("resp-2");
     QMcpResult result2;
     QJsonObject resultData2{{"key2", 42}};
     result2.setAdditionalProperties(resultData2);
-    response2.setResult(result2);
+    response2->setResult(result2);
     responses.append(response2);
     
     batchResponse.setResponses(responses);
     
+    responses = batchResponse.responses();
+
     // Verify the batch response
-    QCOMPARE(batchResponse.responses().size(), 2);
-    QCOMPARE(batchResponse.responses()[0].id().toInt(), 1);
-    QCOMPARE(batchResponse.responses()[0].result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(batchResponse.responses()[1].id().toString(), QString("resp-2"));
-    QCOMPARE(batchResponse.responses()[1].result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(responses.size(), 2);
+    auto response = responses.at(0);
+    QCOMPARE(response->id().toInt(), 1);
+    QCOMPARE(response->result().additionalProperties()["key1"].toString(), QString("value1"));
+    response = responses.at(1);
+    QCOMPARE(response->id().toString(), QString("resp-2"));
+    QCOMPARE(response->result().additionalProperties()["key2"].toInt(), 42);
     
     // Test JSON conversion
     QJsonObject jsonObj = batchResponse.toJsonObject();
@@ -82,21 +87,26 @@ void tst_QMcpJSONRPCBatchResponse::batchResponse()
     // Verify first response in JSON
     QJsonObject resp1Json = responsesArray[0].toObject();
     QCOMPARE(resp1Json["id"].toInt(), 1);
-    QCOMPARE(resp1Json["result"].toObject()["key1"].toString(), QString("value1"));
+    QCOMPARE(resp1Json["result"].toObject()["additionalProperties"].toObject()["key1"].toString(), QString("value1"));
     
     // Verify second response in JSON
     QJsonObject resp2Json = responsesArray[1].toObject();
     QCOMPARE(resp2Json["id"].toString(), QString("resp-2"));
-    QCOMPARE(resp2Json["result"].toObject()["key2"].toInt(), 42);
+    QCOMPARE(resp2Json["result"].toObject()["additionalProperties"].toObject()["key2"].toInt(), 42);
     
     // Test JSON parsing
     QMcpJSONRPCBatchResponse parsedResponse;
     QVERIFY(parsedResponse.fromJsonObject(jsonObj));
-    QCOMPARE(parsedResponse.responses().size(), 2);
-    QCOMPARE(parsedResponse.responses()[0].id().toInt(), 1);
-    QCOMPARE(parsedResponse.responses()[0].result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(parsedResponse.responses()[1].id().toString(), QString("resp-2"));
-    QCOMPARE(parsedResponse.responses()[1].result().additionalProperties()["key2"].toInt(), 42);
+    responses = parsedResponse.responses();
+    QCOMPARE(responses.size(), 2);
+    response = responses.at(0);
+    QCOMPARE(response->id().toInt(), 1);
+    QCOMPARE(response->result().additionalProperties()["key1"].toString(), QString("value1"));
+    response = responses.at(1);
+    QCOMPARE(response->id().toString(), QString("resp-2"));
+    QCOMPARE(response->result().additionalProperties()["key2"].toInt(), 42);
+    // Clean up allocated objects
+    qDeleteAll(responses);
 }
 
 void tst_QMcpJSONRPCBatchResponse::batchErrorResponse()
@@ -180,22 +190,23 @@ void tst_QMcpJSONRPCBatchResponse::copyBatchResponse()
     // Create a batch response
     QMcpJSONRPCBatchResponse batchResponse;
     
-    QList<QMcpJSONRPCResponse> responses;
+    QList<QMcpJSONRPCResponse *> responses;
     
-    QMcpJSONRPCResponse response1;
-    response1.setId(1);
+    // Create response objects on the heap to avoid dangling pointers
+    QMcpJSONRPCResponse *response1 = new QMcpJSONRPCResponse();
+    response1->setId(1);
     QMcpResult result1;
     QJsonObject resultData1{{"key1", "value1"}};
     result1.setAdditionalProperties(resultData1);
-    response1.setResult(result1);
+    response1->setResult(result1);
     responses.append(response1);
     
-    QMcpJSONRPCResponse response2;
-    response2.setId("resp-2");
+    QMcpJSONRPCResponse *response2 = new QMcpJSONRPCResponse();
+    response2->setId("resp-2");
     QMcpResult result2;
     QJsonObject resultData2{{"key2", 42}};
     result2.setAdditionalProperties(resultData2);
-    response2.setResult(result2);
+    response2->setResult(result2);
     responses.append(response2);
     
     batchResponse.setResponses(responses);
@@ -203,19 +214,21 @@ void tst_QMcpJSONRPCBatchResponse::copyBatchResponse()
     // Test copy constructor
     QMcpJSONRPCBatchResponse copiedResponse(batchResponse);
     QCOMPARE(copiedResponse.responses().size(), 2);
-    QCOMPARE(copiedResponse.responses()[0].id().toInt(), 1);
-    QCOMPARE(copiedResponse.responses()[0].result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(copiedResponse.responses()[1].id().toString(), QString("resp-2"));
-    QCOMPARE(copiedResponse.responses()[1].result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(copiedResponse.responses()[0]->id().toInt(), 1);
+    QCOMPARE(copiedResponse.responses()[0]->result().additionalProperties()["key1"].toString(), QString("value1"));
+    QCOMPARE(copiedResponse.responses()[1]->id().toString(), QString("resp-2"));
+    QCOMPARE(copiedResponse.responses()[1]->result().additionalProperties()["key2"].toInt(), 42);
     
     // Test assignment operator
     QMcpJSONRPCBatchResponse assignedResponse;
     assignedResponse = batchResponse;
     QCOMPARE(assignedResponse.responses().size(), 2);
-    QCOMPARE(assignedResponse.responses()[0].id().toInt(), 1);
-    QCOMPARE(assignedResponse.responses()[0].result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(assignedResponse.responses()[1].id().toString(), QString("resp-2"));
-    QCOMPARE(assignedResponse.responses()[1].result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(assignedResponse.responses()[0]->id().toInt(), 1);
+    QCOMPARE(assignedResponse.responses()[0]->result().additionalProperties()["key1"].toString(), QString("value1"));
+    QCOMPARE(assignedResponse.responses()[1]->id().toString(), QString("resp-2"));
+    QCOMPARE(assignedResponse.responses()[1]->result().additionalProperties()["key2"].toInt(), 42);
+    // Clean up allocated objects
+    qDeleteAll(responses);
 }
 
 void tst_QMcpJSONRPCBatchResponse::copyBatchErrorResponse()

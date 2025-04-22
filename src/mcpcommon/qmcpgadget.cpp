@@ -88,13 +88,62 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object)
                             }
                         }
                     } else {
-                        QList<QMcpGadget> *list = reinterpret_cast<QList<QMcpGadget> *>(propertyValue.data());
-                        for (const auto &v : array) {
-                            QMcpGadget base;
-                            auto *sub = static_cast<QMcpGadget *>(mt.construct(&base));
-                            if (!sub->fromJsonObject(v.toObject()))
-                                return false;
-                            list->append(*sub);
+                        // Check if this is a list of pointers to QMcpGadget objects
+                        if (typeName.endsWith('*')) {
+                            // Handle QList<QMcpGadget *> case
+                            QByteArray pointedTypeName = typeName.chopped(1).trimmed(); // Remove the * and any whitespace
+                            auto metaType = QMetaType::fromName(pointedTypeName);
+
+                            // Generic handling for lists of pointers to QMcpGadget subclasses
+                            QList<QMcpGadget *> *list = reinterpret_cast<QList<QMcpGadget *> *>(propertyValue.data());
+
+                            // Clear any existing items in the list first to avoid memory leaks
+                            qDeleteAll(*list);
+                            list->clear();
+
+                            for (const auto &v : array) {
+                                if (!v.isObject())
+                                    continue;
+
+                                // Create a new instance
+                                QMcpGadget *gadget = nullptr;
+
+                                if (metaType.isValid()) {
+                                    // Create using the meta-type if available
+                                    void *instance = metaType.create();
+                                    if (instance) {
+                                        gadget = static_cast<QMcpGadget *>(instance);
+                                    }
+                                }
+
+                                // If the meta-type approach failed, fall back to creating a generic instance
+                                if (!gadget) {
+                                    // As fallback, create a generic QMcpGadget instance
+                                    // since we can't know the exact type
+                                    gadget = new QMcpGadget();
+                                }
+
+                                // Populate it from JSON
+                                if (!gadget->fromJsonObject(v.toObject())) {
+                                    delete gadget;
+                                    return false;
+                                }
+
+                                // Add it to the list
+                                list->append(gadget);
+                            }
+                        } else {
+                            // Original code for handling QList<QMcpGadget>
+                            QList<QMcpGadget> *list = reinterpret_cast<QList<QMcpGadget> *>(propertyValue.data());
+                            for (const auto &v : array) {
+                                QMcpGadget base;
+                                auto *sub = static_cast<QMcpGadget *>(mt.construct(&base));
+                                if (!sub->fromJsonObject(v.toObject())) {
+                                    delete sub;
+                                    return false;
+                                }
+                                list->append(*sub);
+                            }
                         }
                     }
                     break; }
@@ -170,7 +219,7 @@ QJsonObject QMcpGadget::toJsonObject() const
         const auto mt = mp.metaType();
         const auto name = QString::fromLatin1(mp.name());
         auto value = mp.readOnGadget(this);
-        
+
         // Handle QList types first to ensure empty lists are properly serialized
         if (QString::fromUtf8(mt.name()).startsWith(QStringLiteral("QList<")) ||
             QString::fromUtf8(mt.name()).endsWith(QStringLiteral("List"))) {
@@ -213,7 +262,7 @@ QJsonObject QMcpGadget::toJsonObject() const
             ret.insert(name, array);
             continue;
         }
-        
+
         // Handle other types
         switch (mt.id()) {
         case QMetaType::Bool:

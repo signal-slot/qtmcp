@@ -5,6 +5,9 @@
 #define QMCPJSONRPCBATCHRESPONSE_H
 
 #include <QtCore/QList>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
+#include <QtCore/QJsonValue>
 #include <QtMcpCommon/qmcpjsonrpcmessage.h>
 #include <QtMcpCommon/qmcpjsonrpcresponse.h>
 #include <QtMcpCommon/qmcpjsonrpcerror.h>
@@ -23,16 +26,55 @@ class Q_MCPCOMMON_EXPORT QMcpJSONRPCBatchResponse : public QMcpJSONRPCMessage
         \property QMcpJSONRPCBatchResponse::responses
         \brief The list of responses in this batch.
     */
-    Q_PROPERTY(QList<QMcpJSONRPCResponse> responses READ responses WRITE setResponses REQUIRED)
+    Q_PROPERTY(QList<QMcpJSONRPCResponse *> responses READ responses WRITE setResponses REQUIRED)
 
 public:
     QMcpJSONRPCBatchResponse() : QMcpJSONRPCMessage(new Private) {}
 
-    QList<QMcpJSONRPCResponse> responses() const {
+    // Override fromJsonObject to properly handle response list parsing
+    bool fromJsonObject(const QJsonObject &json) override {
+        // First, call the base class implementation
+        if (!QMcpJSONRPCMessage::fromJsonObject(json))
+            return false;
+            
+        // Handle responses array manually
+        if (json.contains("responses"_L1) && json["responses"_L1].isArray()) {
+            QJsonArray responsesArray = json["responses"_L1].toArray();
+            QList<QMcpJSONRPCResponse*> responseList;
+            
+            // Process each response in the array
+            for (const QJsonValue &value : responsesArray) {
+                if (!value.isObject())
+                    continue;
+                    
+                // Create a new response object
+                QMcpJSONRPCResponse* response = new QMcpJSONRPCResponse();
+                
+                // Populate it from the JSON object
+                if (!response->fromJsonObject(value.toObject())) {
+                    delete response;
+                    qDeleteAll(responseList);
+                    responseList.clear();
+                    return false;
+                }
+                
+                // Add it to our list
+                responseList.append(response);
+            }
+            
+            // Update our responses property with the parsed list
+            setResponses(responseList);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    QList<QMcpJSONRPCResponse *> responses() const {
         return d<Private>()->responses;
     }
 
-    void setResponses(const QList<QMcpJSONRPCResponse> &responses) {
+    void setResponses(const QList<QMcpJSONRPCResponse *> &responses) {
         if (this->responses() == responses) return;
         d<Private>()->responses = responses;
     }
@@ -43,7 +85,7 @@ public:
 
 private:
     struct Private : public QMcpJSONRPCMessage::Private {
-        QList<QMcpJSONRPCResponse> responses;
+        QList<QMcpJSONRPCResponse *> responses;
 
         Private *clone() const override { return new Private(*this); }
     };
