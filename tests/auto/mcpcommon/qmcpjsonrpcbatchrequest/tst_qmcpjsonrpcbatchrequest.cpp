@@ -4,12 +4,11 @@
 #include "../testhelper.h"
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
-#include <QtCore/QJsonParseError>
-#include <QtCore/QJsonValue>
+#include <QtCore/QJsonObject>
 #include <QtMcpCommon/qmcpjsonrpcbatchrequest.h>
-#include <QtMcpCommon/qmcpjsonrpcrequest.h>
-#include <QtMcpCommon/qmcpserverrequest.h>
-#include <QtMcpCommon/qmcpclientrequest.h>
+#include <QtMcpCommon/qmcppingrequest.h>
+#include <QtMcpCommon/qmcpcreatemessagerequest.h>
+#include <QtMcpCommon/qmcpcalltoolrequest.h>
 #include <QtTest/QTest>
 
 class tst_QMcpJSONRPCBatchRequest : public QObject
@@ -28,94 +27,97 @@ void tst_QMcpJSONRPCBatchRequest::defaultValues()
     QMcpJSONRPCBatchRequest genericRequest;
     QVERIFY(genericRequest.requests().isEmpty());
     QCOMPARE(genericRequest.jsonrpc(), QString("2.0"));
-
-    // Test default values for QMcpServerJSONRPCBatchRequest
-    QMcpServerJSONRPCBatchRequest serverRequest;
-    QVERIFY(serverRequest.requests().isEmpty());
-    QCOMPARE(serverRequest.jsonrpc(), QString("2.0"));
-
-    // Test default values for QMcpClientJSONRPCBatchRequest
-    QMcpClientJSONRPCBatchRequest clientRequest;
-    QVERIFY(clientRequest.requests().isEmpty());
-    QCOMPARE(clientRequest.jsonrpc(), QString("2.0"));
 }
 
 void tst_QMcpJSONRPCBatchRequest::jsonConversion()
 {
-    // Create a batch request with empty requests list
+    // Create a batch of JSON-RPC requests using QMcpPingRequest
     QMcpJSONRPCBatchRequest batchRequest;
+    QList<QMcpJSONRPCRequest *> requests;
+    
+    // Create first request - QMcpPingRequest
+    QMcpPingRequest pingRequest;
+    pingRequest.setId(1);
+    requests.append(&pingRequest);
+
+    // Create second request - another QMcpPingRequest with a string ID
+    QMcpPingRequest pingRequest2;
+    pingRequest2.setId("req-2");
+    requests.append(&pingRequest2);
+    
+    batchRequest.setRequests(requests);
+
+    // Verify the batch request
+    requests = batchRequest.requests();
+    QCOMPARE(requests.size(), 2);
+    auto request = requests.at(0);
+    QCOMPARE(request->id().toInt(), 1);
+    QCOMPARE(request->method(), QString("ping"));
+    request = requests.at(1);
+    QCOMPARE(request->id().toString(), QString("req-2"));
+    QCOMPARE(request->method(), QString("ping"));
     
     // Test JSON conversion
     QJsonObject jsonObj = batchRequest.toJsonObject();
     QCOMPARE(jsonObj["jsonrpc"].toString(), QString("2.0"));
     QVERIFY(jsonObj.contains("requests"));
     QVERIFY(jsonObj["requests"].isArray());
-    QCOMPARE(jsonObj["requests"].toArray().size(), 0);
+    QJsonArray requestsArray = jsonObj["requests"].toArray();
+    QCOMPARE(requestsArray.size(), 2);
     
-    // Create a server batch request with empty requests list
-    QMcpServerJSONRPCBatchRequest serverBatchRequest;
+    // Verify first request in JSON
+    QJsonObject req1Json = requestsArray[0].toObject();
+    QCOMPARE(req1Json["id"].toInt(), 1);
+    QCOMPARE(req1Json["method"].toString(), QString("ping"));
     
-    // Test JSON conversion
-    QJsonObject serverJsonObj = serverBatchRequest.toJsonObject();
-    QCOMPARE(serverJsonObj["jsonrpc"].toString(), QString("2.0"));
-    QVERIFY(serverJsonObj.contains("requests"));
-    QVERIFY(serverJsonObj["requests"].isArray());
-    QCOMPARE(serverJsonObj["requests"].toArray().size(), 0);
-    
-    // Create a client batch request with empty requests list
-    QMcpClientJSONRPCBatchRequest clientBatchRequest;
-    
-    // Test JSON conversion
-    QJsonObject clientJsonObj = clientBatchRequest.toJsonObject();
-    QCOMPARE(clientJsonObj["jsonrpc"].toString(), QString("2.0"));
-    QVERIFY(clientJsonObj.contains("requests"));
-    QVERIFY(clientJsonObj["requests"].isArray());
-    QCOMPARE(clientJsonObj["requests"].toArray().size(), 0);
+    // Verify second request in JSON
+    QJsonObject req2Json = requestsArray[1].toObject();
+    QCOMPARE(req2Json["id"].toString(), QString("req-2"));
+    QCOMPARE(req2Json["method"].toString(), QString("ping"));
 }
 
 void tst_QMcpJSONRPCBatchRequest::copyTest()
 {
-    // Create a batch request
+    // Create a batch request with non-empty requests using concrete request types
     QMcpJSONRPCBatchRequest batchRequest;
+    QList<QMcpJSONRPCRequest *> requests;
+    
+    // Create first request - QMcpPingRequest
+    QMcpPingRequest pingRequest;
+    pingRequest.setId(1);
+    QMcpPingRequestParams pingParams;
+    pingRequest.setParams(pingParams);
+    requests.append(&pingRequest);
+    
+    // Create second request - another QMcpPingRequest with a string ID
+    QMcpPingRequest pingRequest2;
+    pingRequest2.setId("req-2");
+    requests.append(&pingRequest2);
+    
+    batchRequest.setRequests(requests);
     
     // Test copy constructor
     QMcpJSONRPCBatchRequest copiedRequest(batchRequest);
-    QVERIFY(copiedRequest.requests().isEmpty());
-    QCOMPARE(copiedRequest.jsonrpc(), QString("2.0"));
+    requests = copiedRequest.requests();
+    QCOMPARE(requests.size(), 2);
+    auto request = requests.at(0);
+    QCOMPARE(request->id().toInt(), 1);
+    QCOMPARE(request->method(), QString("ping"));
+    request = requests.at(1);
+    QCOMPARE(request->id().toString(), QString("req-2"));
+    QCOMPARE(request->method(), QString("ping"));
     
     // Test assignment operator
     QMcpJSONRPCBatchRequest assignedRequest;
     assignedRequest = batchRequest;
-    QVERIFY(assignedRequest.requests().isEmpty());
-    QCOMPARE(assignedRequest.jsonrpc(), QString("2.0"));
-    
-    // Create a server batch request
-    QMcpServerJSONRPCBatchRequest serverBatchRequest;
-    
-    // Test copy constructor
-    QMcpServerJSONRPCBatchRequest copiedServerRequest(serverBatchRequest);
-    QVERIFY(copiedServerRequest.requests().isEmpty());
-    QCOMPARE(copiedServerRequest.jsonrpc(), QString("2.0"));
-    
-    // Test assignment operator
-    QMcpServerJSONRPCBatchRequest assignedServerRequest;
-    assignedServerRequest = serverBatchRequest;
-    QVERIFY(assignedServerRequest.requests().isEmpty());
-    QCOMPARE(assignedServerRequest.jsonrpc(), QString("2.0"));
-    
-    // Create a client batch request
-    QMcpClientJSONRPCBatchRequest clientBatchRequest;
-    
-    // Test copy constructor
-    QMcpClientJSONRPCBatchRequest copiedClientRequest(clientBatchRequest);
-    QVERIFY(copiedClientRequest.requests().isEmpty());
-    QCOMPARE(copiedClientRequest.jsonrpc(), QString("2.0"));
-    
-    // Test assignment operator
-    QMcpClientJSONRPCBatchRequest assignedClientRequest;
-    assignedClientRequest = clientBatchRequest;
-    QVERIFY(assignedClientRequest.requests().isEmpty());
-    QCOMPARE(assignedClientRequest.jsonrpc(), QString("2.0"));
+    requests = assignedRequest.requests();
+    QCOMPARE(requests.size(), 2);
+    request = requests.at(0);
+    QCOMPARE(request->id().toInt(), 1);
+    QCOMPARE(request->method(), QString("ping"));
+    request = requests.at(1);
+    QCOMPARE(request->id().toString(), QString("req-2"));
+    QCOMPARE(request->method(), QString("ping"));
 }
 
 QTEST_MAIN(tst_QMcpJSONRPCBatchRequest)

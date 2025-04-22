@@ -82,13 +82,6 @@ protected:
 
 Q_DECLARE_SHARED(QMcpJSONRPCMessageWithId)
 
-// Forward declarations for batch message types
-class QMcpJSONRPCBatchRequest;
-class QMcpServerJSONRPCBatchRequest;
-class QMcpClientJSONRPCBatchRequest;
-class QMcpJSONRPCBatchResponse;
-class QMcpJSONRPCBatchErrorResponse;
-
 QT_END_NAMESPACE
 
 #endif // QMCPJSONRPCMESSAGE_H

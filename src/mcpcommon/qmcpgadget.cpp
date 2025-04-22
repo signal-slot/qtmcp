@@ -199,6 +199,10 @@ QJsonObject QMcpGadget::toJsonObject() const
                             const auto gadget = reinterpret_cast<const QMcpGadget *>(item.constData());
                             const auto object = gadget->toJsonObject();
                             array.append(object);
+                        } else if (item.canConvert<QMcpGadget *>()) {
+                            const auto gadget = item.value<QMcpGadget *>();
+                            const auto object = gadget->toJsonObject();
+                            array.append(object);
                         } else {
                             array.append(item.toJsonValue());
                         }
