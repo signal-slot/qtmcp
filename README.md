@@ -286,7 +286,7 @@ ctest --output-on-failure
 
 ## Protocol Specification
 
-The Model Context Protocol is defined using JSON Schema (see `spec/schema.json`). Key components include:
+The Model Context Protocol is defined using JSON Schema. Key components include:
 
 - Message Types:
   - Requests (client to server and vice versa)
@@ -300,7 +300,23 @@ The Model Context Protocol is defined using JSON Schema (see `spec/schema.json`)
   - Roles: User and assistant roles in communication
   - Experimental Features: Optional protocol extensions
 
-Schema Structure:
+### Specification Status
+
+Qt MCP currently has two specification versions:
+
+- **2024-11-05**: The stable version that is fully implemented and deployed in production.
+- **2025-03-26**: The newer version with several enhancements that has completed core implementation and is now in testing phase.
+
+Key differences in the 2025-03-26 specification include:
+
+- Audio Content Support: New `AudioContent` type for audio data handling ✅ **Implemented**
+- Annotations Structure Change: Direct references to `Annotations` instead of inheritance from `Annotated` ✅ **Implemented**
+- JSON-RPC Batch Support: New types for batch requests and responses ✅ **Implemented**
+- Model Hints: Enhanced model preference specification ✅ **Implemented**
+
+The implementation maintains backward compatibility with the 2024-11-05 schema while adding support for all new features in the 2025-03-26 schema. The core implementation is complete, and the project is currently in the testing phase. For the detailed status and remaining tasks, see the update plan outlined in `update-plan-mcp-2025-03-26.md`.
+
+Schema Structure Example:
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -328,6 +344,10 @@ Schema Structure:
   }
 }
 ```
+
+For detailed specification information, see:
+- `spec/schema-2024-11-05.json`: Current implementation
+- `spec/schema-2025-03-26.json`: Upcoming implementation
 
 ## License
 
