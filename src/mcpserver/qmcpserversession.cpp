@@ -77,6 +77,20 @@ void QMcpServerSession::setProtocolVersion(const QString &protocolVersion)
 {
     if (d->protocolVersion == protocolVersion)
         return;
+    
+    // Validation of protocol version
+    static const QStringList validVersions = {
+        QStringLiteral("2025-03-26"),
+        QStringLiteral("2024-11-05")
+    };
+    
+    // Only accept valid protocol versions in correct format
+    if (protocolVersion.isEmpty() ||
+        !validVersions.contains(protocolVersion) ||
+        !QRegularExpression(QStringLiteral("^\\d{4}-\\d{2}-\\d{2}$")).match(protocolVersion).hasMatch()) {
+        return;  // Reject invalid versions
+    }
+    
     d->protocolVersion = protocolVersion;
 }
 
