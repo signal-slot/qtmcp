@@ -74,6 +74,25 @@ public:
     ~QMcpClient() override;
 
     /*!
+        Returns the current protocol version used by the client.
+    */
+    QString protocolVersion() const;
+
+    /*!
+        Sets the protocol version to use for communication.
+        This should be called before sending initialization requests.
+        
+        \param version The protocol version string (e.g., "2024-11-05", "2025-03-26")
+        \return true if the version is supported, false otherwise
+    */
+    bool setProtocolVersion(const QString &version);
+
+    /*!
+        Returns a list of protocol versions supported by this client.
+    */
+    QStringList supportedProtocolVersions() const;
+
+    /*!
         \internal
         Helper struct for extracting callback argument types.
     */
@@ -120,13 +139,26 @@ public:
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
         static_assert(std::is_base_of<QMcpResult, Result>::value, "Result must inherit from QMcpResult");
 
-        auto json = request.toJsonObject();
-        send(json, [callback](const QJsonObject &json, const QJsonObject &error) {
+        // For initialize requests, we'll handle protocol version negotiation in the send method
+        // For all other requests, we use the current protocol version
+        auto json = request.toJsonObject(protocolVersion());
+        send(json, [callback, this](const QJsonObject &json, const QJsonObject &error) {
+            // Use the negotiated protocol version from the response when available
+            QString versionToUse = protocolVersion();
+            
+            // If the result contains a protocol version field, use that version
+            if (json.contains("protocolVersion")) {
+                QString resultVersion = json["protocolVersion"].toString();
+                if (supportedProtocolVersions().contains(resultVersion)) {
+                    versionToUse = resultVersion;
+                }
+            }
+            
             Result result;
-            result.fromJsonObject(json);
+            result.fromJsonObject(json, versionToUse);
             if (!error.isEmpty()) {
                 QMcpJSONRPCErrorError e;
-                e.fromJsonObject(error);
+                e.fromJsonObject(error, versionToUse);
                 callback(result, &e);
             } else {
                 callback(result, nullptr);
@@ -146,7 +178,8 @@ public:
     {
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
 
-        auto json = request.toJsonObject();
+        // Use the current protocol version for sending the request
+        auto json = request.toJsonObject(protocolVersion());
         send(json);
     }
 
@@ -170,7 +203,8 @@ public:
     {
         static_assert(std::is_base_of<QMcpNotification, Notification>::value, "Notification must inherit from QMcpNotification");
 
-        auto json = notification.toJsonObject();
+        // Use the current protocol version for sending the notification
+        auto json = notification.toJsonObject(protocolVersion());
         send(json);
     }
 
@@ -220,11 +254,22 @@ public:
         static_assert(std::is_base_of<QMcpResult, Res>::value,
                       "Result type must inherit from QMcpResult");
 
-        auto wrapper = [handler](const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
+        auto wrapper = [handler, this](const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
+            // Make sure to respect the specific protocol version
+            QString versionToUse = protocolVersion();
+            
+            // If this is a response to initialize, check the protocol version in the response
+            if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
+                QString reqVersion = json["params"].toObject()["protocolVersion"].toString();
+                if (supportedProtocolVersions().contains(reqVersion)) {
+                    versionToUse = reqVersion;
+                }
+            }
+            
             Req req;
-            req.fromJsonObject(json);
+            req.fromJsonObject(json, versionToUse);
             Res res = handler(req, error);
-            return res.toJsonObject();
+            return res.toJsonObject(versionToUse);
         };
 
         registerRequestHandler(Req().method(), wrapper);
@@ -246,9 +291,20 @@ public:
         static_assert(std::is_base_of<QMcpNotification, Notification>::value,
                       "Notification type must inherit from QMcpNotification");
 
-        auto wrapper = [handler](const QJsonObject &json) {
+        auto wrapper = [handler, this](const QJsonObject &json) {
+            // Make sure to respect the specific protocol version
+            QString versionToUse = protocolVersion();
+            
+            // If this is a notification containing protocol version info
+            if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
+                QString notifVersion = json["params"].toObject()["protocolVersion"].toString();
+                if (supportedProtocolVersions().contains(notifVersion)) {
+                    versionToUse = notifVersion;
+                }
+            }
+            
             Notification notification;
-            notification.fromJsonObject(json);
+            notification.fromJsonObject(json, versionToUse);
             handler(notification);
         };
 

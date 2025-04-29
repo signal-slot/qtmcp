@@ -17,6 +17,10 @@ private slots:
     void convert();
     void copy_data();
     void copy();
+    void versionSpecificSerialization_data();
+    void versionSpecificSerialization();
+    void versionSpecificDeserialization_data();
+    void versionSpecificDeserialization();
 };
 
 void tst_QMcpAnnotated::convert_data()
@@ -119,6 +123,128 @@ void tst_QMcpAnnotated::copy()
     QMcpAnnotated annotated3;
     annotated3 = annotated2;
     TestHelper::verify(&annotated3, data);
+}
+
+void tst_QMcpAnnotated::versionSpecificSerialization_data()
+{
+    QTest::addColumn<QString>("protocolVersion");
+    QTest::addColumn<bool>("hasAnnotations");
+    QTest::addColumn<bool>("shouldIncludeAnnotations");
+
+    // Latest version (2025-03-26) should include annotations when present
+    QTest::newRow("2025-03-26 with annotations") << "2025-03-26" << true << true;
+    QTest::newRow("2025-03-26 without annotations") << "2025-03-26" << false << false;
+
+    // Previous version (2024-11-05) should always omit annotations
+    QTest::newRow("2024-11-05 with annotations") << "2024-11-05" << true << false;
+    QTest::newRow("2024-11-05 without annotations") << "2024-11-05" << false << false;
+
+    // Unknown version should default to latest behavior
+    QTest::newRow("unknown version with annotations") << "future-version" << true << true;
+    QTest::newRow("unknown version without annotations") << "future-version" << false << false;
+}
+
+void tst_QMcpAnnotated::versionSpecificSerialization()
+{
+    QFETCH(QString, protocolVersion);
+    QFETCH(bool, hasAnnotations);
+    QFETCH(bool, shouldIncludeAnnotations);
+
+    // Create an annotated object
+    QMcpAnnotated annotated;
+    
+    if (hasAnnotations) {
+        QMcpAnnotations annotations;
+        annotations.setAudience({QMcpRole::assistant});
+        annotations.setPriority(0.8);
+        annotated.setAnnotations(annotations);
+    }
+
+    // Serialize with the specified protocol version
+    QJsonObject jsonObj = annotated.toJsonObject(protocolVersion);
+    
+    // Verify whether annotations are included based on the protocol version
+    if (shouldIncludeAnnotations) {
+        QVERIFY(jsonObj.contains("annotations"));
+        QVERIFY(jsonObj["annotations"].isObject());
+        
+        if (hasAnnotations) {
+            QJsonObject anns = jsonObj["annotations"].toObject();
+            QVERIFY(anns.contains("audience"));
+            QVERIFY(anns.contains("priority"));
+            QCOMPARE(anns["priority"].toDouble(), 0.8);
+        } else {
+            QVERIFY(jsonObj["annotations"].toObject().isEmpty());
+        }
+    } else {
+        QVERIFY(!jsonObj.contains("annotations"));
+    }
+}
+
+void tst_QMcpAnnotated::versionSpecificDeserialization_data()
+{
+    QTest::addColumn<QString>("protocolVersion");
+    QTest::addColumn<QByteArray>("json");
+    QTest::addColumn<bool>("shouldHaveAnnotations");
+
+    // JSON with annotations
+    QByteArray jsonWithAnnotations = R"({
+        "annotations": {
+            "audience": ["assistant"],
+            "priority": 0.8
+        }
+    })"_ba;
+
+    // JSON without annotations
+    QByteArray jsonWithoutAnnotations = R"({})"_ba;
+
+    // Latest version (2025-03-26) should process annotations when present
+    QTest::newRow("2025-03-26 with annotations") << "2025-03-26" << jsonWithAnnotations << true;
+    QTest::newRow("2025-03-26 without annotations") << "2025-03-26" << jsonWithoutAnnotations << false;
+
+    // Previous version (2024-11-05) should ignore annotations even if present
+    QTest::newRow("2024-11-05 with annotations") << "2024-11-05" << jsonWithAnnotations << false;
+    QTest::newRow("2024-11-05 without annotations") << "2024-11-05" << jsonWithoutAnnotations << false;
+
+    // Unknown version should default to latest behavior
+    QTest::newRow("unknown version with annotations") << "future-version" << jsonWithAnnotations << true;
+    QTest::newRow("unknown version without annotations") << "future-version" << jsonWithoutAnnotations << false;
+}
+
+void tst_QMcpAnnotated::versionSpecificDeserialization()
+{
+    QFETCH(QString, protocolVersion);
+    QFETCH(QByteArray, json);
+    QFETCH(bool, shouldHaveAnnotations);
+
+    QJsonParseError error;
+    QJsonDocument doc = QJsonDocument::fromJson(json, &error);
+
+    QVERIFY(error.error == QJsonParseError::NoError);
+    QVERIFY(doc.isObject());
+
+    const auto object = doc.object();
+    QMcpAnnotated annotated;
+    QVERIFY(annotated.fromJsonObject(object, protocolVersion));
+
+    if (shouldHaveAnnotations) {
+        QVERIFY(!annotated.annotations().audience().isEmpty() || annotated.annotations().priority() != 0);
+        
+        // If we have annotations from JSON, verify they are correct
+        if (object.contains("annotations")) {
+            if (object["annotations"].toObject().contains("audience")) {
+                QCOMPARE(annotated.annotations().audience().size(), 1);
+                QCOMPARE(annotated.annotations().audience().first(), QMcpRole::assistant);
+            }
+            
+            if (object["annotations"].toObject().contains("priority")) {
+                QCOMPARE(annotated.annotations().priority(), 0.8);
+            }
+        }
+    } else {
+        QVERIFY(annotated.annotations().audience().isEmpty());
+        QCOMPARE(annotated.annotations().priority(), 0.0);
+    }
 }
 
 QTEST_MAIN(tst_QMcpAnnotated)

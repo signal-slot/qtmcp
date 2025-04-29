@@ -16,6 +16,7 @@
 #include <QtMcpCommon/QMcpRoot>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
+#include <QtMcpCommon/QMcpAnnotated>
 #include <QtMcpServer/QMcpServer>
 #include <QtMcpServer/QMcpServerSession>
 
@@ -30,6 +31,12 @@ private slots:
     // Basic properties
     void testSessionId();
     void testInitialization();
+    
+    // Protocol version handling
+    void testProtocolVersion();
+    void testProtocolVersionValidation_data();
+    void testProtocolVersionValidation();
+    void testAnnotationsWithVersion();
 
     // Resource template management
     void testResourceTemplates();
@@ -90,6 +97,71 @@ void tst_QMcpServerSession::testInitialization()
     QVERIFY(m_session->isInitialized());
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.first().first().toBool(), true);
+}
+
+void tst_QMcpServerSession::testProtocolVersion()
+{
+    // Check default protocol version
+    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2025-03-26"));
+    
+    // Check protocol version setter and getter
+    m_session->setProtocolVersion(QStringLiteral("2024-11-05"));
+    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2024-11-05"));
+    
+    // Change back to default version
+    m_session->setProtocolVersion(QStringLiteral("2025-03-26"));
+    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2025-03-26"));
+}
+
+void tst_QMcpServerSession::testProtocolVersionValidation_data()
+{
+    QTest::addColumn<QString>("version");
+    QTest::addColumn<bool>("isValid");
+
+    QTest::newRow("2025-03-26") << "2025-03-26" << true;
+    QTest::newRow("2024-11-05") << "2024-11-05" << true;
+    QTest::newRow("invalid date format") << "2025/03/26" << false;
+    QTest::newRow("future version") << "2026-01-01" << false;
+    QTest::newRow("empty") << "" << false;
+}
+
+void tst_QMcpServerSession::testProtocolVersionValidation()
+{
+    QFETCH(QString, version);
+    QFETCH(bool, isValid);
+    
+    if (isValid) {
+        m_session->setProtocolVersion(version);
+        QCOMPARE(m_session->protocolVersion(), version);
+    } else {
+        // Should remain at the default version since invalid version is rejected
+        QString originalVersion = m_session->protocolVersion();
+        m_session->setProtocolVersion(version);
+        QCOMPARE(m_session->protocolVersion(), originalVersion);
+    }
+}
+
+void tst_QMcpServerSession::testAnnotationsWithVersion()
+{
+    // Create an annotated object
+    QMcpAnnotated annotated;
+    QMcpAnnotations annotations;
+    annotations.setAudience({QMcpRole::assistant});
+    annotations.setPriority(0.8);
+    annotated.setAnnotations(annotations);
+    
+    // Test with 2025-03-26 version (should include annotations)
+    m_session->setProtocolVersion("2025-03-26");
+    QJsonObject jsonObj2025 = annotated.toJsonObject(m_session->protocolVersion());
+    QVERIFY(jsonObj2025.contains("annotations"));
+    QVERIFY(jsonObj2025["annotations"].isObject());
+    QVERIFY(jsonObj2025["annotations"].toObject().contains("audience"));
+    QVERIFY(jsonObj2025["annotations"].toObject().contains("priority"));
+    
+    // Test with 2024-11-05 version (should not include annotations)
+    m_session->setProtocolVersion("2024-11-05");
+    QJsonObject jsonObj2024 = annotated.toJsonObject(m_session->protocolVersion());
+    QVERIFY(!jsonObj2024.contains("annotations"));
 }
 
 void tst_QMcpServerSession::testResourceTemplates()

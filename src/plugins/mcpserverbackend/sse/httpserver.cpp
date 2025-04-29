@@ -22,7 +22,6 @@ QByteArray HttpServer::getSse(const QNetworkRequest &request)
     QByteArray response;
     if (request.hasRawHeader("Accept") && request.rawHeader("Accept") == "text/event-stream") {
         auto uuid = registerSseRequest(request);
-        qDebug() << uuid;
         if (!uuid.isNull()) {
             d->sessions.insert(uuid);
             response += "event: endpoint\r\ndata: /messages/?session_id=";

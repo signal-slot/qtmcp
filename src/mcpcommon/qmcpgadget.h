@@ -183,8 +183,8 @@ public:
         return true;
     }
 
-    virtual bool fromJsonObject(const QJsonObject &object);
-    virtual QJsonObject toJsonObject() const;
+    virtual bool fromJsonObject(const QJsonObject &object, const QString &protocolVersion = "2025-03-26"_L1);
+    virtual QJsonObject toJsonObject(const QString &protocolVersion = "2025-03-26"_L1) const;
     virtual const QMetaObject* metaObject() const { return &staticMetaObject; }
 
 protected:

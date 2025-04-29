@@ -35,7 +35,7 @@ class Q_MCPCOMMON_EXPORT QMcpAnnotations : public QMcpGadget
 
         The default value is 0.
     */
-    Q_PROPERTY(qreal priority READ priority WRITE setPriority)
+    Q_PROPERTY(qreal priority READ priority WRITE setPriority REQUIRED)
 
 public:
     QMcpAnnotations() : QMcpGadget(new Private) {}
@@ -54,8 +54,10 @@ public:
     }
 
     void setPriority(qreal priority) {
-        if (this->priority() == priority) return;
-        d<Private>()->priority = priority;
+        // Clamp priority between 0 and 1
+        qreal clampedPriority = qBound(0.0, priority, 1.0);
+        if (this->priority() == clampedPriority) return;
+        d<Private>()->priority = clampedPriority;
     }
 
     const QMetaObject* metaObject() const override {

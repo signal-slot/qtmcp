@@ -32,9 +32,9 @@ public:
     QMcpJSONRPCBatchResponse() : QMcpJSONRPCMessage(new Private) {}
 
     // Override fromJsonObject to properly handle response list parsing
-    bool fromJsonObject(const QJsonObject &json) override {
+    bool fromJsonObject(const QJsonObject &json, const QString &protocolVersion = "2025-03-26"_L1) override {
         // First, call the base class implementation
-        if (!QMcpJSONRPCMessage::fromJsonObject(json))
+        if (!QMcpJSONRPCMessage::fromJsonObject(json, protocolVersion))
             return false;
             
         // Handle responses array manually
@@ -51,7 +51,7 @@ public:
                 QMcpJSONRPCResponse* response = new QMcpJSONRPCResponse();
                 
                 // Populate it from the JSON object
-                if (!response->fromJsonObject(value.toObject())) {
+                if (!response->fromJsonObject(value.toObject(), protocolVersion)) {
                     delete response;
                     qDeleteAll(responseList);
                     responseList.clear();

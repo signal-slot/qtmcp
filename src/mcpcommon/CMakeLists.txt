@@ -22,7 +22,7 @@ qt_internal_add_module(McpCommon
         qmcpjsonrpcrequestparams.h
         qmcpjsonrpcrequestparamsmeta.h
         qmcpjsonrpcresponse.h
-        qmcpannotated.h
+        qmcpannotated.h qmcpannotated.cpp
         qmcpblobresourcecontents.h
         qmcpcalltoolrequest.h
         qmcpcalltoolrequestparams.h

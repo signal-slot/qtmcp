@@ -89,6 +89,15 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
         This version is used for compatibility checking with clients.
     */
     Q_PROPERTY(QString protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
+    
+    /*!
+        \property QMcpServer::supportedProtocolVersions
+        This property holds the list of MCP protocol versions supported by the server.
+        
+        This list is used during the initialization handshake to negotiate
+        a compatible protocol version with clients.
+    */
+    Q_PROPERTY(QStringList supportedProtocolVersions READ supportedProtocolVersions NOTIFY supportedProtocolVersionsChanged FINAL)
 public:
     /*!
         Returns a list of available backend implementations for the MCP server.
@@ -150,10 +159,19 @@ public:
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
         static_assert(std::is_base_of<QMcpResult, Result>::value, "Result must inherit from QMcpResult");
 
-        auto json = request.toJsonObject();
-        send(session, json, [callback](const QUuid & session, const QJsonObject &json) {
+        // Get session's negotiated protocol version if available
+        QString versionToUse = protocolVersion();
+        for (auto *s : sessions()) {
+            if (s->sessionId() == session) {
+                versionToUse = s->protocolVersion();
+                break;
+            }
+        }
+
+        auto json = request.toJsonObject(versionToUse);
+        send(session, json, [callback, this, versionToUse](const QUuid & session, const QJsonObject &json) {
             Result result;
-            result.fromJsonObject(json);
+            result.fromJsonObject(json, versionToUse);
             callback(session, result);
         });
     }
@@ -170,7 +188,16 @@ public:
     {
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
 
-        auto json = request.toJsonObject();
+        // Get session's negotiated protocol version if available
+        QString versionToUse = protocolVersion();
+        for (auto *s : sessions()) {
+            if (s->sessionId() == session) {
+                versionToUse = s->protocolVersion();
+                break;
+            }
+        }
+
+        auto json = request.toJsonObject(versionToUse);
         send(session, json);
     }
 
@@ -190,11 +217,25 @@ public:
         \param notification Notification object inheriting from QMcpNotification
     */
     template<typename Notification>
-    void notify(const QUuid &session, const Notification &notification)
+    void notify(const QUuid &session, const Notification &notification, const QString &protocolVersion = QString())
     {
         static_assert(std::is_base_of<QMcpNotification, Notification>::value, "Notification must inherit from QMcpNotification");
 
-        auto json = notification.toJsonObject();
+        // Determine which protocol version to use
+        QString versionToUse = protocolVersion;
+        
+        // If no version was explicitly provided, get session's negotiated protocol version
+        if (versionToUse.isEmpty()) {
+            versionToUse = this->protocolVersion();
+            for (auto *s : sessions()) {
+                if (s->sessionId() == session) {
+                    versionToUse = s->protocolVersion();
+                    break;
+                }
+            }
+        }
+        
+        auto json = notification.toJsonObject(versionToUse);
         send(session, json);
     }
 
@@ -233,8 +274,17 @@ public:
         }
 
         auto wrapper = [this, handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
+            // Get session's negotiated protocol version if available
+            QString versionToUse = protocolVersion();
+            for (auto *s : sessions()) {
+                if (s->sessionId() == session) {
+                    versionToUse = s->protocolVersion();
+                    break;
+                }
+            }
+
             Req req;
-            req.fromJsonObject(json);
+            req.fromJsonObject(json, versionToUse);
             
             if constexpr (is_future<Result>::value) {
                 // For async handlers
@@ -244,11 +294,11 @@ public:
                 const auto id = json.value("id"_L1);
                 
                 // Set up continuation to send response when ready
-                future.then([this, session, id](const auto &result) {
+                future.then([this, session, id, versionToUse](const auto &result) {
                     QMcpJSONRPCResponse response;
                     response.setId(id.toVariant());
-                    auto object = response.toJsonObject();
-                    object.insert("result"_L1, result.toJsonObject());
+                    auto object = response.toJsonObject(versionToUse);
+                    object.insert("result"_L1, result.toJsonObject(versionToUse));
                     send(session, object);
                 });
                 
@@ -257,7 +307,7 @@ public:
             } else {
                 // For sync handlers
                 auto res = handler(session, req, error);
-                return QJsonValue(res.toJsonObject());
+                return QJsonValue(res.toJsonObject(versionToUse));
             }
         };
 
@@ -280,9 +330,18 @@ public:
         static_assert(std::is_base_of<QMcpNotification, Notification>::value,
                       "Notification type must inherit from QMcpNotification");
 
-        auto wrapper = [handler](const QUuid &session, const QJsonObject &json) {
+        auto wrapper = [handler, this](const QUuid &session, const QJsonObject &json) {
+            // Get session's negotiated protocol version if available
+            QString versionToUse = protocolVersion();
+            for (auto *s : sessions()) {
+                if (s->sessionId() == session) {
+                    versionToUse = s->protocolVersion();
+                    break;
+                }
+            }
+            
             Notification notification;
-            notification.fromJsonObject(json);
+            notification.fromJsonObject(json, versionToUse);
             handler(session, notification);
         };
 
@@ -306,6 +365,20 @@ public:
         \sa setProtocolVersion()
     */
     QString protocolVersion() const;
+    
+    /*!
+        Returns the list of protocol versions supported by the server.
+        \sa setSupportedProtocolVersions(), isProtocolVersionSupported()
+    */
+    QStringList supportedProtocolVersions() const;
+    
+    /*!
+        Checks if a given protocol version is supported by the server.
+        \param version Protocol version to check
+        \return true if supported, false otherwise
+        \sa supportedProtocolVersions()
+    */
+    bool isProtocolVersionSupported(const QString &version) const;
 
     /*!
         Returns a mapping of feature identifiers to their toolDescriptions.
@@ -335,6 +408,13 @@ public slots:
         \sa protocolVersion()
     */
     void setProtocolVersion(const QString &protocolVersion);
+    
+    /*!
+        Sets the list of protocol versions supported by the server.
+        \param versions List of supported protocol versions
+        \sa supportedProtocolVersions(), isProtocolVersionSupported()
+    */
+    void setSupportedProtocolVersions(const QStringList &versions);
 
     /*!
         Starts the MCP server with the given arguments.
@@ -366,6 +446,12 @@ signals:
         \param protocolVersion The new protocol version string
     */
     void protocolVersionChanged(const QString &protocolVersion);
+    
+    /*!
+        Emitted when the supported protocol versions change.
+        \param versions The new list of supported protocol versions
+    */
+    void supportedProtocolVersionsChanged(const QStringList &versions);
 
     /*!
         Emitted when the server has successfully started.

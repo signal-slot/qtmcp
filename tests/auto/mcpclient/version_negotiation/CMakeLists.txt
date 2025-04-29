@@ -3,10 +3,12 @@
 
 set(CMAKE_CXX_STANDARD 20)
 
-qt_internal_add_test(tst_qmcpannotated
+qt_internal_add_test(tst_version_negotiation
     SOURCES
-        tst_qmcpannotated.cpp
+        tst_version_negotiation.cpp
     LIBRARIES
         Qt::Test
         Qt::McpCommon
+        Qt::McpClient
+        Qt::McpServer
 )

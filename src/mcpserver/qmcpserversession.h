@@ -76,6 +76,16 @@ public:
     QUuid sessionId() const;
 
     /*!
+        Returns the protocol version negotiated with the client.
+    */
+    QString protocolVersion() const;
+    
+    /*!
+        Sets the protocol version negotiated with the client.
+    */
+    void setProtocolVersion(const QString &protocolVersion);
+
+    /*!
         Returns whether the session has been initialized.
         \sa initialized
     */

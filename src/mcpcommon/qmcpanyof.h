@@ -40,8 +40,8 @@ protected:
     }
 
 public:
-    bool fromJsonObject(const QJsonObject &object) override;
-    QJsonObject toJsonObject() const override;
+    bool fromJsonObject(const QJsonObject &object, const QString &protocolVersion = "2025-03-26"_L1) override;
+    QJsonObject toJsonObject(const QString &protocolVersion = "2025-03-26"_L1) const override;
 
 protected:
     struct Private : public QMcpGadget::Private {

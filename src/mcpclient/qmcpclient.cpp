@@ -17,6 +17,9 @@ Q_GLOBAL_STATIC_WITH_ARGS(QFactoryLoader, backendLoader,
 class QMcpClient::Private
 {
 public:
+    QString protocolVersion = "2025-03-26"_L1; // Default to latest version
+    QStringList supportedVersions = {"2024-11-05"_L1, "2025-03-26"_L1};
+    
     Private(const QString &type, QMcpClient *parent)
         : q(parent)
     {
@@ -27,7 +30,8 @@ public:
             qWarning() << QMcpClient::backends();
             return;
         }
-
+        
+        backend->setParent(q);
         connect(backend, &QMcpClientBackendInterface::started, q, &QMcpClient::started);
         connect(backend, &QMcpClientBackendInterface::errorOccurred, q, &QMcpClient::errorOccurred);
         connect(backend, &QMcpClientBackendInterface::received, q, [this](const QJsonObject &object) {
@@ -60,8 +64,17 @@ public:
                         if (error.code() > 0) {
                             QMcpJSONRPCError response;
                             response.setId(id.toVariant());
+                            // Extract protocol version if available in the request
+                            QString reqVersion = protocolVersion;
+                            if (object.contains("params"_L1) && object["params"_L1].toObject().contains("protocolVersion"_L1)) {
+                                QString requestedVersion = object["params"_L1].toObject()["protocolVersion"_L1].toString();
+                                if (supportedVersions.contains(requestedVersion)) {
+                                    reqVersion = requestedVersion;
+                                }
+                            }
                             response.setError(error);
-                            q->send(response.toJsonObject());
+                            // Use the appropriate protocol version for the session
+                            q->send(response.toJsonObject(protocolVersion));
                         } else {
                             q->send(result);
                         }
@@ -72,7 +85,8 @@ public:
                         auto error = response.error();
                         error.setMessage("Server doesn't handle the request"_L1);
                         response.setError(error);
-                        q->send(response.toJsonObject());
+                        // Use the appropriate protocol version for the session
+                        q->send(response.toJsonObject(protocolVersion));
                     }
                     return;
                 }
@@ -111,6 +125,25 @@ QMcpClient::QMcpClient(const QString &backend, QObject *parent)
 
 QMcpClient::~QMcpClient() = default;
 
+QString QMcpClient::protocolVersion() const
+{
+    return d->protocolVersion;
+}
+
+bool QMcpClient::setProtocolVersion(const QString &version)
+{
+    if (d->supportedVersions.contains(version)) {
+        d->protocolVersion = version;
+        return true;
+    }
+    return false;
+}
+
+QStringList QMcpClient::supportedProtocolVersions() const
+{
+    return d->supportedVersions;
+}
+
 void QMcpClient::start(const QString &args)
 {
     if (!d->backend) return;
@@ -120,6 +153,57 @@ void QMcpClient::start(const QString &args)
 void QMcpClient::send(const QJsonObject &request, std::function<void(const QJsonObject &, const QJsonObject &)> callback)
 {
     if (!d->backend) return;
+    
+    // If this is an initialization request, ensure the protocol version is set
+    if (request.contains("method"_L1) && request.value("method"_L1).toString() == "initialize") {
+        QJsonObject requestCopy = request;
+        QJsonObject params = requestCopy["params"].toObject();
+        
+        // Make sure we're sending our current protocol version
+        if (!params.contains("protocolVersion")) {
+            params["protocolVersion"] = d->protocolVersion;
+            requestCopy["params"] = params;
+        }
+        
+        // Add a callback to handle the initialization response
+        auto initCallback = [this, callback](const QJsonObject &result, const QJsonObject &error) {
+            if (!error.isEmpty()) {
+                // If there was an error, pass it to the original callback
+                if (callback)
+                    callback(result, error);
+                return;
+            }
+            
+            // Extract and store the protocol version from the server's response
+            if (result.contains("protocolVersion"_L1)) {
+                QString serverVersion = result["protocolVersion"_L1].toString();
+                if (d->supportedVersions.contains(serverVersion)) {
+                    d->protocolVersion = serverVersion;
+                }
+            }
+            
+            // Call the original callback
+            if (callback)
+                callback(result, error);
+        };
+        
+        // Send with our wrapped callback
+        static int id = 0;
+        if (requestCopy.contains("id"_L1) && requestCopy.value("id"_L1).isNull()) {
+            auto request2 = requestCopy;
+            request2.insert("id"_L1, id);
+
+            d->callbacks.insert(id, initCallback);
+            id++;
+            d->backend->send(request2);
+        } else {
+            d->backend->send(requestCopy);
+        }
+        
+        return;
+    }
+    
+    // For non-initialization requests, use the standard flow
     static int id = 0;
     if (request.contains("id"_L1) && request.value("id"_L1).isNull()) {
         auto request2 = request;

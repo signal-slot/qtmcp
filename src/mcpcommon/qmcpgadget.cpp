@@ -7,7 +7,7 @@
 
 QT_BEGIN_NAMESPACE
 
-bool QMcpGadget::fromJsonObject(const QJsonObject &object)
+bool QMcpGadget::fromJsonObject(const QJsonObject &object, const QString &protocolVersion)
 {
     const auto mo = metaObject();
 
@@ -124,7 +124,7 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object)
                                 }
 
                                 // Populate it from JSON
-                                if (!gadget->fromJsonObject(v.toObject())) {
+                                if (!gadget->fromJsonObject(v.toObject(), protocolVersion)) {
                                     delete gadget;
                                     return false;
                                 }
@@ -138,7 +138,7 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object)
                             for (const auto &v : array) {
                                 QMcpGadget base;
                                 auto *sub = static_cast<QMcpGadget *>(mt.construct(&base));
-                                if (!sub->fromJsonObject(v.toObject())) {
+                                if (!sub->fromJsonObject(v.toObject(), protocolVersion)) {
                                     delete sub;
                                     return false;
                                 }
@@ -158,7 +158,7 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object)
             auto propertyValue = property.readOnGadget(this);
             if (propertyValue.canConvert<QMcpGadget>()) {
                 auto *gadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-                if (!gadget->fromJsonObject(value.toObject()))
+                if (!gadget->fromJsonObject(value.toObject(), protocolVersion))
                     return false;
                 if (!property.writeOnGadget(this, propertyValue))
                     qFatal() << gadget;
@@ -209,7 +209,7 @@ QList<int> requiredOrModifiedPropertyIndices(const QMcpGadget *gadget)
 }
 }
 
-QJsonObject QMcpGadget::toJsonObject() const
+QJsonObject QMcpGadget::toJsonObject(const QString &protocolVersion) const
 {
     QJsonObject ret;
     const auto mo = metaObject();
@@ -246,11 +246,11 @@ QJsonObject QMcpGadget::toJsonObject() const
                             }
                         } else if (item.canConvert<QMcpGadget>()) {
                             const auto gadget = reinterpret_cast<const QMcpGadget *>(item.constData());
-                            const auto object = gadget->toJsonObject();
+                            const auto object = gadget->toJsonObject(protocolVersion);
                             array.append(object);
                         } else if (item.canConvert<QMcpGadget *>()) {
                             const auto gadget = item.value<QMcpGadget *>();
-                            const auto object = gadget->toJsonObject();
+                            const auto object = gadget->toJsonObject(protocolVersion);
                             array.append(object);
                         } else {
                             array.append(item.toJsonValue());
@@ -291,7 +291,7 @@ QJsonObject QMcpGadget::toJsonObject() const
                 }
             } else if (value.canConvert<QMcpGadget>()) {
                 const auto *gadget = reinterpret_cast<const QMcpGadget *>(value.constData());
-                const auto object = gadget->toJsonObject();
+                const auto object = gadget->toJsonObject(protocolVersion);
                 value = object.toVariantMap();
             }
         }

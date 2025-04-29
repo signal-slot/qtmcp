@@ -5,7 +5,7 @@
 
 QT_BEGIN_NAMESPACE
 
-bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
+bool QMcpAnyOf::fromJsonObject(const QJsonObject &object, const QString &protocolVersion)
 {
     const auto mo = metaObject();
     int propertyIndex = d<Private>()->findPropertyIndex(object);
@@ -89,7 +89,7 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
                 
                 if (propertyValue.canConvert<QMcpGadget>()) {
                     auto *newGadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-                    if (!newGadget->fromJsonObject(value.toObject()))
+                    if (!newGadget->fromJsonObject(value.toObject(), protocolVersion))
                         return false;
                     if (!property.writeOnGadget(gadget, propertyValue))
                         qFatal() << gadget;
@@ -109,7 +109,7 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object)
     return true;
 }
 
-QJsonObject QMcpAnyOf::toJsonObject() const
+QJsonObject QMcpAnyOf::toJsonObject(const QString &protocolVersion) const
 {
     const auto mo = metaObject();
     for (int i = 0; i < mo->propertyCount(); i++) {
@@ -119,7 +119,7 @@ QJsonObject QMcpAnyOf::toJsonObject() const
         auto value = mp.readOnGadget(this);
         if (value.canConvert<QMcpGadget>()) {
             const auto *gadget = reinterpret_cast<const QMcpGadget *>(value.constData());
-            return gadget->toJsonObject();
+            return gadget->toJsonObject(protocolVersion);
         } else {
             qFatal();
         }

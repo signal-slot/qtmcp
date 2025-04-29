@@ -23,6 +23,7 @@ private:
 public:
     QUuid sessionId;
     bool initialized = false;
+    QString protocolVersion = "2025-03-26"_L1; // Default to latest version
     QList<QMcpResourceTemplate> resourceTemplates;
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
@@ -65,6 +66,18 @@ QMcpServerSession::~QMcpServerSession() = default;
 QUuid QMcpServerSession::sessionId() const
 {
     return d->sessionId;
+}
+
+QString QMcpServerSession::protocolVersion() const
+{
+    return d->protocolVersion;
+}
+
+void QMcpServerSession::setProtocolVersion(const QString &protocolVersion)
+{
+    if (d->protocolVersion == protocolVersion)
+        return;
+    d->protocolVersion = protocolVersion;
 }
 
 bool QMcpServerSession::isInitialized() const
@@ -632,7 +645,7 @@ void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &para
         return;
     QMcpCreateMessageRequest request;
     request.setParams(params);
-    server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
+    server->request(d->sessionId, request, [this, server](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
         Q_ASSERT(d->sessionId == sessionId);
         emit createMessageFinished(result);
     });

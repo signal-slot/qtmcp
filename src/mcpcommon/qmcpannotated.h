@@ -31,6 +31,9 @@ public:
         d<Private>()->annotations = annotations;
     }
 
+    QJsonObject toJsonObject(const QString &protocolVersion = "2025-03-26"_L1) const override;
+    bool fromJsonObject(const QJsonObject &object, const QString &protocolVersion = "2025-03-26"_L1) override;
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }

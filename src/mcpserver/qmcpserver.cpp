@@ -29,7 +29,8 @@ public:
     QMcpServerBackendInterface *backend = nullptr;
     QMcpServerCapabilities capabilities;
     QString instructions;
-    QString protocolVersion = "2024-11-05"_L1;
+    QString protocolVersion = "2025-03-26"_L1; // Default to latest version
+    QStringList supportedVersions = {"2024-11-05"_L1, "2025-03-26"_L1};
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonValue(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
@@ -62,6 +63,7 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
         return;
     }
 
+    backend->setParent(q);
     connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
     connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
         auto session = new QMcpServerSession(sessionId, q);
@@ -87,23 +89,23 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                 auto params = notification.params();
                 params.setUri(uri);
                 notification.setParams(params);
-                q->notify(session->sessionId(), notification);
+                q->notify(session->sessionId(), notification, session->protocolVersion());
             }
         });
         connect(session, &QMcpServerSession::resourceListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpResourceListChangedNotification notification;
-            q->notify(session->sessionId(), notification);
+            q->notify(session->sessionId(), notification, session->protocolVersion());
         });
         connect(session, &QMcpServerSession::promptListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpPromptListChangedNotification notification;
-            q->notify(session->sessionId(), notification);
+            q->notify(session->sessionId(), notification, session->protocolVersion());
         });
         connect(session, &QMcpServerSession::toolListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpToolListChangedNotification notification;
-            q->notify(session->sessionId(), notification);
+            q->notify(session->sessionId(), notification, session->protocolVersion());
         });
 
         emit q->newSession(session);
@@ -140,11 +142,13 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                         QMcpJSONRPCError response;
                         response.setId(id);
                         response.setError(error);
-                        q->send(session, response.toJsonObject());
+                        auto sessionObj = sessions.value(session);
+                        q->send(session, response.toJsonObject(sessionObj ? sessionObj->protocolVersion() : protocolVersion));
                     } else if (result.isObject()){
                         QMcpJSONRPCResponse response;
                         response.setId(id);
-                        auto object = response.toJsonObject();
+                        auto sessionObj = sessions.value(session);
+                        auto object = response.toJsonObject(sessionObj ? sessionObj->protocolVersion() : protocolVersion);
                         object.insert("result"_L1, result.toObject());
                         q->send(session, object);
                     }
@@ -155,7 +159,8 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                     auto error = response.error();
                     error.setMessage("Server doesn't handle the request"_L1);
                     response.setError(error);
-                    q->send(session, response.toJsonObject());
+                    auto sessionObj = sessions.value(session);
+                    q->send(session, response.toJsonObject(sessionObj ? sessionObj->protocolVersion() : protocolVersion));
                 }
                 return;
             }
@@ -208,18 +213,33 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         auto session = d->findSession(sessionId, false, error);
         if (!session)
             return result;
-        if (request.params().protocolVersion() != "2024-11-05"_L1) {
+        
+        // Handle protocol version negotiation
+        QString requestedVersion = request.params().protocolVersion();
+        QString negotiatedVersion;
+        
+        // Check if requested version is supported
+        if (supportedProtocolVersions().contains(requestedVersion)) {
+            negotiatedVersion = requestedVersion;
+        } else {
+            // If requested version is not supported, return an error
             error->setCode(20241105);
-            error->setMessage("Protocol Version %1 is not supported"_L1.arg(request.params().protocolVersion()));
+            error->setMessage("Protocol Version '%1' is not supported"_L1.arg(requestedVersion));
             return result;
         }
+        
+        // Store the negotiated version in the session
+        if (session->protocolVersion() != negotiatedVersion) {
+            const_cast<QMcpServerSession*>(session)->setProtocolVersion(negotiatedVersion);
+        }
+        
         result.setCapabilities(d->capabilities);
         result.setInstructions(d->instructions);
         auto serverInfo = result.serverInfo();
         serverInfo.setName(QCoreApplication::applicationName());
         serverInfo.setVersion(QCoreApplication::applicationVersion());
         result.setServerInfo(serverInfo);
-        result.setProtocolVersion(d->protocolVersion);
+        result.setProtocolVersion(negotiatedVersion); // Use the negotiated version
         return result;
     });
     addNotificationHandler([this](const QUuid &sessionId, const QMcpInitializedNotification &notification) {
@@ -456,6 +476,23 @@ void QMcpServer::setProtocolVersion(const QString &protocolVersion)
     if (d->protocolVersion == protocolVersion) return;
     d->protocolVersion = protocolVersion;
     emit protocolVersionChanged(protocolVersion);
+}
+
+QStringList QMcpServer::supportedProtocolVersions() const
+{
+    return d->supportedVersions;
+}
+
+void QMcpServer::setSupportedProtocolVersions(const QStringList &versions)
+{
+    if (d->supportedVersions == versions) return;
+    d->supportedVersions = versions;
+    emit supportedProtocolVersionsChanged(versions);
+}
+
+bool QMcpServer::isProtocolVersionSupported(const QString &version) const
+{
+    return d->supportedVersions.contains(version);
 }
 
 QHash<QString, QString> QMcpServer::toolDescriptions() const
