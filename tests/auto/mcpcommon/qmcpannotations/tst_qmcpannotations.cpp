@@ -43,67 +43,62 @@ void tst_QMcpAnnotations::convert_data()
     QTest::newRow("only audience") << R"({
         "audience": ["user"]
     })"_ba
-                                   << QVariantMap {
-                                                  { "audience", QVariantList {
-            QVariant::fromValue(QMcpRole::user)
-}}
-};
+                                    << QVariantMap {
+                                           { "audience", QVariantList {
+                                                QVariant::fromValue(QMcpRole::user)
+                                            }}
+                                       };
 
-// Test with only priority
-QTest::newRow("only priority") << R"({
+    // Test with only priority
+    QTest::newRow("only priority") << R"({
         "priority": 1.0
     })"_ba
-                               << QVariantMap {
-                                      { "priority", 1.0 }
-                                  };
+                                << QVariantMap {
+                                       { "priority", 1.0 }
+                                   };
 
-// Test with empty object
-QTest::newRow("empty") << R"({})"_ba
-                       << QVariantMap {
-                          };
+    // Test with empty object
+    QTest::newRow("empty") << R"({})"_ba
+                        << QVariantMap {};
 
-// Test with all roles in audience
-QTest::newRow("all roles") << R"({
+    // Test with all roles in audience
+    QTest::newRow("all roles") << R"({
         "audience": ["assistant", "user"],
         "priority": 0.5
     })"_ba
-                           << QVariantMap {
-                                  { "audience", QVariantList {
-                                                   QVariant::fromValue(QMcpRole::assistant),
-                                                   QVariant::fromValue(QMcpRole::user)
-                                               }},
-                                  { "priority", 0.5 }
-                              };
+                            << QVariantMap {
+                                   { "audience", QVariantList {
+                                                    QVariant::fromValue(QMcpRole::assistant),
+                                                    QVariant::fromValue(QMcpRole::user)
+                                                }},
+                                   { "priority", 0.5 }
+                               };
 
-// Test with extreme priority values
-QTest::newRow("max priority") << R"({
+    // Test with extreme priority values
+    QTest::newRow("max priority") << R"({
         "priority": 1.0
     })"_ba
-                             << QVariantMap {
-                                    { "priority", 1.0 }
-                                };
+                              << QVariantMap {
+                                     { "priority", 1.0 }
+                                 };
 
-QTest::newRow("min priority") << R"({
-        "priority": 0.0
-    })"_ba
-                             << QVariantMap {
-                                    { "priority", 0.0 }
-                                };
+    QTest::newRow("min priority") << R"({
+            "priority": 0.0
+        })"_ba
+                                  << QVariantMap {};
 
-// Test with out-of-range priority (should be clamped to valid range)
-QTest::newRow("beyond max priority") << R"({
+    // Test with out-of-range priority (should be clamped to valid range)
+    QTest::newRow("beyond max priority") << R"({
         "priority": 2.0
     })"_ba
-                                    << QVariantMap {
-                                           { "priority", 1.0 }
-                                       };
+                                     << QVariantMap {
+                                            { "priority", 1.0 }
+                                        };
 
-QTest::newRow("negative priority") << R"({
-        "priority": -0.5
-    })"_ba
-                                  << QVariantMap {
-                                         { "priority", 0.0 }
-                                     };
+    QTest::newRow("negative priority") << R"({
+            "priority": -0.5
+        })"_ba
+                                       << QVariantMap {};
 }
 
 void tst_QMcpAnnotations::convert()
@@ -167,21 +162,21 @@ void tst_QMcpAnnotations::defaultValues()
 void tst_QMcpAnnotations::priorityBounds()
 {
     QMcpAnnotations annotations;
-    
+
     // Test valid priority values
     annotations.setPriority(0.0);
     QCOMPARE(annotations.priority(), 0.0);
-    
+
     annotations.setPriority(0.5);
     QCOMPARE(annotations.priority(), 0.5);
-    
+
     annotations.setPriority(1.0);
     QCOMPARE(annotations.priority(), 1.0);
-    
+
     // Test priority value clamping
     annotations.setPriority(-0.1);
     QCOMPARE(annotations.priority(), 0.0);
-    
+
     annotations.setPriority(1.1);
     QCOMPARE(annotations.priority(), 1.0);
 }
@@ -189,20 +184,20 @@ void tst_QMcpAnnotations::priorityBounds()
 void tst_QMcpAnnotations::audienceOperations()
 {
     QMcpAnnotations annotations;
-    
+
     // Test adding roles to audience
     QVERIFY(annotations.audience().isEmpty());
-    
+
     annotations.setAudience({QMcpRole::assistant});
     QCOMPARE(annotations.audience().size(), 1);
     QVERIFY(annotations.audience().contains(QMcpRole::assistant));
-    
+
     // Test replacing audience
     annotations.setAudience({QMcpRole::user, QMcpRole::assistant});
     QCOMPARE(annotations.audience().size(), 2);
     QVERIFY(annotations.audience().contains(QMcpRole::user));
     QVERIFY(annotations.audience().contains(QMcpRole::assistant));
-    
+
     // Test clearing audience
     annotations.setAudience({});
     QVERIFY(annotations.audience().isEmpty());

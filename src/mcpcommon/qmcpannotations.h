@@ -35,7 +35,7 @@ class Q_MCPCOMMON_EXPORT QMcpAnnotations : public QMcpGadget
 
         The default value is 0.
     */
-    Q_PROPERTY(qreal priority READ priority WRITE setPriority REQUIRED)
+    Q_PROPERTY(qreal priority READ priority WRITE setPriority)
 
 public:
     QMcpAnnotations() : QMcpGadget(new Private) {}
