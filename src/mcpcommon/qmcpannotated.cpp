@@ -9,27 +9,22 @@ QJsonObject QMcpAnnotated::toJsonObject(const QString &protocolVersion) const
 {
     // Get the base object representation
     QJsonObject obj = QMcpGadget::toJsonObject(protocolVersion);
-    
-    // Handle annotations based on protocol version
-    if (protocolVersion == "2025-03-26"_L1) {
-        // Only include annotations if they're not empty for 2025-03-26
-        QMcpAnnotations anns = annotations();
-        if (!anns.audience().isEmpty() || anns.priority() != 0) {
-            obj["annotations"_L1] = anns.toJsonObject(protocolVersion);
-        }
+
+    // Special case: 2024-11-05 has no annotations
+    if (protocolVersion == "2024-11-05"_L1) {
+        // Explicitly remove annotations key even if it exists
+        if (obj.contains("annotations"_L1))
+            obj.remove("annotations"_L1);
+        return obj;
     }
-    else if (protocolVersion == "2024-11-05"_L1) {
-        // Explicitly omit annotations for 2024-11-05 as they weren't supported
-        // No action needed as we don't add annotations
+
+    // For 2025-03-26 and all future versions:
+    // Include annotations if they're not empty
+    QMcpAnnotations anns = annotations();
+    if (!anns.audience().isEmpty() || anns.priority() != 0.0) {
+        obj["annotations"_L1] = anns.toJsonObject(protocolVersion);
     }
-    else {
-        // For unknown versions, default to the latest behavior
-        QMcpAnnotations anns = annotations();
-        if (!anns.audience().isEmpty() || anns.priority() != 0) {
-            obj["annotations"_L1] = anns.toJsonObject(protocolVersion);
-        }
-    }
-    
+
     return obj;
 }
 
@@ -38,31 +33,21 @@ bool QMcpAnnotated::fromJsonObject(const QJsonObject &object, const QString &pro
     // Parse the base object first
     if (!QMcpGadget::fromJsonObject(object, protocolVersion))
         return false;
-    
-    // Handle annotations based on protocol version
-    if (protocolVersion == "2025-03-26"_L1) {
-        // Only process annotations if they're present in the JSON for 2025-03-26
-        if (object.contains("annotations"_L1)) {
-            QMcpAnnotations anns;
-            if (!anns.fromJsonObject(object["annotations"_L1].toObject(), protocolVersion))
-                return false;
+
+    // 2024-11-05: Always reset annotations to empty and return success
+    if (protocolVersion == "2024-11-05"_L1) {
+        setAnnotations(QMcpAnnotations());
+        return true;
+    }
+
+    // For 2025-03-26 and later versions:
+    if (object.contains("annotations"_L1)) {
+        QMcpAnnotations anns;
+        if (anns.fromJsonObject(object.value("annotations"_L1).toObject())) {
             setAnnotations(anns);
         }
     }
-    else if (protocolVersion == "2024-11-05"_L1) {
-        // Explicitly ignore annotations for 2024-11-05 as they weren't supported
-        // No action needed as we don't process annotations
-    }
-    else {
-        // For unknown versions, default to the latest behavior
-        if (object.contains("annotations"_L1)) {
-            QMcpAnnotations anns;
-            if (!anns.fromJsonObject(object["annotations"_L1].toObject(), protocolVersion))
-                return false;
-            setAnnotations(anns);
-        }
-    }
-    
+
     return true;
 }
 

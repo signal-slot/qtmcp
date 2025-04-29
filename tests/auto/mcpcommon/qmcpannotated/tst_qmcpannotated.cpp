@@ -37,7 +37,7 @@ void tst_QMcpAnnotated::convert_data()
     })"_ba
     << QVariantMap {
         { "annotations", QVariantMap {
-            { "audience", QVariantList { 
+            { "audience", QVariantList {
                 QVariant::fromValue(QMcpRole::assistant),
                 QVariant::fromValue(QMcpRole::user)
             }},
@@ -47,15 +47,11 @@ void tst_QMcpAnnotated::convert_data()
 
     // Test with only audience
     QTest::newRow("only audience") << R"({
-        "annotations": {
-            "audience": ["assistant"]
-        }
+        "audience": ["assistant"]
     })"_ba
     << QVariantMap {
-        { "annotations", QVariantMap {
-            { "audience", QVariantList { 
-                QVariant::fromValue(QMcpRole::assistant)
-            }}
+        { "audience", QVariantList {
+            QVariant::fromValue(QMcpRole::assistant)
         }}
     };
 
@@ -73,11 +69,8 @@ void tst_QMcpAnnotated::convert_data()
 
     // Test with empty annotations
     QTest::newRow("empty annotations") << R"({
-        "annotations": {}
     })"_ba
-    << QVariantMap {
-        { "annotations", QVariantMap {} }
-    };
+    << QVariantMap {};
 }
 
 void tst_QMcpAnnotated::convert()
@@ -152,7 +145,7 @@ void tst_QMcpAnnotated::versionSpecificSerialization()
 
     // Create an annotated object
     QMcpAnnotated annotated;
-    
+
     if (hasAnnotations) {
         QMcpAnnotations annotations;
         annotations.setAudience({QMcpRole::assistant});
@@ -162,12 +155,12 @@ void tst_QMcpAnnotated::versionSpecificSerialization()
 
     // Serialize with the specified protocol version
     QJsonObject jsonObj = annotated.toJsonObject(protocolVersion);
-    
+
     // Verify whether annotations are included based on the protocol version
     if (shouldIncludeAnnotations) {
         QVERIFY(jsonObj.contains("annotations"));
         QVERIFY(jsonObj["annotations"].isObject());
-        
+
         if (hasAnnotations) {
             QJsonObject anns = jsonObj["annotations"].toObject();
             QVERIFY(anns.contains("audience"));
@@ -229,14 +222,14 @@ void tst_QMcpAnnotated::versionSpecificDeserialization()
 
     if (shouldHaveAnnotations) {
         QVERIFY(!annotated.annotations().audience().isEmpty() || annotated.annotations().priority() != 0);
-        
+
         // If we have annotations from JSON, verify they are correct
         if (object.contains("annotations")) {
             if (object["annotations"].toObject().contains("audience")) {
                 QCOMPARE(annotated.annotations().audience().size(), 1);
                 QCOMPARE(annotated.annotations().audience().first(), QMcpRole::assistant);
             }
-            
+
             if (object["annotations"].toObject().contains("priority")) {
                 QCOMPARE(annotated.annotations().priority(), 0.8);
             }
