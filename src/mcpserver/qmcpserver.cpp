@@ -501,6 +501,25 @@ bool QMcpServer::isProtocolVersionSupported(QtMcp::ProtocolVersion version) cons
     return d->supportedVersions.contains(version);
 }
 
+QtMcp::ProtocolVersion QMcpServer::versionToUse(const QUuid &session, QtMcp::ProtocolVersion defaultVersion) const
+{
+    // If defaultVersion is not Latest, use it directly
+    if (defaultVersion != QtMcp::ProtocolVersion::Latest) {
+        return defaultVersion;
+    }
+
+    // Try to find the session's negotiated version
+    const auto sessions = this->sessions();
+    for (const auto *s : sessions) {
+        if (s->sessionId() == session) {
+            return s->protocolVersion();
+        }
+    }
+
+    // If session not found, use server's default protocol version
+    return protocolVersion();
+}
+
 QHash<QString, QString> QMcpServer::toolDescriptions() const
 {
     return {};

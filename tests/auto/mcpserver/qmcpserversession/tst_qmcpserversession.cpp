@@ -243,7 +243,8 @@ void tst_QMcpServerSession::testResourceOperations()
     const auto resources = m_session->resources();
     QCOMPARE(resources.size(), 1);
     QCOMPARE(resources.first().name(), QStringLiteral("Test Resource"));
-    QCOMPARE(m_session->contents(resource.uri()).first().textResourceContents().text(), QStringLiteral("Test content"));
+    const auto contents = m_session->contents(resource.uri());
+    QCOMPARE(contents.first().textResourceContents().text(), QStringLiteral("Test content"));
     QCOMPARE(resourceListSpy.count(), 1);
 }
 

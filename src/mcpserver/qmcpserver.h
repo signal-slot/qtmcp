@@ -159,14 +159,7 @@ public:
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
         static_assert(std::is_base_of<QMcpResult, Result>::value, "Result must inherit from QMcpResult");
 
-        // Get session's negotiated protocol version if available
-        QtMcp::ProtocolVersion versionToUse = protocolVersion();
-        for (auto *s : sessions()) {
-            if (s->sessionId() == session) {
-                versionToUse = s->protocolVersion();
-                break;
-            }
-        }
+        QtMcp::ProtocolVersion versionToUse = this->versionToUse(session);
 
         auto json = request.toJsonObject(versionToUse);
         send(session, json, [callback, this, versionToUse](const QUuid & session, const QJsonObject &json) {
@@ -188,14 +181,7 @@ public:
     {
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
 
-        // Get session's negotiated protocol version if available
-        QtMcp::ProtocolVersion versionToUse = protocolVersion();
-        for (auto *s : sessions()) {
-            if (s->sessionId() == session) {
-                versionToUse = s->protocolVersion();
-                break;
-            }
-        }
+        QtMcp::ProtocolVersion versionToUse = this->versionToUse(session);
 
         auto json = request.toJsonObject(versionToUse);
         send(session, json);
@@ -221,19 +207,7 @@ public:
     {
         static_assert(std::is_base_of<QMcpNotification, Notification>::value, "Notification must inherit from QMcpNotification");
 
-        // Determine which protocol version to use
-        QtMcp::ProtocolVersion versionToUse = protocolVersion;
-
-        // If default value was used, get session's negotiated protocol version
-        if (versionToUse == QtMcp::ProtocolVersion::Latest) {
-            versionToUse = this->protocolVersion();
-            for (auto *s : sessions()) {
-                if (s->sessionId() == session) {
-                    versionToUse = s->protocolVersion();
-                    break;
-                }
-            }
-        }
+        QtMcp::ProtocolVersion versionToUse = this->versionToUse(session, protocolVersion);
 
         auto json = notification.toJsonObject(versionToUse);
         send(session, json);
@@ -274,14 +248,7 @@ public:
         }
 
         auto wrapper = [this, handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
-            // Get session's negotiated protocol version if available
-            QtMcp::ProtocolVersion versionToUse = protocolVersion();
-            for (auto *s : sessions()) {
-                if (s->sessionId() == session) {
-                    versionToUse = s->protocolVersion();
-                    break;
-                }
-            }
+            QtMcp::ProtocolVersion versionToUse = this->versionToUse(session);
 
             Req req;
             req.fromJsonObject(json, versionToUse);
@@ -331,14 +298,7 @@ public:
                       "Notification type must inherit from QMcpNotification");
 
         auto wrapper = [handler, this](const QUuid &session, const QJsonObject &json) {
-            // Get session's negotiated protocol version if available
-            QtMcp::ProtocolVersion versionToUse = protocolVersion();
-            for (auto *s : sessions()) {
-                if (s->sessionId() == session) {
-                    versionToUse = s->protocolVersion();
-                    break;
-                }
-            }
+            QtMcp::ProtocolVersion versionToUse = this->versionToUse(session);
 
             Notification notification;
             notification.fromJsonObject(json, versionToUse);
@@ -480,6 +440,20 @@ signals:
     void result(const QUuid &session, const QJsonObject &result);
 
 private:
+    /*!
+        \internal
+        Determines the protocol version to use for a given session.
+        
+        If the session exists, returns its negotiated protocol version.
+        Otherwise, returns the default version.
+        
+        \param session UUID of the client session
+        \param defaultVersion Version to use if session is not found or as a fallback
+        \return The protocol version to use
+    */
+    QtMcp::ProtocolVersion versionToUse(const QUuid &session,
+                                        QtMcp::ProtocolVersion defaultVersion = QtMcp::ProtocolVersion::Latest) const;
+    
     void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);
     void send(const QUuid &session, const QJsonObject &message, std::function<void(const QUuid &session, const QJsonObject &)> callback = nullptr);
     void registerRequestHandler(const QString &method, std::function<QJsonValue(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
