@@ -155,14 +155,14 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
     if (!d->backend) return;
 
     // If this is an initialization request, ensure the protocol version is set
-    if (request.contains("method"_L1) && request.value("method"_L1).toString() == "initialize") {
+    if (request.contains("method"_L1) && request.value("method"_L1).toString() == "initialize"_L1) {
         QJsonObject requestCopy = request;
-        QJsonObject params = requestCopy["params"].toObject();
+        QJsonObject params = requestCopy["params"_L1].toObject();
 
         // Make sure we're sending our current protocol version
-        if (!params.contains("protocolVersion")) {
-            params["protocolVersion"] = QtMcp::protocolVersionToString(d->protocolVersion);
-            requestCopy["params"] = params;
+        if (!params.contains("protocolVersion"_L1)) {
+            params["protocolVersion"_L1] = QtMcp::protocolVersionToString(d->protocolVersion);
+            requestCopy["params"_L1] = params;
         }
 
         // Add a callback to handle the initialization response

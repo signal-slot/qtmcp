@@ -178,7 +178,7 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersio
             break; }
         case QJsonValue::String: {
             // Special handling for QtMcp::ProtocolVersion
-            if (QString(propertyType) == "QtMcp::ProtocolVersion") {
+            if (property.typeId() == qMetaTypeId<QtMcp::ProtocolVersion>()) {
                 // Convert string to enum
                 QtMcp::ProtocolVersion version = QtMcp::stringToProtocolVersion(value.toString());
                 if (!property.writeOnGadget(this, QVariant::fromValue(version))) {

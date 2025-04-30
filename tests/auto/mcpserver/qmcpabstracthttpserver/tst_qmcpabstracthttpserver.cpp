@@ -39,11 +39,15 @@ QByteArray TestHttpServer::getEcho(const QNetworkRequest &request) const
 
 QByteArray TestHttpServer::post(const QNetworkRequest &request, const QByteArray &body) const
 {
+    Q_UNUSED(request);
+    Q_UNUSED(body);
     return "";
 }
 
 QByteArray TestHttpServer::postEcho(const QNetworkRequest &request, const QByteArray &body) const
 {
+    Q_UNUSED(request);
+    Q_UNUSED(body);
     return body;
 }
 
@@ -61,6 +65,7 @@ QByteArray TestHttpServer::getSse(const QNetworkRequest &request)
 
 QByteArray TestHttpServer::postMessages(const QNetworkRequest &request, const QByteArray &body)
 {
+    Q_UNUSED(body);
     QUrlQuery query(request.url().query());
     const auto uuid = QUuid::fromBytes(query.queryItemValue("session_id").toUtf8());
     sendSseEvent(uuid, "test"_ba, "done"_L1);
