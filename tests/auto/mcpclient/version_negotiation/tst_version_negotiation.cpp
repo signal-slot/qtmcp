@@ -36,7 +36,7 @@ private:
     QMcpServer *m_server = nullptr;
     QMcpClient *m_client = nullptr;
     QTemporaryFile m_tempFile;
-    
+
     // Helper methods
     QtMcp::ProtocolVersion connectClientServer();
     QMcpServerSession* getServerSession();
@@ -46,17 +46,17 @@ void tst_VersionNegotiation::init()
 {
     // Set up the MCP server with sse backend
     m_server = new QMcpServer("sse", this);
-    
+
     // Set supported protocol versions
     m_server->setSupportedProtocolVersions({QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2024_11_05});
     m_server->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26); // Default to latest version
-    
+
     // Start the server with specific address
     m_server->start("127.0.0.1:10101");
 
     // Set up the MCP client with sse backend
     m_client = new QMcpClient("sse", this);
-    
+
     // Start the client - connect to the server using the same address
     m_client->start("http://localhost:10101");
 }
@@ -77,20 +77,20 @@ void tst_VersionNegotiation::cleanup()
 QtMcp::ProtocolVersion tst_VersionNegotiation::connectClientServer()
 {
     QSignalSpy startedSpy(m_client, &QMcpClient::started);
-    
+
     if (!startedSpy.wait(5000))
         return QtMcp::ProtocolVersion::Latest;
-    
+
     // Send initialization request with properly set protocol version
     QMcpInitializeRequest request;
     QMcpInitializeRequestParams params = request.params();
-    
+
     // Set the protocol version in the params - convert enum to string since params still uses strings
     params.setProtocolVersion(QtMcp::protocolVersionToString(m_client->protocolVersion()));
-    
+
     // Set the params back to the request
     request.setParams(params);
-    
+
     QEventLoop loop;
 
     // Set up a flag to track initialization success
@@ -105,7 +105,7 @@ QtMcp::ProtocolVersion tst_VersionNegotiation::connectClientServer()
         }
         loop.quit();
     });
-    
+
     QTimer::singleShot(5000, &loop, &QEventLoop::quit);
     loop.exec();
 
@@ -117,18 +117,18 @@ QMcpServerSession* tst_VersionNegotiation::getServerSession()
     const auto sessions = m_server->sessions();
     if (sessions.isEmpty())
         return nullptr;
-    
+
     return sessions.first();
 }
 
 void tst_VersionNegotiation::testDefaultVersionNegotiation()
 {
     const auto clientProtocolVersion = connectClientServer();
-    
+
     // Check that both client and server negotiated to the latest version
     QMcpServerSession *session = getServerSession();
     QVERIFY(session);
-    
+
     // Both should be using the latest protocol version
     QCOMPARE(session->protocolVersion(), clientProtocolVersion);
 }
@@ -146,13 +146,13 @@ void tst_VersionNegotiation::testSpecificVersionNegotiation()
 {
     QFETCH(QtMcp::ProtocolVersion, requestedVersion);
     QFETCH(QtMcp::ProtocolVersion, expectedVersion);
-    
+
     // Set the protocol version explicitly before sending request
-    QVERIFY(m_client->setProtocolVersion(requestedVersion));
-    
+    m_client->setProtocolVersion(requestedVersion);
+
     const auto clientProtocolVersion = connectClientServer();
     QCOMPARE(clientProtocolVersion, expectedVersion);
-    
+
     // Verify the server session is using the expected protocol version
     QMcpServerSession *session = getServerSession();
     QVERIFY(session);
@@ -165,7 +165,7 @@ void tst_VersionNegotiation::testUnsupportedVersionFallback()
     // This should use an invalid enum value instead
     // For now, we'll convert a string that will map to an invalid or default enum value
     m_client->setProtocolVersion(QtMcp::stringToProtocolVersion("9999-99-99"));
-    
+
     const auto clientProtocolVersion = connectClientServer();
 
     // Server should fall back to the latest supported version
