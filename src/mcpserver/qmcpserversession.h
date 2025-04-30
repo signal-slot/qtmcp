@@ -19,6 +19,7 @@
 #include <QtMcpCommon/QMcpResourceTemplate>
 #include <QtMcpCommon/QMcpRoot>
 #include <QtMcpCommon/QMcpTool>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtMcpServer/qmcpserverglobal.h>
 
 QT_BEGIN_NAMESPACE
@@ -78,12 +79,19 @@ public:
     /*!
         Returns the protocol version negotiated with the client.
     */
-    QString protocolVersion() const;
+    QtMcp::ProtocolVersion protocolVersion() const;
     
     /*!
         Sets the protocol version negotiated with the client.
     */
-    void setProtocolVersion(const QString &protocolVersion);
+    void setProtocolVersion(QtMcp::ProtocolVersion protocolVersion);
+    
+    /*!
+        Sets the protocol version negotiated with the client using a string.
+        \internal
+        This is provided for backward compatibility.
+    */
+    void setProtocolVersion(const QString &protocolVersionStr);
 
     /*!
         Returns whether the session has been initialized.

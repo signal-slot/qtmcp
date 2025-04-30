@@ -8,6 +8,7 @@
 #include <QtMcpCommon/qmcpclientcapabilities.h>
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcpimplementation.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -25,7 +26,7 @@ class Q_MCPCOMMON_EXPORT QMcpInitializeRequestParams : public QMcpGadget
         \property QMcpInitializeRequestParams::protocolVersion
         \brief The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
     */
-    Q_PROPERTY(QString protocolVersion READ protocolVersion WRITE setProtocolVersion REQUIRED)
+    Q_PROPERTY(QtMcp::ProtocolVersion protocolVersion READ protocolVersion WRITE setProtocolVersion REQUIRED)
 
 public:
     QMcpInitializeRequestParams() : QMcpGadget(new Private) {}
@@ -48,13 +49,18 @@ public:
         d<Private>()->clientInfo = clientInfo;
     }
 
-    QString protocolVersion() const {
+    QtMcp::ProtocolVersion protocolVersion() const {
         return d<Private>()->protocolVersion;
     }
 
-    void setProtocolVersion(const QString &version) {
+    void setProtocolVersion(QtMcp::ProtocolVersion version) {
         if (this->protocolVersion() == version) return;
         d<Private>()->protocolVersion = version;
+    }
+    
+    // For backward compatibility
+    void setProtocolVersion(const QString &versionStr) {
+        setProtocolVersion(QtMcp::stringToProtocolVersion(versionStr));
     }
 
     const QMetaObject* metaObject() const override {
@@ -65,7 +71,7 @@ private:
     struct Private : public QMcpGadget::Private {
         QMcpClientCapabilities capabilities;
         QMcpImplementation clientInfo;
-        QString protocolVersion;
+        QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest;
 
         Private *clone() const override { return new Private(*this); }
     };

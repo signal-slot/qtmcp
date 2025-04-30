@@ -6,6 +6,7 @@
 
 #include <QtMcpCommon/qmcpannotations.h>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -31,8 +32,8 @@ public:
         d<Private>()->annotations = annotations;
     }
 
-    QJsonObject toJsonObject(const QString &protocolVersion = "2025-03-26"_L1) const override;
-    bool fromJsonObject(const QJsonObject &object, const QString &protocolVersion = "2025-03-26"_L1) override;
+    QJsonObject toJsonObject(QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) const override;
+    bool fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) override;
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;

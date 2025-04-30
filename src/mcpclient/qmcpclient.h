@@ -10,6 +10,7 @@
 #include <QtMcpCommon/QMcpResult>
 #include <QtMcpCommon/QMcpNotification>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <concepts>
 #include <functional>
 
@@ -62,12 +63,12 @@ public:
 
     /*!
         Constructs an MCP client using the specified backend.
-        
+
         \param backend Name of the backend implementation to use
         \param parent Parent QObject (optional)
     */
     explicit QMcpClient(const QString &backend, QObject *parent = nullptr);
-    
+
     /*!
         Destroys the MCP client.
     */
@@ -76,21 +77,22 @@ public:
     /*!
         Returns the current protocol version used by the client.
     */
-    QString protocolVersion() const;
+    QtMcp::ProtocolVersion protocolVersion() const;
 
     /*!
         Sets the protocol version to use for communication.
         This should be called before sending initialization requests.
-        
-        \param version The protocol version string (e.g., "2024-11-05", "2025-03-26")
+
+        \param version The protocol version enum value
         \return true if the version is supported, false otherwise
     */
-    bool setProtocolVersion(const QString &version);
+    void setProtocolVersion(QtMcp::ProtocolVersion version);
+
 
     /*!
         Returns a list of protocol versions supported by this client.
     */
-    QStringList supportedProtocolVersions() const;
+    QList<QtMcp::ProtocolVersion> supportedProtocolVersions() const;
 
     /*!
         \internal
@@ -144,16 +146,17 @@ public:
         auto json = request.toJsonObject(protocolVersion());
         send(json, [callback, this](const QJsonObject &json, const QJsonObject &error) {
             // Use the negotiated protocol version from the response when available
-            QString versionToUse = protocolVersion();
-            
+            QtMcp::ProtocolVersion versionToUse = protocolVersion();
+
             // If the result contains a protocol version field, use that version
             if (json.contains("protocolVersion")) {
                 QString resultVersion = json["protocolVersion"].toString();
-                if (supportedProtocolVersions().contains(resultVersion)) {
-                    versionToUse = resultVersion;
+                QtMcp::ProtocolVersion resultVerEnum = QtMcp::stringToProtocolVersion(resultVersion);
+                if (supportedProtocolVersions().contains(resultVerEnum)) {
+                    versionToUse = resultVerEnum;
                 }
             }
-            
+
             Result result;
             result.fromJsonObject(json, versionToUse);
             if (!error.isEmpty()) {
@@ -256,16 +259,18 @@ public:
 
         auto wrapper = [handler, this](const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonObject {
             // Make sure to respect the specific protocol version
-            QString versionToUse = protocolVersion();
-            
+            // Use our protocol version enum directly
+            QtMcp::ProtocolVersion versionToUse = protocolVersion();
+
             // If this is a response to initialize, check the protocol version in the response
             if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
-                QString reqVersion = json["params"].toObject()["protocolVersion"].toString();
+                QString reqVersionStr = json["params"].toObject()["protocolVersion"].toString();
+                QtMcp::ProtocolVersion reqVersion = QtMcp::stringToProtocolVersion(reqVersionStr);
                 if (supportedProtocolVersions().contains(reqVersion)) {
                     versionToUse = reqVersion;
                 }
             }
-            
+
             Req req;
             req.fromJsonObject(json, versionToUse);
             Res res = handler(req, error);
@@ -293,16 +298,18 @@ public:
 
         auto wrapper = [handler, this](const QJsonObject &json) {
             // Make sure to respect the specific protocol version
-            QString versionToUse = protocolVersion();
-            
+            // Use the enum protocol version
+            QtMcp::ProtocolVersion versionToUse = protocolVersion();
+
             // If this is a notification containing protocol version info
             if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
-                QString notifVersion = json["params"].toObject()["protocolVersion"].toString();
+                QString notifVersionStr = json["params"].toObject()["protocolVersion"].toString();
+                QtMcp::ProtocolVersion notifVersion = QtMcp::stringToProtocolVersion(notifVersionStr);
                 if (supportedProtocolVersions().contains(notifVersion)) {
                     versionToUse = notifVersion;
                 }
             }
-            
+
             Notification notification;
             notification.fromJsonObject(json, versionToUse);
             handler(notification);

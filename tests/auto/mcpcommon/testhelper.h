@@ -66,7 +66,18 @@ inline void verify(const QMcpGadget *gadget, const QVariantMap &data)
                 QCOMPARE(value.toString(), expectedValue);
                 break;
             default:
-                QCOMPARE(value, expectedValue);
+                // Special handling for QtMcp::ProtocolVersion
+                if (property.typeId() == qMetaTypeId<QtMcp::ProtocolVersion>()) {
+                    // First check if expectedValue is already an enum
+                    if (expectedValue.typeId() == QMetaType::QString) {
+                        auto enumValue = QtMcp::stringToProtocolVersion(expectedValue.toString());
+                        QCOMPARE(value.toInt(), static_cast<int>(enumValue));
+                    } else {
+                        QCOMPARE(value.toInt(), expectedValue.toInt());
+                    }
+                } else {
+                    QCOMPARE(value, expectedValue);
+                }
                 break;
             }
         }

@@ -6,6 +6,7 @@
 #include <QtCore/QJsonParseError>
 #include <QtCore/QVariantMap>
 #include <QtMcpCommon/QMcpAnnotated>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtTest/QTest>
 
 class tst_QMcpAnnotated : public QObject
@@ -120,26 +121,26 @@ void tst_QMcpAnnotated::copy()
 
 void tst_QMcpAnnotated::versionSpecificSerialization_data()
 {
-    QTest::addColumn<QString>("protocolVersion");
+    QTest::addColumn<QtMcp::ProtocolVersion>("protocolVersion");
     QTest::addColumn<bool>("hasAnnotations");
     QTest::addColumn<bool>("shouldIncludeAnnotations");
 
     // Latest version (2025-03-26) should include annotations when present
-    QTest::newRow("2025-03-26 with annotations") << "2025-03-26" << true << true;
-    QTest::newRow("2025-03-26 without annotations") << "2025-03-26" << false << false;
+    QTest::newRow("2025-03-26 with annotations") << QtMcp::ProtocolVersion::v2025_03_26 << true << true;
+    QTest::newRow("2025-03-26 without annotations") << QtMcp::ProtocolVersion::v2025_03_26 << false << false;
 
     // Previous version (2024-11-05) should always omit annotations
-    QTest::newRow("2024-11-05 with annotations") << "2024-11-05" << true << false;
-    QTest::newRow("2024-11-05 without annotations") << "2024-11-05" << false << false;
+    QTest::newRow("2024-11-05 with annotations") << QtMcp::ProtocolVersion::v2024_11_05 << true << false;
+    QTest::newRow("2024-11-05 without annotations") << QtMcp::ProtocolVersion::v2024_11_05 << false << false;
 
-    // Unknown version should default to latest behavior
-    QTest::newRow("unknown version with annotations") << "future-version" << true << true;
-    QTest::newRow("unknown version without annotations") << "future-version" << false << false;
+    // Latest version should default to latest behavior
+    QTest::newRow("Latest with annotations") << QtMcp::ProtocolVersion::Latest << true << true;
+    QTest::newRow("Latest without annotations") << QtMcp::ProtocolVersion::Latest << false << false;
 }
 
 void tst_QMcpAnnotated::versionSpecificSerialization()
 {
-    QFETCH(QString, protocolVersion);
+    QFETCH(QtMcp::ProtocolVersion, protocolVersion);
     QFETCH(bool, hasAnnotations);
     QFETCH(bool, shouldIncludeAnnotations);
 
@@ -176,7 +177,7 @@ void tst_QMcpAnnotated::versionSpecificSerialization()
 
 void tst_QMcpAnnotated::versionSpecificDeserialization_data()
 {
-    QTest::addColumn<QString>("protocolVersion");
+    QTest::addColumn<QtMcp::ProtocolVersion>("protocolVersion");
     QTest::addColumn<QByteArray>("json");
     QTest::addColumn<bool>("shouldHaveAnnotations");
 
@@ -192,21 +193,21 @@ void tst_QMcpAnnotated::versionSpecificDeserialization_data()
     QByteArray jsonWithoutAnnotations = R"({})"_ba;
 
     // Latest version (2025-03-26) should process annotations when present
-    QTest::newRow("2025-03-26 with annotations") << "2025-03-26" << jsonWithAnnotations << true;
-    QTest::newRow("2025-03-26 without annotations") << "2025-03-26" << jsonWithoutAnnotations << false;
+    QTest::newRow("2025-03-26 with annotations") << QtMcp::ProtocolVersion::v2025_03_26 << jsonWithAnnotations << true;
+    QTest::newRow("2025-03-26 without annotations") << QtMcp::ProtocolVersion::v2025_03_26 << jsonWithoutAnnotations << false;
 
     // Previous version (2024-11-05) should ignore annotations even if present
-    QTest::newRow("2024-11-05 with annotations") << "2024-11-05" << jsonWithAnnotations << false;
-    QTest::newRow("2024-11-05 without annotations") << "2024-11-05" << jsonWithoutAnnotations << false;
+    QTest::newRow("2024-11-05 with annotations") << QtMcp::ProtocolVersion::v2024_11_05 << jsonWithAnnotations << false;
+    QTest::newRow("2024-11-05 without annotations") << QtMcp::ProtocolVersion::v2024_11_05 << jsonWithoutAnnotations << false;
 
-    // Unknown version should default to latest behavior
-    QTest::newRow("unknown version with annotations") << "future-version" << jsonWithAnnotations << true;
-    QTest::newRow("unknown version without annotations") << "future-version" << jsonWithoutAnnotations << false;
+    // Latest version should default to latest behavior
+    QTest::newRow("Latest with annotations") << QtMcp::ProtocolVersion::Latest << jsonWithAnnotations << true;
+    QTest::newRow("Latest without annotations") << QtMcp::ProtocolVersion::Latest << jsonWithoutAnnotations << false;
 }
 
 void tst_QMcpAnnotated::versionSpecificDeserialization()
 {
-    QFETCH(QString, protocolVersion);
+    QFETCH(QtMcp::ProtocolVersion, protocolVersion);
     QFETCH(QByteArray, json);
     QFETCH(bool, shouldHaveAnnotations);
 

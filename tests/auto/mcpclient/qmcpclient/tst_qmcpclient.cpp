@@ -65,7 +65,7 @@ QMcpInitializeResult tst_QMcpClient::initialize()
     clientInfo.setName("QtMcpClient-Test");
     clientInfo.setVersion("1.0.0");
     params.setClientInfo(clientInfo);
-    params.setProtocolVersion("2024-11-05");
+    params.setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
 
     m_client->request(request, [&](const QMcpInitializeResult &result, const QMcpJSONRPCErrorError *) {
         QMcpInitializedNotification notification;
@@ -83,7 +83,7 @@ QMcpInitializeResult tst_QMcpClient::initialize()
 void tst_QMcpClient::testInitialize()
 {
     const auto result = initialize();
-    QCOMPARE(result.protocolVersion(), "2024-11-05"_L1);
+    QCOMPARE(result.protocolVersion(), QtMcp::ProtocolVersion::v2024_11_05);
 }
 
 void tst_QMcpClient::testListTools()

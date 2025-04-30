@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcprequestid.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 

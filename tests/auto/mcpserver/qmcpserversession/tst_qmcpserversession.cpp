@@ -17,6 +17,7 @@
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
 #include <QtMcpCommon/QMcpAnnotated>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtMcpServer/QMcpServer>
 #include <QtMcpServer/QMcpServerSession>
 
@@ -102,15 +103,15 @@ void tst_QMcpServerSession::testInitialization()
 void tst_QMcpServerSession::testProtocolVersion()
 {
     // Check default protocol version
-    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2025-03-26"));
+    QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::Latest);
     
     // Check protocol version setter and getter
-    m_session->setProtocolVersion(QStringLiteral("2024-11-05"));
-    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2024-11-05"));
+    m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
+    QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::v2024_11_05);
     
     // Change back to default version
-    m_session->setProtocolVersion(QStringLiteral("2025-03-26"));
-    QCOMPARE(m_session->protocolVersion(), QStringLiteral("2025-03-26"));
+    m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
+    QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::v2025_03_26);
 }
 
 void tst_QMcpServerSession::testProtocolVersionValidation_data()
@@ -131,11 +132,13 @@ void tst_QMcpServerSession::testProtocolVersionValidation()
     QFETCH(bool, isValid);
     
     if (isValid) {
+        // Since we now have the string-based overload for backward compatibility
+        QtMcp::ProtocolVersion expectedVersion = QtMcp::stringToProtocolVersion(version);
         m_session->setProtocolVersion(version);
-        QCOMPARE(m_session->protocolVersion(), version);
+        QCOMPARE(m_session->protocolVersion(), expectedVersion);
     } else {
         // Should remain at the default version since invalid version is rejected
-        QString originalVersion = m_session->protocolVersion();
+        QtMcp::ProtocolVersion originalVersion = m_session->protocolVersion();
         m_session->setProtocolVersion(version);
         QCOMPARE(m_session->protocolVersion(), originalVersion);
     }
@@ -151,7 +154,7 @@ void tst_QMcpServerSession::testAnnotationsWithVersion()
     annotated.setAnnotations(annotations);
     
     // Test with 2025-03-26 version (should include annotations)
-    m_session->setProtocolVersion("2025-03-26");
+    m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
     QJsonObject jsonObj2025 = annotated.toJsonObject(m_session->protocolVersion());
     QVERIFY(jsonObj2025.contains("annotations"));
     QVERIFY(jsonObj2025["annotations"].isObject());
@@ -159,7 +162,7 @@ void tst_QMcpServerSession::testAnnotationsWithVersion()
     QVERIFY(jsonObj2025["annotations"].toObject().contains("priority"));
     
     // Test with 2024-11-05 version (should not include annotations)
-    m_session->setProtocolVersion("2024-11-05");
+    m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
     QJsonObject jsonObj2024 = annotated.toJsonObject(m_session->protocolVersion());
     QVERIFY(!jsonObj2024.contains("annotations"));
 }

@@ -6,6 +6,7 @@
 #include <QtCore/QJsonParseError>
 #include <QtCore/QVariantMap>
 #include <QtMcpCommon/QMcpInitializeResult>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtTest/QTest>
 
 class tst_QMcpInitializeResult : public QObject
@@ -48,7 +49,7 @@ void tst_QMcpInitializeResult::convert_data()
             }
         },
         "instructions": "Server provides completion, resource access, and tool execution capabilities.",
-        "protocolVersion": "0.1.0",
+        "protocolVersion": "2024-11-05",
         "serverInfo": {
             "name": "TestServer",
             "version": "1.0.0"
@@ -75,7 +76,7 @@ void tst_QMcpInitializeResult::convert_data()
             }}
         }},
         { "instructions", "Server provides completion, resource access, and tool execution capabilities."_L1 },
-        { "protocolVersion", "0.1.0"_L1 },
+        { "protocolVersion", "2024-11-05"_L1 },
         { "serverInfo", QVariantMap {
             { "name", "TestServer"_L1 },
             { "version", "1.0.0"_L1 }
@@ -90,7 +91,7 @@ void tst_QMcpInitializeResult::convert_data()
                 "level": false
             }
         },
-        "protocolVersion": "0.1.0",
+        "protocolVersion": "2024-11-05",
         "serverInfo": {
             "name": "MinimalServer",
             "version": "0.1.0"
@@ -99,7 +100,7 @@ void tst_QMcpInitializeResult::convert_data()
     << QVariantMap {
         { "capabilities", QVariantMap {
         }},
-        { "protocolVersion", "0.1.0"_L1 },
+        { "protocolVersion", "2024-11-05"_L1 },
         { "serverInfo", QVariantMap {
             { "name", "MinimalServer"_L1 },
             { "version", "0.1.0"_L1 }

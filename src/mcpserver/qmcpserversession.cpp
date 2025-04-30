@@ -23,7 +23,7 @@ private:
 public:
     QUuid sessionId;
     bool initialized = false;
-    QString protocolVersion = "2025-03-26"_L1; // Default to latest version
+    QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
     QList<QMcpResourceTemplate> resourceTemplates;
     QList<QPair<QMcpResource, QMcpReadResourceResultContents>> resources;
     QList<QPair<QMcpPrompt, QMcpPromptMessage>> prompts;
@@ -68,30 +68,26 @@ QUuid QMcpServerSession::sessionId() const
     return d->sessionId;
 }
 
-QString QMcpServerSession::protocolVersion() const
+QtMcp::ProtocolVersion QMcpServerSession::protocolVersion() const
 {
     return d->protocolVersion;
 }
 
-void QMcpServerSession::setProtocolVersion(const QString &protocolVersion)
+void QMcpServerSession::setProtocolVersion(QtMcp::ProtocolVersion protocolVersion)
 {
     if (d->protocolVersion == protocolVersion)
         return;
     
-    // Validation of protocol version
-    static const QStringList validVersions = {
-        QStringLiteral("2025-03-26"),
-        QStringLiteral("2024-11-05")
-    };
-    
-    // Only accept valid protocol versions in correct format
-    if (protocolVersion.isEmpty() ||
-        !validVersions.contains(protocolVersion) ||
-        !QRegularExpression(QStringLiteral("^\\d{4}-\\d{2}-\\d{2}$")).match(protocolVersion).hasMatch()) {
-        return;  // Reject invalid versions
-    }
-    
     d->protocolVersion = protocolVersion;
+}
+
+void QMcpServerSession::setProtocolVersion(const QString &protocolVersionStr)
+{
+    // Convert the string to enum using the utility function
+    const QtMcp::ProtocolVersion version = QtMcp::stringToProtocolVersion(protocolVersionStr);
+    
+    // Use the enum-based method
+    setProtocolVersion(version);
 }
 
 bool QMcpServerSession::isInitialized() const

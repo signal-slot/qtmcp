@@ -8,6 +8,7 @@
 qt_internal_add_module(McpCommon
     SOURCES
         qmcpcommonglobal.h
+        qtmcpnamespace.h qtmcpnamespace.cpp
         qmcpgadget.h qmcpgadget.cpp
         qmcpanyof.h qmcpanyof.cpp
         qmcpjsonrpcmessage.h

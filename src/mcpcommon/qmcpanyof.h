@@ -6,6 +6,7 @@
 
 #include <QtCore/QByteArray>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -40,8 +41,8 @@ protected:
     }
 
 public:
-    bool fromJsonObject(const QJsonObject &object, const QString &protocolVersion = "2025-03-26"_L1) override;
-    QJsonObject toJsonObject(const QString &protocolVersion = "2025-03-26"_L1) const override;
+    bool fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) override;
+    QJsonObject toJsonObject(QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) const override;
 
 protected:
     struct Private : public QMcpGadget::Private {

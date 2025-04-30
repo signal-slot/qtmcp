@@ -5,7 +5,7 @@
 
 QT_BEGIN_NAMESPACE
 
-bool QMcpAnyOf::fromJsonObject(const QJsonObject &object, const QString &protocolVersion)
+bool QMcpAnyOf::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion)
 {
     const auto mo = metaObject();
     int propertyIndex = d<Private>()->findPropertyIndex(object);
@@ -109,7 +109,7 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object, const QString &protoco
     return true;
 }
 
-QJsonObject QMcpAnyOf::toJsonObject(const QString &protocolVersion) const
+QJsonObject QMcpAnyOf::toJsonObject(QtMcp::ProtocolVersion protocolVersion) const
 {
     const auto mo = metaObject();
     for (int i = 0; i < mo->propertyCount(); i++) {

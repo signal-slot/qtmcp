@@ -11,6 +11,7 @@
 #include <QtMcpCommon/qmcpjsonrpcmessage.h>
 #include <QtMcpCommon/qmcpjsonrpcresponse.h>
 #include <QtMcpCommon/qmcpjsonrpcerror.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -32,7 +33,7 @@ public:
     QMcpJSONRPCBatchResponse() : QMcpJSONRPCMessage(new Private) {}
 
     // Override fromJsonObject to properly handle response list parsing
-    bool fromJsonObject(const QJsonObject &json, const QString &protocolVersion = "2025-03-26"_L1) override {
+    bool fromJsonObject(const QJsonObject &json, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) override {
         // First, call the base class implementation
         if (!QMcpJSONRPCMessage::fromJsonObject(json, protocolVersion))
             return false;

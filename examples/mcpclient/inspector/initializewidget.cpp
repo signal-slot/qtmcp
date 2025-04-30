@@ -42,7 +42,7 @@ InitializeWidget::Private::Private(::InitializeWidget *parent)
         clientInfo.setName(clientName->text());
         clientInfo.setVersion(clientVersion->text());
         params.setClientInfo(clientInfo);
-        params.setProtocolVersion("2024-11-05"_L1);
+        params.setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
         request.setParams(params);
 
         auto settings = q->settings();
@@ -52,7 +52,7 @@ InitializeWidget::Private::Private(::InitializeWidget *parent)
         q->client()->request(request, [this](const QMcpInitializeResult &result, const QMcpJSONRPCErrorError *) {
             serverName->setText(result.serverInfo().name());
             serverVersion->setText(result.serverInfo().version());
-            serverProtocolVersion->setText(result.protocolVersion());
+            serverProtocolVersion->setText(QtMcp::protocolVersionToString(result.protocolVersion()));
             serverInstructions->setPlainText(result.instructions());
             QMcpInitializedNotification notification;
             q->client()->notify(notification);

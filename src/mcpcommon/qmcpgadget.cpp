@@ -7,7 +7,7 @@
 
 QT_BEGIN_NAMESPACE
 
-bool QMcpGadget::fromJsonObject(const QJsonObject &object, const QString &protocolVersion)
+bool QMcpGadget::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion)
 {
     const auto mo = metaObject();
 
@@ -176,6 +176,22 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object, const QString &protoc
                 }
             }
             break; }
+        case QJsonValue::String: {
+            // Special handling for QtMcp::ProtocolVersion
+            if (QString(propertyType) == "QtMcp::ProtocolVersion") {
+                // Convert string to enum
+                QtMcp::ProtocolVersion version = QtMcp::stringToProtocolVersion(value.toString());
+                if (!property.writeOnGadget(this, QVariant::fromValue(version))) {
+                    qWarning() << "Failed to write protocol version enum" << propertyType << mo->className() << propertyName << value;
+                }
+            } else {
+                // Default string handling
+                if (!property.writeOnGadget(this, value.toVariant())) {
+                    qWarning() << propertyType << mo->className() << propertyName << value;
+                }
+            }
+            break;
+        }
         default:
             if (!property.writeOnGadget(this, value.toVariant())) {
                 qWarning() << propertyType << mo->className() << propertyName << value;
@@ -209,7 +225,7 @@ QList<int> requiredOrModifiedPropertyIndices(const QMcpGadget *gadget)
 }
 }
 
-QJsonObject QMcpGadget::toJsonObject(const QString &protocolVersion) const
+QJsonObject QMcpGadget::toJsonObject(QtMcp::ProtocolVersion protocolVersion) const
 {
     QJsonObject ret;
     const auto mo = metaObject();
@@ -279,14 +295,20 @@ QJsonObject QMcpGadget::toJsonObject(const QString &protocolVersion) const
             value = value.toUrl().toString();
             break;
         default:
-            if (mt.flags() & QMetaType::IsEnumeration) {
+            if (mt.id() == qMetaTypeId<QtMcp::ProtocolVersion>()) {
+                auto enumValue = value.value<QtMcp::ProtocolVersion>();
+                value = QtMcp::protocolVersionToString(enumValue);
+            } else if (mt.flags() & QMetaType::IsEnumeration) {
+                // Handle other enum types using meta object system
                 const auto mo = mt.metaObject();
-                for (int i = 0; i < mo->enumeratorCount(); i++) {
-                    const auto me = mo->enumerator(i);
-                    if (mt.name() == QByteArray(mo->className()) + "::" + me.enumName()) {
-                        const auto v = value.toInt();
-                        value = QString::fromUtf8(me.valueToKey(v));
-                        break;
+                if (mo) { // Check if meta object is valid
+                    for (int i = 0; i < mo->enumeratorCount(); i++) {
+                        const auto me = mo->enumerator(i);
+                        if (mt.name() == QByteArray(mo->className()) + "::" + me.enumName()) {
+                            const auto v = value.toInt();
+                            value = QString::fromUtf8(me.valueToKey(v));
+                            break;
+                        }
                     }
                 }
             } else if (value.canConvert<QMcpGadget>()) {

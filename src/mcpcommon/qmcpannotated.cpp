@@ -5,13 +5,13 @@
 
 QT_BEGIN_NAMESPACE
 
-QJsonObject QMcpAnnotated::toJsonObject(const QString &protocolVersion) const
+QJsonObject QMcpAnnotated::toJsonObject(QtMcp::ProtocolVersion protocolVersion) const
 {
     // Get the base object representation
     QJsonObject obj = QMcpGadget::toJsonObject(protocolVersion);
 
     // Special case: 2024-11-05 has no annotations
-    if (protocolVersion == "2024-11-05"_L1) {
+    if (protocolVersion == QtMcp::ProtocolVersion::v2024_11_05) {
         // Explicitly remove annotations key even if it exists
         if (obj.contains("annotations"_L1))
             obj.remove("annotations"_L1);
@@ -28,14 +28,14 @@ QJsonObject QMcpAnnotated::toJsonObject(const QString &protocolVersion) const
     return obj;
 }
 
-bool QMcpAnnotated::fromJsonObject(const QJsonObject &object, const QString &protocolVersion)
+bool QMcpAnnotated::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion)
 {
     // Parse the base object first
     if (!QMcpGadget::fromJsonObject(object, protocolVersion))
         return false;
 
     // 2024-11-05: Always reset annotations to empty and return success
-    if (protocolVersion == "2024-11-05"_L1) {
+    if (protocolVersion == QtMcp::ProtocolVersion::v2024_11_05) {
         setAnnotations(QMcpAnnotations());
         return true;
     }

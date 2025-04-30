@@ -6,6 +6,7 @@
 #include <QtCore/QJsonParseError>
 #include <QtCore/QVariantMap>
 #include <QtMcpCommon/QMcpInitializeRequest>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtTest/QTest>
 
 class tst_QMcpInitializeRequest : public QObject
@@ -52,7 +53,7 @@ void tst_QMcpInitializeRequest::convert_data()
                 "name": "TestClient",
                 "version": "1.0.0"
             },
-            "protocolVersion": "0.1.0"
+            "protocolVersion": "2024-11-05"
         }
     })"_ba
     << QVariantMap {
@@ -85,7 +86,7 @@ void tst_QMcpInitializeRequest::convert_data()
                 { "name", "TestClient"_L1 },
                 { "version", "1.0.0"_L1 }
             }},
-            { "protocolVersion", "0.1.0"_L1 }
+            { "protocolVersion", "2024-11-05"_L1 }
         }}
     };
 
@@ -103,7 +104,7 @@ void tst_QMcpInitializeRequest::convert_data()
                 "name": "MinimalClient",
                 "version": "0.1.0"
             },
-            "protocolVersion": "0.1.0"
+            "protocolVersion": "2024-11-05"
         }
     })"_ba
     << QVariantMap {
@@ -117,7 +118,7 @@ void tst_QMcpInitializeRequest::convert_data()
                 { "name", "MinimalClient"_L1 },
                 { "version", "0.1.0"_L1 }
             }},
-            { "protocolVersion", "0.1.0"_L1 }
+            { "protocolVersion", "2024-11-05"_L1 }
         }}
     };
 }

@@ -8,6 +8,7 @@
 #include <QtMcpCommon/qmcpresult.h>
 #include <QtMcpCommon/qmcpimplementation.h>
 #include <QtMcpCommon/qmcpservercapabilities.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -33,7 +34,7 @@ class Q_MCPCOMMON_EXPORT QMcpInitializeResult : public QMcpResult
         \property QMcpInitializeResult::protocolVersion
         \brief The version of the Model Context Protocol that the server wants to use. This may not match the version that the client requested. If the client cannot support this version, it MUST disconnect.
     */
-    Q_PROPERTY(QString protocolVersion READ protocolVersion WRITE setProtocolVersion REQUIRED)
+    Q_PROPERTY(QtMcp::ProtocolVersion protocolVersion READ protocolVersion WRITE setProtocolVersion REQUIRED)
 
     Q_PROPERTY(QMcpImplementation serverInfo READ serverInfo WRITE setServerInfo REQUIRED)
 
@@ -58,13 +59,18 @@ public:
         d<Private>()->instructions = value;
     }
 
-    QString protocolVersion() const {
+    QtMcp::ProtocolVersion protocolVersion() const {
         return d<Private>()->protocolVersion;
     }
 
-    void setProtocolVersion(const QString &value) {
+    void setProtocolVersion(QtMcp::ProtocolVersion value) {
         if (protocolVersion() == value) return;
         d<Private>()->protocolVersion = value;
+    }
+    
+    // For backward compatibility
+    void setProtocolVersion(const QString &versionStr) {
+        setProtocolVersion(QtMcp::stringToProtocolVersion(versionStr));
     }
 
     QMcpImplementation serverInfo() const {
@@ -84,7 +90,7 @@ private:
     struct Private : public QMcpResult::Private {
         QMcpServerCapabilities capabilities;
         QString instructions;
-        QString protocolVersion;
+        QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest;
         QMcpImplementation serverInfo;
 
         Private *clone() const override { return new Private(*this); }

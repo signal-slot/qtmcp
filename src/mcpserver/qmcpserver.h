@@ -15,6 +15,7 @@
 #include <QtMcpCommon/QMcpResult>
 #include <QtMcpCommon/QMcpServerCapabilities>
 #include <QtMcpCommon/QMcpTool>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtMcpServer/qmcpserverglobal.h>
 #include <QtMcpServer/qmcpserversession.h>
 #include <concepts>
@@ -88,7 +89,7 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
         
         This version is used for compatibility checking with clients.
     */
-    Q_PROPERTY(QString protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
+    Q_PROPERTY(QtMcp::ProtocolVersion protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
     
     /*!
         \property QMcpServer::supportedProtocolVersions
@@ -97,7 +98,7 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
         This list is used during the initialization handshake to negotiate
         a compatible protocol version with clients.
     */
-    Q_PROPERTY(QStringList supportedProtocolVersions READ supportedProtocolVersions NOTIFY supportedProtocolVersionsChanged FINAL)
+    Q_PROPERTY(QList<QtMcp::ProtocolVersion> supportedProtocolVersions READ supportedProtocolVersions NOTIFY supportedProtocolVersionsChanged FINAL)
 public:
     /*!
         Returns a list of available backend implementations for the MCP server.
@@ -160,7 +161,7 @@ public:
         static_assert(std::is_base_of<QMcpResult, Result>::value, "Result must inherit from QMcpResult");
 
         // Get session's negotiated protocol version if available
-        QString versionToUse = protocolVersion();
+        QtMcp::ProtocolVersion versionToUse = protocolVersion();
         for (auto *s : sessions()) {
             if (s->sessionId() == session) {
                 versionToUse = s->protocolVersion();
@@ -189,7 +190,7 @@ public:
         static_assert(std::is_base_of<QMcpRequest, Request>::value, "Request must inherit from QMcpRequest");
 
         // Get session's negotiated protocol version if available
-        QString versionToUse = protocolVersion();
+        QtMcp::ProtocolVersion versionToUse = protocolVersion();
         for (auto *s : sessions()) {
             if (s->sessionId() == session) {
                 versionToUse = s->protocolVersion();
@@ -217,15 +218,15 @@ public:
         \param notification Notification object inheriting from QMcpNotification
     */
     template<typename Notification>
-    void notify(const QUuid &session, const Notification &notification, const QString &protocolVersion = QString())
+    void notify(const QUuid &session, const Notification &notification, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest)
     {
         static_assert(std::is_base_of<QMcpNotification, Notification>::value, "Notification must inherit from QMcpNotification");
 
         // Determine which protocol version to use
-        QString versionToUse = protocolVersion;
+        QtMcp::ProtocolVersion versionToUse = protocolVersion;
         
-        // If no version was explicitly provided, get session's negotiated protocol version
-        if (versionToUse.isEmpty()) {
+        // If default value was used, get session's negotiated protocol version
+        if (versionToUse == QtMcp::ProtocolVersion::Latest) {
             versionToUse = this->protocolVersion();
             for (auto *s : sessions()) {
                 if (s->sessionId() == session) {
@@ -275,7 +276,7 @@ public:
 
         auto wrapper = [this, handler](const QUuid &session, const QJsonObject &json, QMcpJSONRPCErrorError *error) -> QJsonValue {
             // Get session's negotiated protocol version if available
-            QString versionToUse = protocolVersion();
+            QtMcp::ProtocolVersion versionToUse = protocolVersion();
             for (auto *s : sessions()) {
                 if (s->sessionId() == session) {
                     versionToUse = s->protocolVersion();
@@ -332,7 +333,7 @@ public:
 
         auto wrapper = [handler, this](const QUuid &session, const QJsonObject &json) {
             // Get session's negotiated protocol version if available
-            QString versionToUse = protocolVersion();
+            QtMcp::ProtocolVersion versionToUse = protocolVersion();
             for (auto *s : sessions()) {
                 if (s->sessionId() == session) {
                     versionToUse = s->protocolVersion();
@@ -364,13 +365,13 @@ public:
         Returns the current protocol version.
         \sa setProtocolVersion()
     */
-    QString protocolVersion() const;
+    QtMcp::ProtocolVersion protocolVersion() const;
     
     /*!
         Returns the list of protocol versions supported by the server.
         \sa setSupportedProtocolVersions(), isProtocolVersionSupported()
     */
-    QStringList supportedProtocolVersions() const;
+    QList<QtMcp::ProtocolVersion> supportedProtocolVersions() const;
     
     /*!
         Checks if a given protocol version is supported by the server.
@@ -378,7 +379,7 @@ public:
         \return true if supported, false otherwise
         \sa supportedProtocolVersions()
     */
-    bool isProtocolVersionSupported(const QString &version) const;
+    bool isProtocolVersionSupported(QtMcp::ProtocolVersion version) const;
 
     /*!
         Returns a mapping of feature identifiers to their toolDescriptions.
@@ -407,14 +408,15 @@ public slots:
         \param protocolVersion The new protocol version string
         \sa protocolVersion()
     */
-    void setProtocolVersion(const QString &protocolVersion);
+    // This method has been replaced by the enum-based version above
+    void setProtocolVersion(QtMcp::ProtocolVersion protocolVersion);
     
     /*!
         Sets the list of protocol versions supported by the server.
         \param versions List of supported protocol versions
         \sa supportedProtocolVersions(), isProtocolVersionSupported()
     */
-    void setSupportedProtocolVersions(const QStringList &versions);
+    void setSupportedProtocolVersions(const QList<QtMcp::ProtocolVersion> &versions);
 
     /*!
         Starts the MCP server with the given arguments.
@@ -443,15 +445,15 @@ signals:
 
     /*!
         Emitted when the protocol version changes.
-        \param protocolVersion The new protocol version string
+        \param protocolVersion The new protocol version enum value
     */
-    void protocolVersionChanged(const QString &protocolVersion);
+    void protocolVersionChanged(QtMcp::ProtocolVersion protocolVersion);
     
     /*!
         Emitted when the supported protocol versions change.
         \param versions The new list of supported protocol versions
     */
-    void supportedProtocolVersionsChanged(const QStringList &versions);
+    void supportedProtocolVersionsChanged(const QList<QtMcp::ProtocolVersion> &versions);
 
     /*!
         Emitted when the server has successfully started.
