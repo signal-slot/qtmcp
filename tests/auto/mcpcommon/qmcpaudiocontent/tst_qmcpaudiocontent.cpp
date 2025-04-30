@@ -24,7 +24,7 @@ private slots:
 void tst_QMcpAudioContent::defaultValues()
 {
     QMcpAudioContent content;
-    QCOMPARE(content.type(), QString("audio"));
+    QCOMPARE(content.type(), "audio"_L1);
     QCOMPARE(content.data(), QByteArray());
     QCOMPARE(content.mimeType(), QString());
     QVERIFY(content.annotations().audience().isEmpty());
@@ -174,7 +174,7 @@ void tst_QMcpAudioContent::setters()
     QCOMPARE(content.annotations().priority(), 0.5);
     
     // Test that type is constant and cannot be changed
-    QCOMPARE(content.type(), QString("audio"));
+    QCOMPARE(content.type(), "audio"_L1);
 }
 
 QTEST_MAIN(tst_QMcpAudioContent)

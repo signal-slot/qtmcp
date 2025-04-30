@@ -24,7 +24,7 @@ void ConnectWidget::Private::loadServerHistory(const QString &backendName)
 {
     const auto settings = q->settings();
     serverName->clear();
-    const QStringList history = settings->value(QString("history/%1").arg(backendName)).toStringList();
+    const QStringList history = settings->value("history/%1"_L1.arg(backendName)).toStringList();
     serverName->addItems(history);
     
     // Add default item if history is empty
@@ -42,7 +42,7 @@ void ConnectWidget::Private::saveServerToHistory(const QString &backendName, con
         return;
 
     const auto settings = q->settings();
-    const QString historyKey = QString("history/%1").arg(backendName);
+    const QString historyKey = "history/%1"_L1.arg(backendName);
     QStringList history = settings->value(historyKey).toStringList();
     
     // Remove if exists and prepend to make it first

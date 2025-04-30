@@ -26,7 +26,7 @@ void tst_QMcpJSONRPCBatchRequest::defaultValues()
     // Test default values for QMcpJSONRPCBatchRequest
     QMcpJSONRPCBatchRequest genericRequest;
     QVERIFY(genericRequest.requests().isEmpty());
-    QCOMPARE(genericRequest.jsonrpc(), QString("2.0"));
+    QCOMPARE(genericRequest.jsonrpc(), "2.0"_L1);
 }
 
 void tst_QMcpJSONRPCBatchRequest::jsonConversion()
@@ -52,14 +52,14 @@ void tst_QMcpJSONRPCBatchRequest::jsonConversion()
     QCOMPARE(requests.size(), 2);
     auto request = requests.at(0);
     QCOMPARE(request->id().toInt(), 1);
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->method(), "ping"_L1);
     request = requests.at(1);
-    QCOMPARE(request->id().toString(), QString("req-2"));
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->id().toString(), "req-2"_L1);
+    QCOMPARE(request->method(), "ping"_L1);
     
     // Test JSON conversion
     QJsonObject jsonObj = batchRequest.toJsonObject();
-    QCOMPARE(jsonObj.value("jsonrpc").toString(), QString("2.0"));
+    QCOMPARE(jsonObj.value("jsonrpc").toString(), "2.0"_L1);
     QVERIFY(jsonObj.contains("requests"));
     QVERIFY(jsonObj.value("requests").isArray());
     QJsonArray requestsArray = jsonObj.value("requests").toArray();
@@ -68,12 +68,12 @@ void tst_QMcpJSONRPCBatchRequest::jsonConversion()
     // Verify first request in JSON
     QJsonObject req1Json = requestsArray.at(0).toObject();
     QCOMPARE(req1Json.value("id").toInt(), 1);
-    QCOMPARE(req1Json.value("method").toString(), QString("ping"));
+    QCOMPARE(req1Json.value("method").toString(), "ping"_L1);
 
     // Verify second request in JSON
     QJsonObject req2Json = requestsArray.at(1).toObject();
-    QCOMPARE(req2Json.value("id").toString(), QString("req-2"));
-    QCOMPARE(req2Json.value("method").toString(), QString("ping"));
+    QCOMPARE(req2Json.value("id").toString(), "req-2"_L1);
+    QCOMPARE(req2Json.value("method").toString(), "ping"_L1);
 }
 
 void tst_QMcpJSONRPCBatchRequest::copyTest()
@@ -102,10 +102,10 @@ void tst_QMcpJSONRPCBatchRequest::copyTest()
     QCOMPARE(requests.size(), 2);
     auto request = requests.at(0);
     QCOMPARE(request->id().toInt(), 1);
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->method(), "ping"_L1);
     request = requests.at(1);
-    QCOMPARE(request->id().toString(), QString("req-2"));
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->id().toString(), "req-2"_L1);
+    QCOMPARE(request->method(), "ping"_L1);
     
     // Test assignment operator
     QMcpJSONRPCBatchRequest assignedRequest;
@@ -114,10 +114,10 @@ void tst_QMcpJSONRPCBatchRequest::copyTest()
     QCOMPARE(requests.size(), 2);
     request = requests.at(0);
     QCOMPARE(request->id().toInt(), 1);
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->method(), "ping"_L1);
     request = requests.at(1);
-    QCOMPARE(request->id().toString(), QString("req-2"));
-    QCOMPARE(request->method(), QString("ping"));
+    QCOMPARE(request->id().toString(), "req-2"_L1);
+    QCOMPARE(request->method(), "ping"_L1);
 }
 
 QTEST_MAIN(tst_QMcpJSONRPCBatchRequest)

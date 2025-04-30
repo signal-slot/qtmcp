@@ -55,14 +55,14 @@ void tst_QMcpJSONRPCMessage::responseVariant()
     QVERIFY(std::holds_alternative<QMcpJSONRPCResponse>(message));
     
     const auto& storedResponse = std::get<QMcpJSONRPCResponse>(message);
-    QCOMPARE(storedResponse.jsonrpc(), QString("2.0"));
+    QCOMPARE(storedResponse.jsonrpc(), "2.0"_L1);
     QCOMPARE(storedResponse.id().toInt(), 123);
-    QCOMPARE(storedResponse.result().additionalProperties().value("key").toString(), QString("value"));
+    QCOMPARE(storedResponse.result().additionalProperties().value("key").toString(), "value"_L1);
 
     // Test with string ID
     response.setId("response-1");
     message = response;
-    QCOMPARE(std::get<QMcpJSONRPCResponse>(message).id().toString(), QString("response-1"));
+    QCOMPARE(std::get<QMcpJSONRPCResponse>(message).id().toString(), "response-1"_L1);
 }
 
 void tst_QMcpJSONRPCMessage::errorVariant()
@@ -81,10 +81,10 @@ void tst_QMcpJSONRPCMessage::errorVariant()
     QVERIFY(std::holds_alternative<QMcpJSONRPCError>(message));
     
     const auto& storedError = std::get<QMcpJSONRPCError>(message);
-    QCOMPARE(storedError.jsonrpc(), QString("2.0"));
+    QCOMPARE(storedError.jsonrpc(), "2.0"_L1);
     QCOMPARE(storedError.error().code(), -32600);
-    QCOMPARE(storedError.error().message(), QString("Invalid Request"));
-    QCOMPARE(storedError.error().data().toObject().value("details").toString(), QString("Additional error info"));
+    QCOMPARE(storedError.error().message(), "Invalid Request"_L1);
+    QCOMPARE(storedError.error().data().toObject().value("details").toString(), "Additional error info"_L1);
 }
 
 void tst_QMcpJSONRPCMessage::jsonValueVariant()
@@ -93,12 +93,12 @@ void tst_QMcpJSONRPCMessage::jsonValueVariant()
     QJsonObject obj{{"test", "value"}};
     QMcpJSONRPCMessageTest objMessage = QJsonValue(obj);
     QVERIFY(std::holds_alternative<QJsonValue>(objMessage));
-    QCOMPARE(std::get<QJsonValue>(objMessage).toObject().value("test").toString(), QString("value"));
+    QCOMPARE(std::get<QJsonValue>(objMessage).toObject().value("test").toString(), "value"_L1);
 
     QJsonArray arr{"item1", "item2"};
     QMcpJSONRPCMessageTest arrMessage = QJsonValue(arr);
     QVERIFY(std::holds_alternative<QJsonValue>(arrMessage));
-    QCOMPARE(std::get<QJsonValue>(arrMessage).toArray().at(0).toString(), QString("item1"));
+    QCOMPARE(std::get<QJsonValue>(arrMessage).toArray().at(0).toString(), "item1"_L1);
 
     QString str = "test string";
     QMcpJSONRPCMessageTest strMessage = QJsonValue(str);
@@ -180,7 +180,7 @@ void tst_QMcpJSONRPCMessage::variantVisit()
     result.setAdditionalProperties(QJsonObject{{"key", "value"}});
     response.setResult(result);
     message = response;
-    QCOMPARE(std::visit(visitor, message), QString("response"));
+    QCOMPARE(std::visit(visitor, message), "response"_L1);
 
     QMcpJSONRPCError error;
     QMcpJSONRPCErrorError errorDetails;
@@ -188,13 +188,13 @@ void tst_QMcpJSONRPCMessage::variantVisit()
     errorDetails.setMessage("Invalid Request");
     error.setError(errorDetails);
     message = error;
-    QCOMPARE(std::visit(visitor, message), QString("error"));
+    QCOMPARE(std::visit(visitor, message), "error"_L1);
 
     message = QJsonValue("test");
-    QCOMPARE(std::visit(visitor, message), QString("json"));
+    QCOMPARE(std::visit(visitor, message), "json"_L1);
 
     message = nullptr;
-    QCOMPARE(std::visit(visitor, message), QString("null"));
+    QCOMPARE(std::visit(visitor, message), "null"_L1);
 }
 
 QTEST_MAIN(tst_QMcpJSONRPCMessage)
