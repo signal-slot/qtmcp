@@ -25,7 +25,7 @@ void tst_QMcpAudioContent::defaultValues()
 {
     QMcpAudioContent content;
     QCOMPARE(content.type(), "audio"_L1);
-    QCOMPARE(content.data(), QByteArray());
+    QCOMPARE(content.data(), ""_ba);
     QCOMPARE(content.mimeType(), QString());
     QVERIFY(content.annotations().audience().isEmpty());
     QCOMPARE(content.annotations().priority(), 0.0);
@@ -44,7 +44,7 @@ void tst_QMcpAudioContent::convert_data()
     })"_ba
     << QVariantMap {
         { "type", "audio" },
-        { "data", QByteArray("SGVsbG8gV29ybGQ=") },
+        { "data", "SGVsbG8gV29ybGQ="_ba },
         { "mimeType", "audio/mp3" }
     };
 
@@ -60,7 +60,7 @@ void tst_QMcpAudioContent::convert_data()
     })"_ba
     << QVariantMap {
         { "type", "audio" },
-        { "data", QByteArray("SGVsbG8gV29ybGQ=") },
+        { "data", "SGVsbG8gV29ybGQ="_ba },
         { "mimeType", "audio/wav" },
         { "annotations", QVariantMap {
             { "audience", QVariantList {
@@ -153,7 +153,7 @@ void tst_QMcpAudioContent::setters()
     QMcpAudioContent content;
     
     // Test data setter
-    QByteArray testData("Test audio data");
+    auto testData = "Test audio data"_ba;
     content.setData(testData);
     QCOMPARE(content.data(), testData);
     

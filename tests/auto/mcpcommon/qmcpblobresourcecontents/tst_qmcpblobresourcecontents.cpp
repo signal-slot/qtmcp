@@ -31,7 +31,7 @@ void tst_QMcpBlobResourceContents::convert_data()
         "uri": "file:///path/to/file.txt"
     })"_ba
     << QVariantMap {
-        { "blob", QByteArray("SGVsbG8gV29ybGQ=") },
+        { "blob", "SGVsbG8gV29ybGQ="_ba },
         { "mimeType", "text/plain"_L1 },
         { "uri", QUrl("file:///path/to/file.txt") }
     };
@@ -43,7 +43,7 @@ void tst_QMcpBlobResourceContents::convert_data()
         "uri": "https://example.com/image.png"
     })"_ba
     << QVariantMap {
-        { "blob", QByteArray("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==") },
+        { "blob", "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="_ba },
         { "mimeType", "image/png"_L1 },
         { "uri", QUrl("https://example.com/image.png") }
     };
@@ -54,7 +54,7 @@ void tst_QMcpBlobResourceContents::convert_data()
         "uri": "data:text/plain;base64,dGVzdCBkYXRh"
     })"_ba
     << QVariantMap {
-        { "blob", QByteArray("dGVzdCBkYXRh") },
+        { "blob", "dGVzdCBkYXRh"_ba },
         { "uri", QUrl("data:text/plain;base64,dGVzdCBkYXRh") }
     };
 
@@ -65,7 +65,7 @@ void tst_QMcpBlobResourceContents::convert_data()
         "uri": "resources/data.bin"
     })"_ba
     << QVariantMap {
-        { "blob", QByteArray("Y29udGVudA==") },
+        { "blob", "Y29udGVudA=="_ba },
         { "mimeType", "application/octet-stream"_L1 },
         { "uri", QUrl("resources/data.bin") }
     };
@@ -139,7 +139,7 @@ void tst_QMcpBlobResourceContents::copy()
 void tst_QMcpBlobResourceContents::defaultValues()
 {
     QMcpBlobResourceContents contents;
-    
+
     // Check default values
     QVERIFY(contents.blob().isEmpty());
     QVERIFY(contents.mimeType().isEmpty());

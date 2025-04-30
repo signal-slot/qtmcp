@@ -149,7 +149,7 @@ void tst_QMcpAnyOf::convert_data()
         "type": "type1",
         "value": "test value"
     })"_ba
-    << QByteArray("type1")
+    << "type1"_ba
     << QVariantMap {
         { "type", "type1" },
         { "value", "test value" }
@@ -160,7 +160,7 @@ void tst_QMcpAnyOf::convert_data()
         "type": "type2",
         "number": 42
     })"_ba
-    << QByteArray("type2")
+    << "type2"_ba
     << QVariantMap {
         { "type", "type2" },
         { "number", 42 }

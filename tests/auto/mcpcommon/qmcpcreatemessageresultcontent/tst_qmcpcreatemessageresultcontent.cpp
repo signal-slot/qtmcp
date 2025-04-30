@@ -44,7 +44,7 @@ void tst_QMcpCreateMessageResultContent::textContent()
     content.setTextContent(textContent);
 
     // Verify the content
-    QCOMPARE(content.refType(), QByteArray("textContent"));
+    QCOMPARE(content.refType(), "textContent"_ba);
     QCOMPARE(content.textContent().text(), "Hello, world!"_L1);
 
     // Test JSON conversion
@@ -55,7 +55,7 @@ void tst_QMcpCreateMessageResultContent::textContent()
     // Test JSON parsing
     QMcpCreateMessageResultContent parsedContent;
     QVERIFY(parsedContent.fromJsonObject(jsonObj));
-    QCOMPARE(parsedContent.refType(), QByteArray("textContent"));
+    QCOMPARE(parsedContent.refType(), "textContent"_ba);
     QCOMPARE(parsedContent.textContent().text(), "Hello, world!"_L1);
 }
 
@@ -63,7 +63,7 @@ void tst_QMcpCreateMessageResultContent::imageContent()
 {
     // Create image content
     QMcpImageContent imageContent;
-    imageContent.setData(QByteArray("image data"));
+    imageContent.setData("image data"_ba);
     imageContent.setMimeType("image/png");
 
     // Set it in the create message result content
@@ -71,8 +71,8 @@ void tst_QMcpCreateMessageResultContent::imageContent()
     content.setImageContent(imageContent);
 
     // Verify the content
-    QCOMPARE(content.refType(), QByteArray("imageContent"));
-    QCOMPARE(content.imageContent().data(), QByteArray("image data"));
+    QCOMPARE(content.refType(), "imageContent"_ba);
+    QCOMPARE(content.imageContent().data(), "image data"_ba);
     QCOMPARE(content.imageContent().mimeType(), "image/png"_L1);
 
     // Test JSON conversion
@@ -84,8 +84,8 @@ void tst_QMcpCreateMessageResultContent::imageContent()
     // Test JSON parsing
     QMcpCreateMessageResultContent parsedContent;
     QVERIFY(parsedContent.fromJsonObject(jsonObj));
-    QCOMPARE(parsedContent.refType(), QByteArray("imageContent"));
-    QCOMPARE(parsedContent.imageContent().data(), QByteArray("image data"));
+    QCOMPARE(parsedContent.refType(), "imageContent"_ba);
+    QCOMPARE(parsedContent.imageContent().data(), "image data"_ba);
     QCOMPARE(parsedContent.imageContent().mimeType(), "image/png"_L1);
 }
 
@@ -93,7 +93,7 @@ void tst_QMcpCreateMessageResultContent::audioContent()
 {
     // Create audio content
     QMcpAudioContent audioContent;
-    audioContent.setData(QByteArray("audio data"));
+    audioContent.setData("audio data"_ba);
     audioContent.setMimeType("audio/mp3");
 
     // Set it in the create message result content
@@ -101,8 +101,8 @@ void tst_QMcpCreateMessageResultContent::audioContent()
     content.setAudioContent(audioContent);
 
     // Verify the content
-    QCOMPARE(content.refType(), QByteArray("audioContent"));
-    QCOMPARE(content.audioContent().data(), QByteArray("audio data"));
+    QCOMPARE(content.refType(), "audioContent"_ba);
+    QCOMPARE(content.audioContent().data(), "audio data"_ba);
     QCOMPARE(content.audioContent().mimeType(), "audio/mp3"_L1);
 
     // Test JSON conversion
@@ -114,8 +114,8 @@ void tst_QMcpCreateMessageResultContent::audioContent()
     // Test JSON parsing
     QMcpCreateMessageResultContent parsedContent;
     QVERIFY(parsedContent.fromJsonObject(jsonObj));
-    QCOMPARE(parsedContent.refType(), QByteArray("audioContent"));
-    QCOMPARE(parsedContent.audioContent().data(), QByteArray("audio data"));
+    QCOMPARE(parsedContent.refType(), "audioContent"_ba);
+    QCOMPARE(parsedContent.audioContent().data(), "audio data"_ba);
     QCOMPARE(parsedContent.audioContent().mimeType(), "audio/mp3"_L1);
 }
 
@@ -129,7 +129,7 @@ void tst_QMcpCreateMessageResultContent::copyConstructor()
 
     // Test copy constructor
     QMcpCreateMessageResultContent copy(original);
-    QCOMPARE(copy.refType(), QByteArray("textContent"));
+    QCOMPARE(copy.refType(), "textContent"_ba);
     QCOMPARE(copy.textContent().text(), "Hello, world!"_L1);
 
     // Modify original, verify copy is unchanged
@@ -145,25 +145,25 @@ void tst_QMcpCreateMessageResultContent::assignmentOperator()
     // Create content with image
     QMcpCreateMessageResultContent original;
     QMcpImageContent imageContent;
-    imageContent.setData(QByteArray("image data"));
+    imageContent.setData("image data"_ba);
     imageContent.setMimeType("image/png");
     original.setImageContent(imageContent);
 
     // Test assignment operator
     QMcpCreateMessageResultContent assigned;
     assigned = original;
-    QCOMPARE(assigned.refType(), QByteArray("imageContent"));
-    QCOMPARE(assigned.imageContent().data(), QByteArray("image data"));
+    QCOMPARE(assigned.refType(), "imageContent"_ba);
+    QCOMPARE(assigned.imageContent().data(), "image data"_ba);
     QCOMPARE(assigned.imageContent().mimeType(), "image/png"_L1);
 
     // Modify original, verify assigned is unchanged
     QMcpImageContent newImageContent;
-    newImageContent.setData(QByteArray("new image data"));
+    newImageContent.setData("new image data"_ba);
     newImageContent.setMimeType("image/jpeg");
     original.setImageContent(newImageContent);
-    QCOMPARE(assigned.imageContent().data(), QByteArray("image data"));
+    QCOMPARE(assigned.imageContent().data(), "image data"_ba);
     QCOMPARE(assigned.imageContent().mimeType(), "image/png"_L1);
-    QCOMPARE(original.imageContent().data(), QByteArray("new image data"));
+    QCOMPARE(original.imageContent().data(), "new image data"_ba);
     QCOMPARE(original.imageContent().mimeType(), "image/jpeg"_L1);
 }
 
@@ -173,25 +173,25 @@ void tst_QMcpCreateMessageResultContent::constructors()
     QMcpTextContent textContent;
     textContent.setText("Hello, world!");
     QMcpCreateMessageResultContent textResult(textContent);
-    QCOMPARE(textResult.refType(), QByteArray("textContent"));
+    QCOMPARE(textResult.refType(), "textContent"_ba);
     QCOMPARE(textResult.textContent().text(), "Hello, world!"_L1);
 
     // Test constructor with image content
     QMcpImageContent imageContent;
-    imageContent.setData(QByteArray("image data"));
+    imageContent.setData("image data"_ba);
     imageContent.setMimeType("image/png");
     QMcpCreateMessageResultContent imageResult(imageContent);
-    QCOMPARE(imageResult.refType(), QByteArray("imageContent"));
-    QCOMPARE(imageResult.imageContent().data(), QByteArray("image data"));
+    QCOMPARE(imageResult.refType(), "imageContent"_ba);
+    QCOMPARE(imageResult.imageContent().data(), "image data"_ba);
     QCOMPARE(imageResult.imageContent().mimeType(), "image/png"_L1);
 
     // Test constructor with audio content
     QMcpAudioContent audioContent;
-    audioContent.setData(QByteArray("audio data"));
+    audioContent.setData("audio data"_ba);
     audioContent.setMimeType("audio/mp3");
     QMcpCreateMessageResultContent audioResult(audioContent);
-    QCOMPARE(audioResult.refType(), QByteArray("audioContent"));
-    QCOMPARE(audioResult.audioContent().data(), QByteArray("audio data"));
+    QCOMPARE(audioResult.refType(), "audioContent"_ba);
+    QCOMPARE(audioResult.audioContent().data(), "audio data"_ba);
     QCOMPARE(audioResult.audioContent().mimeType(), "audio/mp3"_L1);
 }
 
