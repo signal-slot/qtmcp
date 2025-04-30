@@ -18,7 +18,7 @@ class QMcpClient::Private
 {
 public:
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
-    QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26};
+    const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26};
 
     Private(const QString &type, QMcpClient *parent)
         : q(parent)
@@ -131,9 +131,11 @@ QtMcp::ProtocolVersion QMcpClient::protocolVersion() const
     return d->protocolVersion;
 }
 
-void QMcpClient::setProtocolVersion(QtMcp::ProtocolVersion version)
+void QMcpClient::setProtocolVersion(QtMcp::ProtocolVersion protocolVersion)
 {
-    d->protocolVersion = version;
+    if (d->protocolVersion == protocolVersion) return;
+    d->protocolVersion = protocolVersion;
+    emit protocolVersionChanged(protocolVersion);
 }
 
 

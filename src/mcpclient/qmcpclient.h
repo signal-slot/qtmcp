@@ -55,6 +55,24 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCLIENT_EXPORT QMcpClient : public QObject
 {
     Q_OBJECT
+
+    /*!
+        \property QMcpServer::protocolVersion
+        This property holds the MCP protocol version supported by the server.
+
+        This version is used for compatibility checking with clients.
+    */
+    Q_PROPERTY(QtMcp::ProtocolVersion protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
+
+    /*!
+        \property QMcpServer::supportedProtocolVersions
+        This property holds the list of MCP protocol versions supported by the server.
+
+        This list is used during the initialization handshake to negotiate
+        a compatible protocol version with clients.
+    */
+    Q_PROPERTY(QList<QtMcp::ProtocolVersion> supportedProtocolVersions READ supportedProtocolVersions CONSTANT FINAL)
+
 public:
     /*!
         Returns a list of available backend implementations for the MCP client.
@@ -78,16 +96,6 @@ public:
         Returns the current protocol version used by the client.
     */
     QtMcp::ProtocolVersion protocolVersion() const;
-
-    /*!
-        Sets the protocol version to use for communication.
-        This should be called before sending initialization requests.
-
-        \param version The protocol version enum value
-        \return true if the version is supported, false otherwise
-    */
-    void setProtocolVersion(QtMcp::ProtocolVersion version);
-
 
     /*!
         Returns a list of protocol versions supported by this client.
@@ -320,6 +328,15 @@ public:
 
 public slots:
     /*!
+        Sets the protocol version to use for communication.
+        This should be called before sending initialization requests.
+
+        \param version The protocol version enum value
+        \return true if the version is supported, false otherwise
+    */
+    void setProtocolVersion(QtMcp::ProtocolVersion protocolVersion);
+
+    /*!
         Starts the MCP client with the given arguments.
 
         \param args Command-line style arguments to pass to the backend (e.g., "--log-level=debug")
@@ -327,6 +344,12 @@ public slots:
     void start(const QString &args);
 
 signals:
+    /*!
+        Emitted when the protocol version changes.
+        \param protocolVersion The new protocol version enum value
+    */
+    void protocolVersionChanged(QtMcp::ProtocolVersion protocolVersion);
+
     /*!
         Emitted when the client has successfully started.
     */
