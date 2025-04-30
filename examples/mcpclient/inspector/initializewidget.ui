@@ -60,10 +60,30 @@
           <property name="text">
            <string>2024-11-05</string>
           </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="clientProtocolVersion20250326">
+          <property name="text">
+           <string>2025-03-26</string>
+          </property>
           <property name="checked">
            <bool>true</bool>
           </property>
          </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
