@@ -4,7 +4,6 @@
 #ifndef QMCPSERVER_H
 #define QMCPSERVER_H
 
-#include <QtConcurrent/QtConcurrent>
 #include <QtCore/QFuture>
 #include <QtCore/QObject>
 #include <QtMcpCommon/QMcpJSONRPCErrorError>
@@ -68,7 +67,7 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
     /*!
         \property QMcpServer::capabilities
         This property holds the server's capabilities configuration.
-        
+
         The capabilities define what features the server supports, such as
         experimental features, tools, resources, etc.
     */
@@ -77,7 +76,7 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
     /*!
         \property QMcpServer::instructions
         This property holds the server's instructions for clients.
-        
+
         These instructions can provide guidance on how to interact with the server
         or describe its purpose.
     */
@@ -86,15 +85,15 @@ class Q_MCPSERVER_EXPORT QMcpServer : public QObject
     /*!
         \property QMcpServer::protocolVersion
         This property holds the MCP protocol version supported by the server.
-        
+
         This version is used for compatibility checking with clients.
     */
     Q_PROPERTY(QtMcp::ProtocolVersion protocolVersion READ protocolVersion WRITE setProtocolVersion NOTIFY protocolVersionChanged FINAL)
-    
+
     /*!
         \property QMcpServer::supportedProtocolVersions
         This property holds the list of MCP protocol versions supported by the server.
-        
+
         This list is used during the initialization handshake to negotiate
         a compatible protocol version with clients.
     */
@@ -107,12 +106,12 @@ public:
 
     /*!
         Constructs an MCP server using the specified backend.
-        
+
         \param backend Name of the backend implementation to use
         \param parent Parent QObject (optional)
     */
     explicit QMcpServer(const QString &backend, QObject *parent = nullptr);
-    
+
     /*!
         Destroys the MCP server.
     */
@@ -224,7 +223,7 @@ public:
 
         // Determine which protocol version to use
         QtMcp::ProtocolVersion versionToUse = protocolVersion;
-        
+
         // If default value was used, get session's negotiated protocol version
         if (versionToUse == QtMcp::ProtocolVersion::Latest) {
             versionToUse = this->protocolVersion();
@@ -235,7 +234,7 @@ public:
                 }
             }
         }
-        
+
         auto json = notification.toJsonObject(versionToUse);
         send(session, json);
     }
@@ -246,10 +245,10 @@ public:
     // Helper to detect QFuture
     template<typename T>
     struct is_future : std::false_type {};
-    
+
     template<typename T>
     struct is_future<QFuture<T>> : std::true_type {};
-    
+
     template <typename R, typename C, typename Arg>
     struct RequestHandlerTraits<R(C::*)(const QUuid &, Arg, QMcpJSONRPCErrorError *) const> {
         using RequestType = std::decay_t<Arg>;
@@ -265,7 +264,7 @@ public:
 
         static_assert(std::is_base_of<QMcpRequest, Req>::value,
                       "Request type must inherit from QMcpRequest");
-        
+
         if constexpr (is_future<Result>::value) {
             static_assert(std::is_base_of<QMcpResult, typename Result::value_type>::value,
                           "Future result type must inherit from QMcpResult");
@@ -286,14 +285,14 @@ public:
 
             Req req;
             req.fromJsonObject(json, versionToUse);
-            
+
             if constexpr (is_future<Result>::value) {
                 // For async handlers
                 auto future = handler(session, req, error);
-                
+
                 // Get the request ID from the JSON object
                 const auto id = json.value("id"_L1);
-                
+
                 // Set up continuation to send response when ready
                 future.then([this, session, id, versionToUse](const auto &result) {
                     QMcpJSONRPCResponse response;
@@ -302,7 +301,7 @@ public:
                     object.insert("result"_L1, result.toJsonObject(versionToUse));
                     send(session, object);
                 });
-                
+
                 // Return empty value since we'll send response later
                 return QJsonValue();
             } else {
@@ -340,7 +339,7 @@ public:
                     break;
                 }
             }
-            
+
             Notification notification;
             notification.fromJsonObject(json, versionToUse);
             handler(session, notification);
@@ -366,13 +365,13 @@ public:
         \sa setProtocolVersion()
     */
     QtMcp::ProtocolVersion protocolVersion() const;
-    
+
     /*!
         Returns the list of protocol versions supported by the server.
         \sa setSupportedProtocolVersions(), isProtocolVersionSupported()
     */
     QList<QtMcp::ProtocolVersion> supportedProtocolVersions() const;
-    
+
     /*!
         Checks if a given protocol version is supported by the server.
         \param version Protocol version to check
@@ -410,7 +409,7 @@ public slots:
     */
     // This method has been replaced by the enum-based version above
     void setProtocolVersion(QtMcp::ProtocolVersion protocolVersion);
-    
+
     /*!
         Sets the list of protocol versions supported by the server.
         \param versions List of supported protocol versions
@@ -448,7 +447,7 @@ signals:
         \param protocolVersion The new protocol version enum value
     */
     void protocolVersionChanged(QtMcp::ProtocolVersion protocolVersion);
-    
+
     /*!
         Emitted when the supported protocol versions change.
         \param versions The new list of supported protocol versions

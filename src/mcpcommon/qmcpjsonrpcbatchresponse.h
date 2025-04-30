@@ -44,7 +44,7 @@ public:
             QList<QMcpJSONRPCResponse*> responseList;
             
             // Process each response in the array
-            for (const QJsonValue &value : responsesArray) {
+            for (const QJsonValue &value : std::as_const(responsesArray)) {
                 if (!value.isObject())
                     continue;
                     
@@ -62,7 +62,7 @@ public:
                 // Add it to our list
                 responseList.append(response);
             }
-            
+
             // Update our responses property with the parsed list
             setResponses(responseList);
             return true;

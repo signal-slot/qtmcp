@@ -54,7 +54,6 @@ QByteArray HttpServer::postMessages(const QNetworkRequest &request, const QByteA
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(body, &error);
     if (error.error == QJsonParseError::NoError && doc.isObject()) {
-        QJsonObject obj = doc.object();
         emit received(session, doc.object());
     } else {
         qWarning() << body;

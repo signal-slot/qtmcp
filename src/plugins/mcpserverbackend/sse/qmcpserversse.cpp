@@ -68,7 +68,7 @@ void QMcpServerSse::start(const QString &server)
 void QMcpServerSse::send(const QUuid &session, const QJsonObject &object)
 {
     qCDebug(lcQMcpServerSsePlugin) << "Sending message:" << session;
-    
+
     d->httpServer.send(session, object);
 }
 

@@ -157,8 +157,8 @@ public:
             QtMcp::ProtocolVersion versionToUse = protocolVersion();
 
             // If the result contains a protocol version field, use that version
-            if (json.contains("protocolVersion")) {
-                QString resultVersion = json.value("protocolVersion").toString();
+            if (json.contains("protocolVersion"_L1)) {
+                QString resultVersion = json.value("protocolVersion"_L1).toString();
                 QtMcp::ProtocolVersion resultVerEnum = QtMcp::stringToProtocolVersion(resultVersion);
                 if (supportedProtocolVersions().contains(resultVerEnum)) {
                     versionToUse = resultVerEnum;
@@ -271,8 +271,8 @@ public:
             QtMcp::ProtocolVersion versionToUse = protocolVersion();
 
             // If this is a response to initialize, check the protocol version in the response
-            if (json.contains("params") && json.value("params").toObject().contains("protocolVersion")) {
-                QString reqVersionStr = json.value("params").toObject().value("protocolVersion").toString();
+            if (json.contains("params"_L1) && json.value("params"_L1).toObject().contains("protocolVersion"_L1)) {
+                QString reqVersionStr = json.value("params"_L1).toObject().value("protocolVersion"_L1).toString();
                 QtMcp::ProtocolVersion reqVersion = QtMcp::stringToProtocolVersion(reqVersionStr);
                 if (supportedProtocolVersions().contains(reqVersion)) {
                     versionToUse = reqVersion;
@@ -310,8 +310,8 @@ public:
             QtMcp::ProtocolVersion versionToUse = protocolVersion();
 
             // If this is a notification containing protocol version info
-            if (json.contains("params") && json.value("params").toObject().contains("protocolVersion")) {
-                QString notifVersionStr = json.value("params").toObject().value("protocolVersion").toString();
+            if (json.contains("params"_L1) && json.value("params"_L1).toObject().contains("protocolVersion"_L1)) {
+                QString notifVersionStr = json.value("params"_L1).toObject().value("protocolVersion"_L1).toString();
                 QtMcp::ProtocolVersion notifVersion = QtMcp::stringToProtocolVersion(notifVersionStr);
                 if (supportedProtocolVersions().contains(notifVersion)) {
                     versionToUse = notifVersion;

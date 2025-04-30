@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include <QtCore/QEventLoop>
+#include <QtCore/QTimer>
 #include <QtMcpCommon/QMcpNotification>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResult>
@@ -83,7 +84,7 @@ private:
 void tst_QMcpServer::init()
 {
     m_server = new QMcpServer(QStringLiteral("stdio"), this);
-    
+
     QEventLoop loop;
     connect(m_server, &QMcpServer::started, &loop, &QEventLoop::quit);
     m_server->start();
@@ -116,7 +117,7 @@ void tst_QMcpServer::testRequestHandler()
     // Send a request through the server
     EchoRequest request;
     request.message = QStringLiteral("Hello MCP!");
-    
+
     connect(m_server, &QMcpServer::result, this, [&](const QUuid &, const QJsonObject &resultJson) {
         EchoResult result;
         result.fromJsonObject(resultJson);

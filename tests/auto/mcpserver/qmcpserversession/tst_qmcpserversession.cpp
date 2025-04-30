@@ -32,7 +32,7 @@ private slots:
     // Basic properties
     void testSessionId();
     void testInitialization();
-    
+
     // Protocol version handling
     void testProtocolVersion();
     void testProtocolVersionValidation_data();
@@ -91,10 +91,10 @@ void tst_QMcpServerSession::testSessionId()
 void tst_QMcpServerSession::testInitialization()
 {
     QVERIFY(!m_session->isInitialized());
-    
+
     QSignalSpy spy(m_session, &QMcpServerSession::initializedChanged);
     m_session->setInitialized(true);
-    
+
     QVERIFY(m_session->isInitialized());
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.first().first().toBool(), true);
@@ -104,11 +104,11 @@ void tst_QMcpServerSession::testProtocolVersion()
 {
     // Check default protocol version
     QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::Latest);
-    
+
     // Check protocol version setter and getter
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
     QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::v2024_11_05);
-    
+
     // Change back to default version
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
     QCOMPARE(m_session->protocolVersion(), QtMcp::ProtocolVersion::v2025_03_26);
@@ -130,7 +130,7 @@ void tst_QMcpServerSession::testProtocolVersionValidation()
 {
     QFETCH(QString, version);
     QFETCH(bool, isValid);
-    
+
     if (isValid) {
         // Since we now have the string-based overload for backward compatibility
         QtMcp::ProtocolVersion expectedVersion = QtMcp::stringToProtocolVersion(version);
@@ -152,7 +152,7 @@ void tst_QMcpServerSession::testAnnotationsWithVersion()
     annotations.setAudience({QMcpRole::assistant});
     annotations.setPriority(0.8);
     annotated.setAnnotations(annotations);
-    
+
     // Test with 2025-03-26 version (should include annotations)
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
     QJsonObject jsonObj2025 = annotated.toJsonObject(m_session->protocolVersion());
@@ -160,7 +160,7 @@ void tst_QMcpServerSession::testAnnotationsWithVersion()
     QVERIFY(jsonObj2025.value("annotations").isObject());
     QVERIFY(jsonObj2025.value("annotations").toObject().contains("audience"));
     QVERIFY(jsonObj2025.value("annotations").toObject().contains("priority"));
-    
+
     // Test with 2024-11-05 version (should not include annotations)
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
     QJsonObject jsonObj2024 = annotated.toJsonObject(m_session->protocolVersion());
@@ -179,8 +179,9 @@ void tst_QMcpServerSession::testAppendResourceTemplate()
     tmpl.setUriTemplate(QStringLiteral("test://{param}"));
 
     m_session->appendResourceTemplate(tmpl);
-    QCOMPARE(m_session->resourceTemplates().size(), 1);
-    QCOMPARE(m_session->resourceTemplates().first().name(), QStringLiteral("test"));
+    const auto resourceTemplates = m_session->resourceTemplates();
+    QCOMPARE(resourceTemplates.size(), 1);
+    QCOMPARE(resourceTemplates.first().name(), QStringLiteral("test"));
 }
 
 void tst_QMcpServerSession::testInsertResourceTemplate()
@@ -191,8 +192,9 @@ void tst_QMcpServerSession::testInsertResourceTemplate()
 
     m_session->appendResourceTemplate(tmpl1);
     m_session->insertResourceTemplate(0, tmpl2);
-    QCOMPARE(m_session->resourceTemplates().size(), 2);
-    QCOMPARE(m_session->resourceTemplates().first().name(), QStringLiteral("test2"));
+    const auto resourceTemplates = m_session->resourceTemplates();
+    QCOMPARE(resourceTemplates.size(), 2);
+    QCOMPARE(resourceTemplates.first().name(), QStringLiteral("test2"));
 }
 
 void tst_QMcpServerSession::testReplaceResourceTemplate()
@@ -203,8 +205,9 @@ void tst_QMcpServerSession::testReplaceResourceTemplate()
 
     m_session->appendResourceTemplate(tmpl1);
     m_session->replaceResourceTemplate(0, tmpl2);
-    QCOMPARE(m_session->resourceTemplates().size(), 1);
-    QCOMPARE(m_session->resourceTemplates().first().name(), QStringLiteral("test2"));
+    const auto resourceTemplates = m_session->resourceTemplates();
+    QCOMPARE(resourceTemplates.size(), 1);
+    QCOMPARE(resourceTemplates.first().name(), QStringLiteral("test2"));
 }
 
 void tst_QMcpServerSession::testRemoveResourceTemplate()
@@ -235,10 +238,11 @@ void tst_QMcpServerSession::testResourceOperations()
 
     QSignalSpy resourceListSpy(m_session, &QMcpServerSession::resourceListChanged);
     m_session->appendResource(resource, content);
-    
+
     QTest::qWait(10);
-    QCOMPARE(m_session->resources().size(), 1);
-    QCOMPARE(m_session->resources().first().name(), QStringLiteral("Test Resource"));
+    const auto resources = m_session->resources();
+    QCOMPARE(resources.size(), 1);
+    QCOMPARE(resources.first().name(), QStringLiteral("Test Resource"));
     QCOMPARE(m_session->contents(resource.uri()).first().textResourceContents().text(), QStringLiteral("Test content"));
     QCOMPARE(resourceListSpy.count(), 1);
 }
@@ -273,8 +277,9 @@ void tst_QMcpServerSession::testPromptOperations()
     m_session->appendPrompt(prompt, message);
     QTest::qWait(10);
 
-    QCOMPARE(m_session->prompts().size(), 1);
-    QCOMPARE(m_session->prompts().first().name(), QStringLiteral("test"));
+    const auto prompts = m_session->prompts();
+    QCOMPARE(prompts.size(), 1);
+    QCOMPARE(prompts.first().name(), QStringLiteral("test"));
     QCOMPARE(promptListSpy.count(), 1);
 }
 
@@ -288,8 +293,9 @@ void tst_QMcpServerSession::testMessages()
     message.setContent(QMcpTextContent("Test message"_L1));
 
     m_session->appendPrompt(prompt, message);
-    QCOMPARE(m_session->messages(QStringLiteral("test")).size(), 1);
-    QCOMPARE(m_session->messages(QStringLiteral("test")).first().content().textContent().text(), QStringLiteral("Test message"));
+    const auto messages = m_session->messages(QStringLiteral("test"));
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.first().content().textContent().text(), QStringLiteral("Test message"));
 }
 
 void tst_QMcpServerSession::testTools()
@@ -320,8 +326,9 @@ void tst_QMcpServerSession::testRoots()
     QSignalSpy rootsSpy(m_session, &QMcpServerSession::rootsChanged);
     m_session->setRoots(roots);
 
-    QCOMPARE(m_session->roots().size(), 1);
-    QCOMPARE(m_session->roots().first().name(), QStringLiteral("test"));
+    roots = m_session->roots();
+    QCOMPARE(roots.size(), 1);
+    QCOMPARE(roots.first().name(), QStringLiteral("test"));
     QCOMPARE(rootsSpy.count(), 1);
 }
 

@@ -13,7 +13,7 @@ public:
     void handleNewConnection();
     void handleDisconnected(QTcpSocket *socket);
     void parseHttpRequest(QTcpSocket *socket);
-    void sendHttpResponse(QTcpSocket *socket, const QByteArray &data, 
+    void sendHttpResponse(QTcpSocket *socket, const QByteArray &data,
                          const QString &contentType = QStringLiteral("text/plain"),
                          int statusCode = 200);
 
@@ -202,14 +202,14 @@ void QMcpAbstractHttpServer::Private::sendHttpResponse(QTcpSocket *socket, const
 {
     QString statusText = (statusCode == 200) ? "OK"_L1 : "Not Found"_L1;
     QByteArray response = u"HTTP/1.1 %1 %2\r\n"
-               "Content-Type: %3\r\n"
-               "Content-Length: %4\r\n"
-               "\r\n"_s
-                   .arg(statusCode)
-                   .arg(statusText)
-                   .arg(contentType)
-                   .arg(data.size())
-                   .toLatin1();
+                          "Content-Type: %3\r\n"
+                          "Content-Length: %4\r\n"
+                          "\r\n"_s
+                              .arg(statusCode)
+                              .arg(statusText)
+                              .arg(contentType)
+                              .arg(data.size())
+                              .toLatin1();
     response += data;
     socket->write(response);
     socket->flush();
