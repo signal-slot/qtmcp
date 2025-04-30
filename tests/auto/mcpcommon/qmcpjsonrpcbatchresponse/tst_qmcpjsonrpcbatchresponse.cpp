@@ -71,28 +71,28 @@ void tst_QMcpJSONRPCBatchResponse::batchResponse()
     QCOMPARE(responses.size(), 2);
     auto response = responses.at(0);
     QCOMPARE(response->id().toInt(), 1);
-    QCOMPARE(response->result().additionalProperties()["key1"].toString(), QString("value1"));
+    QCOMPARE(response->result().additionalProperties().value("key1").toString(), QString("value1"));
     response = responses.at(1);
     QCOMPARE(response->id().toString(), QString("resp-2"));
-    QCOMPARE(response->result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(response->result().additionalProperties().value("key2").toInt(), 42);
     
     // Test JSON conversion
     QJsonObject jsonObj = batchResponse.toJsonObject();
-    QCOMPARE(jsonObj["jsonrpc"].toString(), QString("2.0"));
+    QCOMPARE(jsonObj.value("jsonrpc").toString(), QString("2.0"));
     QVERIFY(jsonObj.contains("responses"));
-    QVERIFY(jsonObj["responses"].isArray());
-    QJsonArray responsesArray = jsonObj["responses"].toArray();
+    QVERIFY(jsonObj.value("responses").isArray());
+    QJsonArray responsesArray = jsonObj.value("responses").toArray();
     QCOMPARE(responsesArray.size(), 2);
     
     // Verify first response in JSON
-    QJsonObject resp1Json = responsesArray[0].toObject();
-    QCOMPARE(resp1Json["id"].toInt(), 1);
-    QCOMPARE(resp1Json["result"].toObject()["additionalProperties"].toObject()["key1"].toString(), QString("value1"));
+    QJsonObject resp1Json = responsesArray.at(0).toObject();
+    QCOMPARE(resp1Json.value("id").toInt(), 1);
+    QCOMPARE(resp1Json.value("result").toObject().value("additionalProperties").toObject().value("key1").toString(), QString("value1"));
     
     // Verify second response in JSON
-    QJsonObject resp2Json = responsesArray[1].toObject();
-    QCOMPARE(resp2Json["id"].toString(), QString("resp-2"));
-    QCOMPARE(resp2Json["result"].toObject()["additionalProperties"].toObject()["key2"].toInt(), 42);
+    QJsonObject resp2Json = responsesArray.at(1).toObject();
+    QCOMPARE(resp2Json.value("id").toString(), QString("resp-2"));
+    QCOMPARE(resp2Json.value("result").toObject().value("additionalProperties").toObject().value("key2").toInt(), 42);
     
     // Test JSON parsing
     QMcpJSONRPCBatchResponse parsedResponse;
@@ -101,10 +101,10 @@ void tst_QMcpJSONRPCBatchResponse::batchResponse()
     QCOMPARE(responses.size(), 2);
     response = responses.at(0);
     QCOMPARE(response->id().toInt(), 1);
-    QCOMPARE(response->result().additionalProperties()["key1"].toString(), QString("value1"));
+    QCOMPARE(response->result().additionalProperties().value("key1").toString(), QString("value1"));
     response = responses.at(1);
     QCOMPARE(response->id().toString(), QString("resp-2"));
-    QCOMPARE(response->result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(response->result().additionalProperties().value("key2").toInt(), 42);
     // Clean up allocated objects
     qDeleteAll(responses);
 }
@@ -142,47 +142,47 @@ void tst_QMcpJSONRPCBatchResponse::batchErrorResponse()
     
     // Verify the batch error response
     QCOMPARE(batchErrorResponse.errors().size(), 2);
-    QCOMPARE(batchErrorResponse.errors()[0].id().toInt(), 1);
-    QCOMPARE(batchErrorResponse.errors()[0].error().code(), -32600);
-    QCOMPARE(batchErrorResponse.errors()[0].error().message(), QString("Invalid Request"));
-    QCOMPARE(batchErrorResponse.errors()[0].error().data().toObject()["details"].toString(), QString("Error details 1"));
-    QCOMPARE(batchErrorResponse.errors()[1].id().toString(), QString("err-2"));
-    QCOMPARE(batchErrorResponse.errors()[1].error().code(), -32601);
-    QCOMPARE(batchErrorResponse.errors()[1].error().message(), QString("Method not found"));
-    QCOMPARE(batchErrorResponse.errors()[1].error().data().toObject()["details"].toString(), QString("Error details 2"));
+    QCOMPARE(batchErrorResponse.errors().at(0).id().toInt(), 1);
+    QCOMPARE(batchErrorResponse.errors().at(0).error().code(), -32600);
+    QCOMPARE(batchErrorResponse.errors().at(0).error().message(), QString("Invalid Request"));
+    QCOMPARE(batchErrorResponse.errors().at(0).error().data().toObject().value("details").toString(), QString("Error details 1"));
+    QCOMPARE(batchErrorResponse.errors().at(1).id().toString(), QString("err-2"));
+    QCOMPARE(batchErrorResponse.errors().at(1).error().code(), -32601);
+    QCOMPARE(batchErrorResponse.errors().at(1).error().message(), QString("Method not found"));
+    QCOMPARE(batchErrorResponse.errors().at(1).error().data().toObject().value("details").toString(), QString("Error details 2"));
     
     // Test JSON conversion
     QJsonObject jsonObj = batchErrorResponse.toJsonObject();
-    QCOMPARE(jsonObj["jsonrpc"].toString(), QString("2.0"));
+    QCOMPARE(jsonObj.value("jsonrpc").toString(), QString("2.0"));
     QVERIFY(jsonObj.contains("errors"));
-    QVERIFY(jsonObj["errors"].isArray());
-    QJsonArray errorsArray = jsonObj["errors"].toArray();
+    QVERIFY(jsonObj.value("errors").isArray());
+    QJsonArray errorsArray = jsonObj.value("errors").toArray();
     QCOMPARE(errorsArray.size(), 2);
     
     // Verify first error in JSON
-    QJsonObject err1Json = errorsArray[0].toObject();
-    QCOMPARE(err1Json["id"].toInt(), 1);
-    QCOMPARE(err1Json["error"].toObject()["code"].toInt(), -32600);
-    QCOMPARE(err1Json["error"].toObject()["message"].toString(), QString("Invalid Request"));
-    QCOMPARE(err1Json["error"].toObject()["data"].toObject()["details"].toString(), QString("Error details 1"));
+    QJsonObject err1Json = errorsArray.at(0).toObject();
+    QCOMPARE(err1Json.value("id").toInt(), 1);
+    QCOMPARE(err1Json.value("error").toObject().value("code").toInt(), -32600);
+    QCOMPARE(err1Json.value("error").toObject().value("message").toString(), QString("Invalid Request"));
+    QCOMPARE(err1Json.value("error").toObject().value("data").toObject().value("details").toString(), QString("Error details 1"));
     
     // Verify second error in JSON
-    QJsonObject err2Json = errorsArray[1].toObject();
-    QCOMPARE(err2Json["id"].toString(), QString("err-2"));
-    QCOMPARE(err2Json["error"].toObject()["code"].toInt(), -32601);
-    QCOMPARE(err2Json["error"].toObject()["message"].toString(), QString("Method not found"));
-    QCOMPARE(err2Json["error"].toObject()["data"].toObject()["details"].toString(), QString("Error details 2"));
+    QJsonObject err2Json = errorsArray.at(1).toObject();
+    QCOMPARE(err2Json.value("id").toString(), QString("err-2"));
+    QCOMPARE(err2Json.value("error").toObject().value("code").toInt(), -32601);
+    QCOMPARE(err2Json.value("error").toObject().value("message").toString(), QString("Method not found"));
+    QCOMPARE(err2Json.value("error").toObject().value("data").toObject().value("details").toString(), QString("Error details 2"));
     
     // Test JSON parsing
     QMcpJSONRPCBatchErrorResponse parsedErrorResponse;
     QVERIFY(parsedErrorResponse.fromJsonObject(jsonObj));
     QCOMPARE(parsedErrorResponse.errors().size(), 2);
-    QCOMPARE(parsedErrorResponse.errors()[0].id().toInt(), 1);
-    QCOMPARE(parsedErrorResponse.errors()[0].error().code(), -32600);
-    QCOMPARE(parsedErrorResponse.errors()[0].error().message(), QString("Invalid Request"));
-    QCOMPARE(parsedErrorResponse.errors()[1].id().toString(), QString("err-2"));
-    QCOMPARE(parsedErrorResponse.errors()[1].error().code(), -32601);
-    QCOMPARE(parsedErrorResponse.errors()[1].error().message(), QString("Method not found"));
+    QCOMPARE(parsedErrorResponse.errors().at(0).id().toInt(), 1);
+    QCOMPARE(parsedErrorResponse.errors().at(0).error().code(), -32600);
+    QCOMPARE(parsedErrorResponse.errors().at(0).error().message(), QString("Invalid Request"));
+    QCOMPARE(parsedErrorResponse.errors().at(1).id().toString(), QString("err-2"));
+    QCOMPARE(parsedErrorResponse.errors().at(1).error().code(), -32601);
+    QCOMPARE(parsedErrorResponse.errors().at(1).error().message(), QString("Method not found"));
 }
 
 void tst_QMcpJSONRPCBatchResponse::copyBatchResponse()
@@ -214,19 +214,19 @@ void tst_QMcpJSONRPCBatchResponse::copyBatchResponse()
     // Test copy constructor
     QMcpJSONRPCBatchResponse copiedResponse(batchResponse);
     QCOMPARE(copiedResponse.responses().size(), 2);
-    QCOMPARE(copiedResponse.responses()[0]->id().toInt(), 1);
-    QCOMPARE(copiedResponse.responses()[0]->result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(copiedResponse.responses()[1]->id().toString(), QString("resp-2"));
-    QCOMPARE(copiedResponse.responses()[1]->result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(copiedResponse.responses().at(0)->id().toInt(), 1);
+    QCOMPARE(copiedResponse.responses().at(0)->result().additionalProperties().value("key1").toString(), QString("value1"));
+    QCOMPARE(copiedResponse.responses().at(1)->id().toString(), QString("resp-2"));
+    QCOMPARE(copiedResponse.responses().at(1)->result().additionalProperties().value("key2").toInt(), 42);
     
     // Test assignment operator
     QMcpJSONRPCBatchResponse assignedResponse;
     assignedResponse = batchResponse;
     QCOMPARE(assignedResponse.responses().size(), 2);
-    QCOMPARE(assignedResponse.responses()[0]->id().toInt(), 1);
-    QCOMPARE(assignedResponse.responses()[0]->result().additionalProperties()["key1"].toString(), QString("value1"));
-    QCOMPARE(assignedResponse.responses()[1]->id().toString(), QString("resp-2"));
-    QCOMPARE(assignedResponse.responses()[1]->result().additionalProperties()["key2"].toInt(), 42);
+    QCOMPARE(assignedResponse.responses().at(0)->id().toInt(), 1);
+    QCOMPARE(assignedResponse.responses().at(0)->result().additionalProperties().value("key1").toString(), QString("value1"));
+    QCOMPARE(assignedResponse.responses().at(1)->id().toString(), QString("resp-2"));
+    QCOMPARE(assignedResponse.responses().at(1)->result().additionalProperties().value("key2").toInt(), 42);
     // Clean up allocated objects
     qDeleteAll(responses);
 }
@@ -263,23 +263,23 @@ void tst_QMcpJSONRPCBatchResponse::copyBatchErrorResponse()
     // Test copy constructor
     QMcpJSONRPCBatchErrorResponse copiedErrorResponse(batchErrorResponse);
     QCOMPARE(copiedErrorResponse.errors().size(), 2);
-    QCOMPARE(copiedErrorResponse.errors()[0].id().toInt(), 1);
-    QCOMPARE(copiedErrorResponse.errors()[0].error().code(), -32600);
-    QCOMPARE(copiedErrorResponse.errors()[0].error().message(), QString("Invalid Request"));
-    QCOMPARE(copiedErrorResponse.errors()[1].id().toString(), QString("err-2"));
-    QCOMPARE(copiedErrorResponse.errors()[1].error().code(), -32601);
-    QCOMPARE(copiedErrorResponse.errors()[1].error().message(), QString("Method not found"));
+    QCOMPARE(copiedErrorResponse.errors().at(0).id().toInt(), 1);
+    QCOMPARE(copiedErrorResponse.errors().at(0).error().code(), -32600);
+    QCOMPARE(copiedErrorResponse.errors().at(0).error().message(), QString("Invalid Request"));
+    QCOMPARE(copiedErrorResponse.errors().at(1).id().toString(), QString("err-2"));
+    QCOMPARE(copiedErrorResponse.errors().at(1).error().code(), -32601);
+    QCOMPARE(copiedErrorResponse.errors().at(1).error().message(), QString("Method not found"));
     
     // Test assignment operator
     QMcpJSONRPCBatchErrorResponse assignedErrorResponse;
     assignedErrorResponse = batchErrorResponse;
     QCOMPARE(assignedErrorResponse.errors().size(), 2);
-    QCOMPARE(assignedErrorResponse.errors()[0].id().toInt(), 1);
-    QCOMPARE(assignedErrorResponse.errors()[0].error().code(), -32600);
-    QCOMPARE(assignedErrorResponse.errors()[0].error().message(), QString("Invalid Request"));
-    QCOMPARE(assignedErrorResponse.errors()[1].id().toString(), QString("err-2"));
-    QCOMPARE(assignedErrorResponse.errors()[1].error().code(), -32601);
-    QCOMPARE(assignedErrorResponse.errors()[1].error().message(), QString("Method not found"));
+    QCOMPARE(assignedErrorResponse.errors().at(0).id().toInt(), 1);
+    QCOMPARE(assignedErrorResponse.errors().at(0).error().code(), -32600);
+    QCOMPARE(assignedErrorResponse.errors().at(0).error().message(), QString("Invalid Request"));
+    QCOMPARE(assignedErrorResponse.errors().at(1).id().toString(), QString("err-2"));
+    QCOMPARE(assignedErrorResponse.errors().at(1).error().code(), -32601);
+    QCOMPARE(assignedErrorResponse.errors().at(1).error().message(), QString("Method not found"));
 }
 
 QTEST_MAIN(tst_QMcpJSONRPCBatchResponse)

@@ -22,7 +22,7 @@ QJsonObject QMcpAnnotated::toJsonObject(QtMcp::ProtocolVersion protocolVersion) 
     // Include annotations if they're not empty
     QMcpAnnotations anns = annotations();
     if (!anns.audience().isEmpty() || anns.priority() != 0.0) {
-        obj["annotations"_L1] = anns.toJsonObject(protocolVersion);
+        obj.insert("annotations"_L1, anns.toJsonObject(protocolVersion));
     }
 
     return obj;

@@ -160,15 +160,15 @@ void tst_QMcpAnnotated::versionSpecificSerialization()
     // Verify whether annotations are included based on the protocol version
     if (shouldIncludeAnnotations) {
         QVERIFY(jsonObj.contains("annotations"));
-        QVERIFY(jsonObj["annotations"].isObject());
+        QVERIFY(jsonObj.value("annotations").isObject());
 
         if (hasAnnotations) {
-            QJsonObject anns = jsonObj["annotations"].toObject();
+            QJsonObject anns = jsonObj.value("annotations").toObject();
             QVERIFY(anns.contains("audience"));
             QVERIFY(anns.contains("priority"));
-            QCOMPARE(anns["priority"].toDouble(), 0.8);
+            QCOMPARE(anns.value("priority").toDouble(), 0.8);
         } else {
-            QVERIFY(jsonObj["annotations"].toObject().isEmpty());
+            QVERIFY(jsonObj.value("annotations").toObject().isEmpty());
         }
     } else {
         QVERIFY(!jsonObj.contains("annotations"));
@@ -226,12 +226,12 @@ void tst_QMcpAnnotated::versionSpecificDeserialization()
 
         // If we have annotations from JSON, verify they are correct
         if (object.contains("annotations")) {
-            if (object["annotations"].toObject().contains("audience")) {
+            if (object.value("annotations").toObject().contains("audience")) {
                 QCOMPARE(annotated.annotations().audience().size(), 1);
                 QCOMPARE(annotated.annotations().audience().first(), QMcpRole::assistant);
             }
 
-            if (object["annotations"].toObject().contains("priority")) {
+            if (object.value("annotations").toObject().contains("priority")) {
                 QCOMPARE(annotated.annotations().priority(), 0.8);
             }
         }

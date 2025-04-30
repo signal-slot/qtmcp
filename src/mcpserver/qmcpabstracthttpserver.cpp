@@ -194,7 +194,7 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
         sendHttpResponse(socket, ret, "text/plain"_L1, 200);
     else
         socket->write(ret);
-    dataMap[socket] = ParseData();
+    dataMap.insert(socket, ParseData());
 }
 
 void QMcpAbstractHttpServer::Private::sendHttpResponse(QTcpSocket *socket, const QByteArray &data,

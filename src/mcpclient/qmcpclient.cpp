@@ -66,8 +66,8 @@ public:
                             response.setId(id.toVariant());
                             // Extract protocol version if available in the request
                             QtMcp::ProtocolVersion reqVersion = protocolVersion;
-                            if (object.contains("params"_L1) && object["params"_L1].toObject().contains("protocolVersion"_L1)) {
-                                QString requestedVersionStr = object["params"_L1].toObject()["protocolVersion"_L1].toString();
+                            if (object.contains("params"_L1) && object.value("params"_L1).toObject().contains("protocolVersion"_L1)) {
+                                QString requestedVersionStr = object.value("params"_L1).toObject().value("protocolVersion"_L1).toString();
                                 QtMcp::ProtocolVersion requestedVersion = QtMcp::stringToProtocolVersion(requestedVersionStr);
                                 if (supportedVersions.contains(requestedVersion)) {
                                     reqVersion = requestedVersion;
@@ -157,12 +157,12 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
     // If this is an initialization request, ensure the protocol version is set
     if (request.contains("method"_L1) && request.value("method"_L1).toString() == "initialize"_L1) {
         QJsonObject requestCopy = request;
-        QJsonObject params = requestCopy["params"_L1].toObject();
+        QJsonObject params = requestCopy.value("params"_L1).toObject();
 
         // Make sure we're sending our current protocol version
         if (!params.contains("protocolVersion"_L1)) {
-            params["protocolVersion"_L1] = QtMcp::protocolVersionToString(d->protocolVersion);
-            requestCopy["params"_L1] = params;
+            params.insert("protocolVersion"_L1, QtMcp::protocolVersionToString(d->protocolVersion));
+            requestCopy.insert("params"_L1, params);
         }
 
         // Add a callback to handle the initialization response
@@ -176,7 +176,7 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
 
             // Extract and store the protocol version from the server's response
             if (result.contains("protocolVersion"_L1)) {
-                QString serverVersionStr = result["protocolVersion"_L1].toString();
+                QString serverVersionStr = result.value("protocolVersion"_L1).toString();
                 // Convert to enum first
                 QtMcp::ProtocolVersion serverVersion = QtMcp::stringToProtocolVersion(serverVersionStr);
                 if (d->supportedVersions.contains(serverVersion)) {

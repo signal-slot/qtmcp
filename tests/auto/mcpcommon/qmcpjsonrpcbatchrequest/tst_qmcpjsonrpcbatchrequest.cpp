@@ -59,21 +59,21 @@ void tst_QMcpJSONRPCBatchRequest::jsonConversion()
     
     // Test JSON conversion
     QJsonObject jsonObj = batchRequest.toJsonObject();
-    QCOMPARE(jsonObj["jsonrpc"].toString(), QString("2.0"));
+    QCOMPARE(jsonObj.value("jsonrpc").toString(), QString("2.0"));
     QVERIFY(jsonObj.contains("requests"));
-    QVERIFY(jsonObj["requests"].isArray());
-    QJsonArray requestsArray = jsonObj["requests"].toArray();
+    QVERIFY(jsonObj.value("requests").isArray());
+    QJsonArray requestsArray = jsonObj.value("requests").toArray();
     QCOMPARE(requestsArray.size(), 2);
     
     // Verify first request in JSON
-    QJsonObject req1Json = requestsArray[0].toObject();
-    QCOMPARE(req1Json["id"].toInt(), 1);
-    QCOMPARE(req1Json["method"].toString(), QString("ping"));
-    
+    QJsonObject req1Json = requestsArray.at(0).toObject();
+    QCOMPARE(req1Json.value("id").toInt(), 1);
+    QCOMPARE(req1Json.value("method").toString(), QString("ping"));
+
     // Verify second request in JSON
-    QJsonObject req2Json = requestsArray[1].toObject();
-    QCOMPARE(req2Json["id"].toString(), QString("req-2"));
-    QCOMPARE(req2Json["method"].toString(), QString("ping"));
+    QJsonObject req2Json = requestsArray.at(1).toObject();
+    QCOMPARE(req2Json.value("id").toString(), QString("req-2"));
+    QCOMPARE(req2Json.value("method").toString(), QString("ping"));
 }
 
 void tst_QMcpJSONRPCBatchRequest::copyTest()

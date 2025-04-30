@@ -120,7 +120,7 @@ void tst_QMcpClient::testCallTool()
     auto params = request.params();
     params.setName("echo");
     QJsonObject args;
-    args["message"] = "Hello MCP!";
+    args.insert("message", "Hello MCP!");
     params.setArguments(args);
     request.setParams(params);
 

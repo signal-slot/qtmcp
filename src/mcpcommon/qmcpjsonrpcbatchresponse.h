@@ -39,8 +39,8 @@ public:
             return false;
             
         // Handle responses array manually
-        if (json.contains("responses"_L1) && json["responses"_L1].isArray()) {
-            QJsonArray responsesArray = json["responses"_L1].toArray();
+        if (json.contains("responses"_L1) && json.value("responses"_L1).isArray()) {
+            QJsonArray responsesArray = json.value("responses"_L1).toArray();
             QList<QMcpJSONRPCResponse*> responseList;
             
             // Process each response in the array

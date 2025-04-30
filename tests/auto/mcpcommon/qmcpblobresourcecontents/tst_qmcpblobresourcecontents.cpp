@@ -114,11 +114,11 @@ void tst_QMcpBlobResourceContents::copy()
 
     QMcpBlobResourceContents contents2(contents);
     // Compare required properties
-    QCOMPARE(contents2.blob(), data["blob"].toByteArray());
-    QCOMPARE(contents2.uri(), data["uri"].toUrl());
+    QCOMPARE(contents2.blob(), data.value("blob").toByteArray());
+    QCOMPARE(contents2.uri(), data.value("uri").toUrl());
     // Compare optional mimeType if present
     if (data.contains("mimeType")) {
-        QCOMPARE(contents2.mimeType(), data["mimeType"].toString());
+        QCOMPARE(contents2.mimeType(), data.value("mimeType").toString());
     } else {
         QVERIFY(contents2.mimeType().isEmpty());
     }
@@ -126,11 +126,11 @@ void tst_QMcpBlobResourceContents::copy()
     QMcpBlobResourceContents contents3;
     contents3 = contents2;
     // Compare required properties
-    QCOMPARE(contents3.blob(), data["blob"].toByteArray());
-    QCOMPARE(contents3.uri(), data["uri"].toUrl());
+    QCOMPARE(contents3.blob(), data.value("blob").toByteArray());
+    QCOMPARE(contents3.uri(), data.value("uri").toUrl());
     // Compare optional mimeType if present
     if (data.contains("mimeType")) {
-        QCOMPARE(contents3.mimeType(), data["mimeType"].toString());
+        QCOMPARE(contents3.mimeType(), data.value("mimeType").toString());
     } else {
         QVERIFY(contents3.mimeType().isEmpty());
     }

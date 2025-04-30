@@ -158,7 +158,7 @@ public:
 
             // If the result contains a protocol version field, use that version
             if (json.contains("protocolVersion")) {
-                QString resultVersion = json["protocolVersion"].toString();
+                QString resultVersion = json.value("protocolVersion").toString();
                 QtMcp::ProtocolVersion resultVerEnum = QtMcp::stringToProtocolVersion(resultVersion);
                 if (supportedProtocolVersions().contains(resultVerEnum)) {
                     versionToUse = resultVerEnum;
@@ -271,8 +271,8 @@ public:
             QtMcp::ProtocolVersion versionToUse = protocolVersion();
 
             // If this is a response to initialize, check the protocol version in the response
-            if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
-                QString reqVersionStr = json["params"].toObject()["protocolVersion"].toString();
+            if (json.contains("params") && json.value("params").toObject().contains("protocolVersion")) {
+                QString reqVersionStr = json.value("params").toObject().value("protocolVersion").toString();
                 QtMcp::ProtocolVersion reqVersion = QtMcp::stringToProtocolVersion(reqVersionStr);
                 if (supportedProtocolVersions().contains(reqVersion)) {
                     versionToUse = reqVersion;
@@ -310,8 +310,8 @@ public:
             QtMcp::ProtocolVersion versionToUse = protocolVersion();
 
             // If this is a notification containing protocol version info
-            if (json.contains("params") && json["params"].toObject().contains("protocolVersion")) {
-                QString notifVersionStr = json["params"].toObject()["protocolVersion"].toString();
+            if (json.contains("params") && json.value("params").toObject().contains("protocolVersion")) {
+                QString notifVersionStr = json.value("params").toObject().value("protocolVersion").toString();
                 QtMcp::ProtocolVersion notifVersion = QtMcp::stringToProtocolVersion(notifVersionStr);
                 if (supportedProtocolVersions().contains(notifVersion)) {
                     versionToUse = notifVersion;

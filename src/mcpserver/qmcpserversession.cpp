@@ -77,7 +77,7 @@ void QMcpServerSession::setProtocolVersion(QtMcp::ProtocolVersion protocolVersio
 {
     if (d->protocolVersion == protocolVersion)
         return;
-    
+
     d->protocolVersion = protocolVersion;
 }
 
@@ -85,7 +85,7 @@ void QMcpServerSession::setProtocolVersion(const QString &protocolVersionStr)
 {
     // Convert the string to enum using the utility function
     const QtMcp::ProtocolVersion version = QtMcp::stringToProtocolVersion(protocolVersionStr);
-    
+
     // Use the enum-based method
     setProtocolVersion(version);
 }
@@ -114,7 +114,7 @@ void QMcpServerSession::insertResourceTemplate(int index, const QMcpResourceTemp
 
 void QMcpServerSession::replaceResourceTemplate(int index, const QMcpResourceTemplate resourceTemplate)
 {
-    d->resourceTemplates[index] = resourceTemplate;
+    d->resourceTemplates.replace(index, resourceTemplate);
 }
 
 void QMcpServerSession::removeResourceTemplateAt(int index)
@@ -138,7 +138,7 @@ void QMcpServerSession::replaceResource(const QUrl &uri, const QMcpResource reso
 {
     for (int i = 0; i < d->resources.count(); ++i) {
         if (d->resources.at(i).first.uri() == uri) {
-            d->resources[i] = qMakePair(resource, content);
+            d->resources.replace(i, qMakePair(resource, content));
             emit resourceUpdated(resource);
             break;
         }
@@ -147,7 +147,7 @@ void QMcpServerSession::replaceResource(const QUrl &uri, const QMcpResource reso
 
 void QMcpServerSession::replaceResource(int index, const QMcpResource resource, const QMcpReadResourceResultContents &content)
 {
-    d->resources[index] = qMakePair(resource, content);
+    d->resources.replace(index, qMakePair(resource, content));
     emit resourceUpdated(resource);
 }
 
@@ -233,7 +233,7 @@ void QMcpServerSession::insertPrompt(int index, const QMcpPrompt &prompt, const 
 
 void QMcpServerSession::replacePrompt(int index, const QMcpPrompt prompt, const QMcpPromptMessage &message)
 {
-    d->prompts[index] = qMakePair(prompt, message);
+    d->prompts.replace(index, qMakePair(prompt, message));
     d->notifyPromptListChanged.start();
 }
 

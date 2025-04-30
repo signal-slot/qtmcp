@@ -59,7 +59,7 @@ void tst_QMcpServerCapabilitiesTools::convert()
     QCOMPARE(converted, expectedObj);
 
     // Verify the property value matches
-    QCOMPARE(capabilities.listChanged(), data["listChanged"].toBool());
+    QCOMPARE(capabilities.listChanged(), data.value("listChanged").toBool());
 }
 
 void tst_QMcpServerCapabilitiesTools::copy_data()

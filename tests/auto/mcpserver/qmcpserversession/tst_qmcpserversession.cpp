@@ -157,9 +157,9 @@ void tst_QMcpServerSession::testAnnotationsWithVersion()
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
     QJsonObject jsonObj2025 = annotated.toJsonObject(m_session->protocolVersion());
     QVERIFY(jsonObj2025.contains("annotations"));
-    QVERIFY(jsonObj2025["annotations"].isObject());
-    QVERIFY(jsonObj2025["annotations"].toObject().contains("audience"));
-    QVERIFY(jsonObj2025["annotations"].toObject().contains("priority"));
+    QVERIFY(jsonObj2025.value("annotations").isObject());
+    QVERIFY(jsonObj2025.value("annotations").toObject().contains("audience"));
+    QVERIFY(jsonObj2025.value("annotations").toObject().contains("priority"));
     
     // Test with 2024-11-05 version (should not include annotations)
     m_session->setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
@@ -301,7 +301,7 @@ void tst_QMcpServerSession::testCallTool()
 {
     bool ok = false;
     QJsonObject params;
-    params[QStringLiteral("test")] = QStringLiteral("value");
+    params.insert(QStringLiteral("test"), QStringLiteral("value"));
 
     auto result = m_session->callTool(QStringLiteral("test"), params, &ok);
     QVERIFY(!ok); // Should fail as no tools are registered

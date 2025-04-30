@@ -48,8 +48,8 @@ void tst_QMcpSamplingMessageContent::textContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["text"].toString(), QString("Hello, world!"));
-    QCOMPARE(jsonObj["type"].toString(), QString("text"));
+    QCOMPARE(jsonObj.value("text").toString(), QString("Hello, world!"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("text"));
     
     // Test JSON parsing
     QMcpSamplingMessageContent parsedContent;
@@ -76,9 +76,9 @@ void tst_QMcpSamplingMessageContent::imageContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["data"].toString(), QString("image data"));
-    QCOMPARE(jsonObj["mimeType"].toString(), QString("image/png"));
-    QCOMPARE(jsonObj["type"].toString(), QString("image"));
+    QCOMPARE(jsonObj.value("data").toString(), QString("image data"));
+    QCOMPARE(jsonObj.value("mimeType").toString(), QString("image/png"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("image"));
     
     // Test JSON parsing
     QMcpSamplingMessageContent parsedContent;
@@ -106,9 +106,9 @@ void tst_QMcpSamplingMessageContent::audioContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["data"].toString(), QString("audio data"));
-    QCOMPARE(jsonObj["mimeType"].toString(), QString("audio/mp3"));
-    QCOMPARE(jsonObj["type"].toString(), QString("audio"));
+    QCOMPARE(jsonObj.value("data").toString(), QString("audio data"));
+    QCOMPARE(jsonObj.value("mimeType").toString(), QString("audio/mp3"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("audio"));
     
     // Test JSON parsing
     QMcpSamplingMessageContent parsedContent;

@@ -52,8 +52,8 @@ void tst_QMcpPromptMessageContent::textContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["text"].toString(), QString("Hello, world!"));
-    QCOMPARE(jsonObj["type"].toString(), QString("text"));
+    QCOMPARE(jsonObj.value("text").toString(), QString("Hello, world!"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("text"));
     
     // Test JSON parsing
     QMcpPromptMessageContent parsedContent;
@@ -80,9 +80,9 @@ void tst_QMcpPromptMessageContent::imageContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["data"].toString(), QString("image data"));
-    QCOMPARE(jsonObj["mimeType"].toString(), QString("image/png"));
-    QCOMPARE(jsonObj["type"].toString(), QString("image"));
+    QCOMPARE(jsonObj.value("data").toString(), QString("image data"));
+    QCOMPARE(jsonObj.value("mimeType").toString(), QString("image/png"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("image"));
     
     // Test JSON parsing
     QMcpPromptMessageContent parsedContent;
@@ -110,9 +110,9 @@ void tst_QMcpPromptMessageContent::audioContent()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["data"].toString(), QString("audio data"));
-    QCOMPARE(jsonObj["mimeType"].toString(), QString("audio/mp3"));
-    QCOMPARE(jsonObj["type"].toString(), QString("audio"));
+    QCOMPARE(jsonObj.value("data").toString(), QString("audio data"));
+    QCOMPARE(jsonObj.value("mimeType").toString(), QString("audio/mp3"));
+    QCOMPARE(jsonObj.value("type").toString(), QString("audio"));
     
     // Test JSON parsing
     QMcpPromptMessageContent parsedContent;
@@ -145,7 +145,7 @@ void tst_QMcpPromptMessageContent::embeddedResource()
     
     // Test JSON conversion
     QJsonObject jsonObj = content.toJsonObject();
-    QCOMPARE(jsonObj["resource"].toObject()["uri"].toString(), QString("resource://test"));
+    QCOMPARE(jsonObj.value("resource").toObject().value("uri").toString(), QString("resource://test"));
     
     // Test JSON parsing
     QMcpPromptMessageContent parsedContent;

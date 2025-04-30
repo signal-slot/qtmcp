@@ -103,8 +103,8 @@ void tst_QMcpImplementation::convert()
     QVERIFY(impl.fromJsonObject(object));
 
     // Verify properties
-    QCOMPARE(impl.name(), data["name"].toString());
-    QCOMPARE(impl.version(), data["version"].toString());
+    QCOMPARE(impl.name(), data.value("name").toString());
+    QCOMPARE(impl.version(), data.value("version").toString());
 
     // Verify JSON conversion
     const auto converted = impl.toJsonObject();
@@ -133,14 +133,14 @@ void tst_QMcpImplementation::copy()
 
     // Test copy constructor
     QMcpImplementation impl2(impl);
-    QCOMPARE(impl2.name(), data["name"].toString());
-    QCOMPARE(impl2.version(), data["version"].toString());
+    QCOMPARE(impl2.name(), data.value("name").toString());
+    QCOMPARE(impl2.version(), data.value("version").toString());
 
     // Test assignment operator
     QMcpImplementation impl3;
     impl3 = impl2;
-    QCOMPARE(impl3.name(), data["name"].toString());
-    QCOMPARE(impl3.version(), data["version"].toString());
+    QCOMPARE(impl3.name(), data.value("name").toString());
+    QCOMPARE(impl3.version(), data.value("version").toString());
 }
 
 QTEST_MAIN(tst_QMcpImplementation)
