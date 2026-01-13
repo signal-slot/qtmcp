@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 #include <QtCore/QJsonObject>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qmcpjsonrpcrequestparamsmeta.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -17,11 +18,21 @@ class Q_MCPCOMMON_EXPORT QMcpCallToolRequestParams : public QMcpGadget
 {
     Q_GADGET
 
+    Q_PROPERTY(QMcpJSONRPCRequestParamsMeta _meta READ meta WRITE setMeta)
     Q_PROPERTY(QJsonObject arguments READ arguments WRITE setArguments)
     Q_PROPERTY(QString name READ name WRITE setName REQUIRED)
 
 public:
     QMcpCallToolRequestParams() : QMcpGadget(new Private) {}
+
+    QMcpJSONRPCRequestParamsMeta meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QMcpJSONRPCRequestParamsMeta &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
+    }
 
     QJsonObject arguments() const {
         return d<Private>()->arguments;
@@ -48,6 +59,7 @@ public:
 private:
     struct Private : public QMcpGadget::Private {
     public:
+        QMcpJSONRPCRequestParamsMeta _meta;
         QJsonObject arguments;
         QString name;
 

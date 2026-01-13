@@ -17,34 +17,19 @@ class Q_MCPCOMMON_EXPORT QMcpJSONRPCRequestParams : public QMcpGadget
 {
     Q_GADGET
 
-#if 0
-    Q_PROPERTY(QMcpJSONRPCRequestParamsMeta _meta READ _meta WRITE setMeta)
-
-    Q_PROPERTY(QJsonObject additionalProperties READ additionalProperties WRITE setAdditionalProperties)
-#endif
+    Q_PROPERTY(QMcpJSONRPCRequestParamsMeta _meta READ meta WRITE setMeta)
 
 public:
     QMcpJSONRPCRequestParams() : QMcpGadget(new Private) {}
 
-#if 0
-    QMcpJSONRPCRequestParamsMeta _meta() const {
+    QMcpJSONRPCRequestParamsMeta meta() const {
         return d<Private>()->_meta;
     }
 
     void setMeta(const QMcpJSONRPCRequestParamsMeta &meta) {
-        if (_meta() == meta) return;
+        if (this->meta() == meta) return;
         d<Private>()->_meta = meta;
     }
-
-    QJsonObject additionalProperties() const {
-        return d<Private>()->additionalProperties;
-    }
-
-    void setAdditionalProperties(const QJsonObject &properties) {
-        if (additionalProperties() == properties) return;
-        d<Private>()->additionalProperties = properties;
-    }
-#endif
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
@@ -52,10 +37,7 @@ public:
 
 private:
     struct Private : public QMcpGadget::Private {
-#if 0
         QMcpJSONRPCRequestParamsMeta _meta;
-        QJsonObject additionalProperties;
-#endif
 
         Private *clone() const override { return new Private(*this); }
     };

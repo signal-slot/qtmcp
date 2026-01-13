@@ -158,8 +158,14 @@ protected:
 
 public:
     QMcpGadget() : data(new Private) {}
+    QMcpGadget(const QMcpGadget &other) : data(other.data.constData()->clone()) {}
     virtual ~QMcpGadget() = default;
-    QMcpGadget &operator=(const QMcpGadget &) = default;
+    QMcpGadget &operator=(const QMcpGadget &other) {
+        if (this != &other) {
+            data.reset(other.data.constData()->clone());
+        }
+        return *this;
+    }
     void swap(QMcpGadget &other) { data.swap(other.data); }
 
     bool operator!=(const QMcpGadget &other) const {
