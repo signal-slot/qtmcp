@@ -55,13 +55,15 @@ CallToolWidget::Private::Private(::CallToolWidget *parent)
                 auto lineEdit = new QLineEdit;
                 lineEdit->setObjectName(key);
                 paramsLayout->addRow(title, lineEdit);
-            } else if (type == "number"_L1) {
+            } else if (type == "number"_L1 || type == "integer"_L1) {
                 auto spinBox = new QDoubleSpinBox;
                 spinBox->setMinimum(-1000);
                 spinBox->setMaximum(10000);
+                if (type == "integer"_L1)
+                    spinBox->setDecimals(0);
                 spinBox->setObjectName(key);
                 paramsLayout->addRow(title, spinBox);
-            } else if (type == "bool"_L1) {
+            } else if (type == "boolean"_L1) {
                 auto checkBox = new QCheckBox;
                 checkBox->setObjectName(key);
                 paramsLayout->addRow(title, checkBox);
@@ -104,15 +106,21 @@ CallToolWidget::Private::Private(::CallToolWidget *parent)
                 } else if (!value.isEmpty()) {
                     arguments.insert(key, value);
                 }
-            } else if (type == "number"_L1) {
+            } else if (type == "number"_L1 || type == "integer"_L1) {
                 const auto spinBox = this->params->findChild<QDoubleSpinBox *>(key);
                 const auto value = spinBox->value();
                 if (required.contains(key)) {
-                    arguments.insert(key, value);
+                    if (type == "integer"_L1)
+                        arguments.insert(key, static_cast<int>(value));
+                    else
+                        arguments.insert(key, value);
                 } else if (!qFuzzyIsNull(value)) {
-                    arguments.insert(key, value);
+                    if (type == "integer"_L1)
+                        arguments.insert(key, static_cast<int>(value));
+                    else
+                        arguments.insert(key, value);
                 }
-            } else if (type == "bool"_L1) {
+            } else if (type == "boolean"_L1) {
                 const auto checkBox = this->params->findChild<QCheckBox *>(key);
                 const auto value = checkBox->isChecked();
                 arguments.insert(key, value);

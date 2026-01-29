@@ -321,8 +321,8 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             // message
             QHash<QString, QString> mcpTypes {
                                              { "QString", "string" },
-                                             { "bool", "bool" },
-                                             { "int", "number" },
+                                             { "bool", "boolean" },
+                                             { "int", "integer" },
                                              };
             QSet<QString> internalTypes { "QUuid"_L1 };
             QJsonObject object;
