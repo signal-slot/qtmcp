@@ -4,6 +4,7 @@
 #ifndef QMCPSERVERSESSION_H
 #define QMCPSERVERSESSION_H
 
+#include <QtCore/QFuture>
 #include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtCore/QObject>
@@ -164,6 +165,15 @@ public:
         \return List of tool execution results
      */
     QList<QMcpCallToolResultContent> callTool(const QString &name, const QJsonObject &params, bool *ok = nullptr);
+
+    /*!
+        Executes a tool asynchronously with progress support.
+        \param name Name of the tool to execute
+        \param params Parameters for the tool
+        \param progressToken Token for progress notifications (from request _meta)
+        \return Future containing the tool execution results, or empty future if tool not found
+     */
+    QFuture<QList<QMcpCallToolResultContent>> callToolAsync(const QString &name, const QJsonObject &params, const QVariant &progressToken = {});
 
     /*!
         Returns the list of roots available in this session.

@@ -4,6 +4,7 @@
 #include "qmcpserver.h"
 #include "qmcpserversession.h"
 #include <QtCore/QMetaType>
+#include <QtCore/QPromise>
 #include <QtCore/private/qfactoryloader_p.h>
 #include <QtCore/qjsonobject.h>
 #ifdef QT_GUI_LIB
@@ -327,10 +328,18 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         if (!session)
             return result;
         const auto params = request.params();
-        bool ok;
-        auto contents = session->callTool(params.name(), params.arguments(), &ok);
-        if (ok) {
-            result.setContent(contents);
+        const auto progressToken = params.meta().progressToken();
+
+        // Check if there's an async tool first
+        auto future = session->callToolAsync(params.name(), params.arguments(), progressToken);
+        if (future.isFinished()) {
+            // Sync result (already completed)
+            result.setContent(future.result());
+        } else {
+            // For true async tools, we need to wait
+            // Note: The progress notifications are sent by callToolAsync via QFutureWatcher
+            future.waitForFinished();
+            result.setContent(future.result());
         }
         return result;
     });

@@ -3,12 +3,15 @@
 
 #include "qmcpserversession.h"
 #include "qmcpserver.h"
+#include <QtCore/QFutureWatcher>
 #include <QtCore/QMultiHash>
+#include <QtCore/QPromise>
 #include <QtCore/QTimer>
 #ifdef QT_GUI_LIB
 #include <QtGui/QAction>
 #endif
 #include <QtMcpCommon/QMcpCreateMessageRequest>
+#include <QtMcpCommon/QMcpProgressNotification>
 
 QT_BEGIN_NAMESPACE
 
@@ -596,6 +599,136 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
     if (!found)
         qWarning() << name << "not found for " << params;
     return ret;
+}
+
+QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
+    const QString &name, const QJsonObject &params, const QVariant &progressToken)
+{
+    using namespace Qt::Literals::StringLiterals;
+
+    for (const auto &pair : std::as_const(d->tools)) {
+        const auto tool = pair.first;
+        if (tool.name() != name)
+            continue;
+
+        const auto mo = pair.second->metaObject();
+        for (int i = mo->methodOffset(); i < mo->methodCount(); ++i) {
+            const auto mm = mo->method(i);
+            if (mm.methodType() != QMetaMethod::Method)
+                continue;
+            if (mm.access() != QMetaMethod::Public)
+                continue;
+            if (QString::fromUtf8(mm.name()) != name)
+                continue;
+
+            // Check if return type is QFuture
+            const QByteArray returnTypeName = mm.returnMetaType().name();
+            if (!returnTypeName.startsWith("QFuture<"))
+                continue;
+
+            // Build converted arguments
+            QVariantList convertedArgs;
+            for (int j = 0; j < mm.parameterCount(); ++j) {
+                const auto paramName = QString::fromUtf8(mm.parameterNames().at(j));
+                const auto type = mm.parameterMetaType(j);
+
+                // Handle special parameter types
+                if (type.id() == QMetaType::QUuid) {
+                    convertedArgs.append(d->sessionId);
+                    continue;
+                }
+
+                if (!params.contains(paramName))
+                    break;
+
+                auto value = params.value(paramName).toVariant();
+                if (!value.convert(type)) {
+                    qWarning() << "Failed to convert parameter" << paramName;
+                    break;
+                }
+                convertedArgs.append(value);
+            }
+
+            if (convertedArgs.count() != mm.parameterCount())
+                continue;
+
+            // Invoke the method and get the QFuture
+            QFuture<QList<QMcpCallToolResultContent>> resultFuture;
+            QGenericReturnArgument ret(mm.returnMetaType().name(), &resultFuture);
+
+            switch (mm.parameterCount()) {
+            case 0:
+                mm.invoke(pair.second, ret);
+                break;
+            case 1:
+                mm.invoke(pair.second, ret,
+                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()));
+                break;
+            case 2:
+                mm.invoke(pair.second, ret,
+                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()));
+                break;
+            default:
+                qWarning() << "callToolAsync: too many parameters";
+                break;
+            }
+
+            // Set up progress monitoring if progressToken is provided
+            if (progressToken.isValid() && !progressToken.isNull()) {
+                auto *watcher = new QFutureWatcher<QList<QMcpCallToolResultContent>>(this);
+                auto *server = qobject_cast<QMcpServer *>(parent());
+
+                connect(watcher, &QFutureWatcherBase::progressValueChanged, this,
+                        [this, server, progressToken](int value) {
+                    if (!server)
+                        return;
+                    QMcpProgressNotificationParams params;
+                    params.setProgressToken(progressToken);
+                    params.setProgress(value);
+                    QMcpProgressNotification notification;
+                    notification.setParams(params);
+                    server->notify(d->sessionId, notification);
+                });
+
+                connect(watcher, &QFutureWatcherBase::progressRangeChanged, this,
+                        [this, server, progressToken](int min, int max) {
+                    Q_UNUSED(min);
+                    if (!server)
+                        return;
+                    QMcpProgressNotificationParams params;
+                    params.setProgressToken(progressToken);
+                    params.setProgress(0);
+                    params.setTotal(max);
+                    QMcpProgressNotification notification;
+                    notification.setParams(params);
+                    server->notify(d->sessionId, notification);
+                });
+
+                connect(watcher, &QFutureWatcherBase::finished, watcher, &QObject::deleteLater);
+                watcher->setFuture(resultFuture);
+            }
+
+            return resultFuture;
+        }
+    }
+
+    // If no async tool found, try sync callTool and wrap result
+    bool ok = false;
+    auto syncResult = callTool(name, params, &ok);
+    if (ok) {
+        QPromise<QList<QMcpCallToolResultContent>> promise;
+        promise.start();
+        promise.addResult(syncResult);
+        promise.finish();
+        return promise.future();
+    }
+
+    // Return empty/canceled future if tool not found
+    QPromise<QList<QMcpCallToolResultContent>> promise;
+    promise.start();
+    promise.finish();
+    return promise.future();
 }
 
 QList<QMcpRoot> QMcpServerSession::roots(QString *cursor) const
