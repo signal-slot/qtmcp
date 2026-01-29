@@ -36,6 +36,7 @@ QMcpClientStdio::Private::Private(QMcpClientStdio *parent)
     });
     connect(&server, &QProcess::errorOccurred, q, [this](QProcess::ProcessError error) {
         qWarning() << error << server.errorString();
+        emit q->errorOccurred(server.errorString());
     });
     connect(&server, &QProcess::started, q, [this]() {
         emit q->started();
