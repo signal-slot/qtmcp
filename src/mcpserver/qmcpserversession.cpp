@@ -297,15 +297,42 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
     if (!prefix.isEmpty())
         prefix.append('/'_L1);
 
-    bool changed = false;
+    // Collect methods grouped by name, picking the overload with the most parameters
+    // and tracking the minimum parameter count to determine which params are required.
+    // Qt MOC generates multiple overloads for methods with default parameter values.
+    struct MethodInfo {
+        QMetaMethod method;
+        int minParamCount;
+    };
+    QHash<QString, MethodInfo> methodMap;
+
     for (int i = mo->methodOffset(); i < mo->methodCount(); i++) {
         const auto mm = mo->method(i);
         if (mm.access() != QMetaMethod::Public)
             continue;
         if (mm.methodType() == QMetaMethod::Signal || mm.methodType() == QMetaMethod::Constructor)
             continue;
-        QMcpTool tool;
         const auto name = QString::fromUtf8(mm.name());
+        if (!methodMap.contains(name)) {
+            methodMap.insert(name, { mm, mm.parameterCount() });
+        } else {
+            auto &info = methodMap[name];
+            if (mm.parameterCount() > info.method.parameterCount()) {
+                info.minParamCount = qMin(info.minParamCount, info.method.parameterCount());
+                info.method = mm;
+            } else {
+                info.minParamCount = qMin(info.minParamCount, mm.parameterCount());
+            }
+        }
+    }
+
+    bool changed = false;
+    for (auto it = methodMap.cbegin(); it != methodMap.cend(); ++it) {
+        const auto &name = it.key();
+        const auto &mm = it.value().method;
+        const int minParams = it.value().minParamCount;
+
+        QMcpTool tool;
         tool.setName(prefix + name);
         if (descriptions.contains(name)) {
             tool.setDescription(descriptions.value(name));
@@ -337,7 +364,8 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
                 object.insert("description"_L1, descriptions.value("%1/%2"_L1.arg(tool.name(), name)));
             }
             properties.insert(name, object);
-            required.append(name);
+            if (j < minParams)
+                required.append(name);
         }
         inputSchema.setProperties(properties);
         inputSchema.setRequired(required);
@@ -569,7 +597,11 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
             case QMetaType::QImage: {
                 found = true;
                 QImage image = callMethod<QImage>(pair.second, &mm, convertedArgs);
-                ret.append(QMcpImageContent(image));
+                if (image.isNull()) {
+                    ret.append(QMcpTextContent("image is null"_L1));
+                } else {
+                    ret.append(QMcpImageContent(image));
+                }
                 break; }
 #endif // QT_GUI_LIB
             default:
@@ -578,6 +610,9 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
 
             break;
         }
+
+        if (found)
+            break;
     }
 
 #ifdef QT_GUI_LIB
