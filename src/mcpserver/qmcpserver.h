@@ -420,6 +420,11 @@ signals:
     void started();
 
     /*!
+        Emitted when the backend has finished (e.g., stdin reached EOF).
+    */
+    void finished();
+
+    /*!
         Emitted when a new client session is established.
         \param session The new session object
     */

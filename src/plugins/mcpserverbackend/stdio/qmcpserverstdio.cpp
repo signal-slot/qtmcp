@@ -62,6 +62,7 @@ void QMcpServerStdio::Private::readData(QSocketDescriptor socket, QSocketNotifie
     }
     if (bytesRead == 0) {
         // EOF reached (no more data)
+        notifier->setEnabled(false);
         emit q->finished();
         return;
     }

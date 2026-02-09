@@ -66,6 +66,7 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
 
     backend->setParent(q);
     connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
+    connect(backend, &QMcpServerBackendInterface::finished, q, &QMcpServer::finished);
     connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
         auto session = new QMcpServerSession(sessionId, q);
 
