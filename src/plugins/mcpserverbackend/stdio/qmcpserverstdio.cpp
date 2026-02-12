@@ -58,6 +58,8 @@ void QMcpServerStdio::Private::readData(QSocketDescriptor socket, QSocketNotifie
     const auto bytesRead = ::read(STDIN_FILENO, buffer, sizeof(buffer));
     if (bytesRead < 0) {
         std::perror("Error reading STDIN");
+        notifier->setEnabled(false);
+        emit q->finished();
         return;
     }
     if (bytesRead == 0) {
