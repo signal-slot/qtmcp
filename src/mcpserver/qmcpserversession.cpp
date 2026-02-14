@@ -445,6 +445,25 @@ T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &arg
                        QGenericArgument(args.at(2).typeName(), args.at(2).constData())
                        );
         break;
+    case 4:
+        method->invoke(object,
+                       ret,
+                       QGenericArgument(args.at(0).typeName(), args.at(0).constData()),
+                       QGenericArgument(args.at(1).typeName(), args.at(1).constData()),
+                       QGenericArgument(args.at(2).typeName(), args.at(2).constData()),
+                       QGenericArgument(args.at(3).typeName(), args.at(3).constData())
+                       );
+        break;
+    case 5:
+        method->invoke(object,
+                       ret,
+                       QGenericArgument(args.at(0).typeName(), args.at(0).constData()),
+                       QGenericArgument(args.at(1).typeName(), args.at(1).constData()),
+                       QGenericArgument(args.at(2).typeName(), args.at(2).constData()),
+                       QGenericArgument(args.at(3).typeName(), args.at(3).constData()),
+                       QGenericArgument(args.at(4).typeName(), args.at(4).constData())
+                       );
+        break;
     default:
         qFatal() << "callMethod: too many parameters, or not implemented in switch.";
     }
@@ -570,6 +589,25 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
                               QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
                               QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
                               QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData())
+                              );
+                    break;
+                case 4:
+                    mm.invoke(pair.second,
+                              Qt::DirectConnection,
+                              QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                              QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                              QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
+                              QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData())
+                              );
+                    break;
+                case 5:
+                    mm.invoke(pair.second,
+                              Qt::DirectConnection,
+                              QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                              QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                              QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
+                              QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData()),
+                              QGenericArgument(convertedArgs[4].typeName(), convertedArgs[4].constData())
                               );
                     break;
                 default:
