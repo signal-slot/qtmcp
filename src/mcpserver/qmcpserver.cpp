@@ -333,15 +333,10 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
 
         // Check if there's an async tool first
         auto future = session->callToolAsync(params.name(), params.arguments(), progressToken);
-        if (future.isFinished()) {
-            // Sync result (already completed)
-            result.setContent(future.result());
-        } else {
-            // For true async tools, we need to wait
-            // Note: The progress notifications are sent by callToolAsync via QFutureWatcher
+        if (!future.isFinished())
             future.waitForFinished();
+        if (future.resultCount() > 0)
             result.setContent(future.result());
-        }
         return result;
     });
 
