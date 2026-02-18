@@ -323,21 +323,24 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         return result;
     });
 
-    addRequestHandler([this](const QUuid &sessionId, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) {
-        QMcpCallToolResult result;
+    addRequestHandler([this](const QUuid &sessionId, const QMcpCallToolRequest &request, QMcpJSONRPCErrorError *error) -> QFuture<QMcpCallToolResult> {
         auto session = d->findSession(sessionId, true, error);
-        if (!session)
-            return result;
+        if (!session) {
+            QPromise<QMcpCallToolResult> promise;
+            promise.start();
+            promise.addResult(QMcpCallToolResult());
+            promise.finish();
+            return promise.future();
+        }
         const auto params = request.params();
         const auto progressToken = params.meta().progressToken();
 
-        // Check if there's an async tool first
-        auto future = session->callToolAsync(params.name(), params.arguments(), progressToken);
-        if (!future.isFinished())
-            future.waitForFinished();
-        if (future.resultCount() > 0)
-            result.setContent(future.result());
-        return result;
+        auto contentFuture = session->callToolAsync(params.name(), params.arguments(), progressToken);
+        return contentFuture.then([](const QList<QMcpCallToolResultContent> &content) {
+            QMcpCallToolResult result;
+            result.setContent(content);
+            return result;
+        });
     });
 
     addRequestHandler([this](const QUuid &sessionId, const QMcpListPromptsRequest &request, QMcpJSONRPCErrorError *error) {

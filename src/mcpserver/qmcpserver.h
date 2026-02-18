@@ -221,7 +221,7 @@ public:
     struct is_future : std::false_type {};
 
     template<typename T>
-    struct is_future<QFuture<T>> : std::true_type {};
+    struct is_future<QFuture<T>> : std::true_type { using inner_type = T; };
 
     template <typename R, typename C, typename Arg>
     struct RequestHandlerTraits<R(C::*)(const QUuid &, Arg, QMcpJSONRPCErrorError *) const> {
@@ -240,7 +240,7 @@ public:
                       "Request type must inherit from QMcpRequest");
 
         if constexpr (is_future<Result>::value) {
-            static_assert(std::is_base_of<QMcpResult, typename Result::value_type>::value,
+            static_assert(std::is_base_of<QMcpResult, typename is_future<Result>::inner_type>::value,
                           "Future result type must inherit from QMcpResult");
         } else {
             static_assert(std::is_base_of<QMcpResult, std::decay_t<Result>>::value,
@@ -261,7 +261,7 @@ public:
                 const auto id = json.value("id"_L1);
 
                 // Set up continuation to send response when ready
-                future.then([this, session, id, versionToUse](const auto &result) {
+                future.then([this, session, id, versionToUse](const typename is_future<Result>::inner_type &result) {
                     QMcpJSONRPCResponse response;
                     response.setId(id.toVariant());
                     auto object = response.toJsonObject(versionToUse);

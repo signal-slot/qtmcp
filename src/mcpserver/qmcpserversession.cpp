@@ -742,6 +742,27 @@ QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
                           QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
                           QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()));
                 break;
+            case 3:
+                mm.invoke(pair.second, ret,
+                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()));
+                break;
+            case 4:
+                mm.invoke(pair.second, ret,
+                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
+                          QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData()));
+                break;
+            case 5:
+                mm.invoke(pair.second, ret,
+                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
+                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
+                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
+                          QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData()),
+                          QGenericArgument(convertedArgs[4].typeName(), convertedArgs[4].constData()));
+                break;
             default:
                 qWarning() << "callToolAsync: too many parameters";
                 break;
