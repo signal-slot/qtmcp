@@ -882,7 +882,7 @@ void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &para
         return;
     QMcpCreateMessageRequest request;
     request.setParams(params);
-    server->request(d->sessionId, request, [this, server](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
+    server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
         Q_ASSERT(d->sessionId == sessionId);
         emit createMessageFinished(result);
     });
