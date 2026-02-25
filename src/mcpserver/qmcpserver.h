@@ -162,7 +162,7 @@ public:
         QtMcp::ProtocolVersion versionToUse = this->versionToUse(session);
 
         auto json = request.toJsonObject(versionToUse);
-        send(session, json, [callback, this, versionToUse](const QUuid & session, const QJsonObject &json) {
+        send(session, json, [callback, versionToUse](const QUuid & session, const QJsonObject &json) {
             Result result;
             result.fromJsonObject(json, versionToUse);
             callback(session, result);
