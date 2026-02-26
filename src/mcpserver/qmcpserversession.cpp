@@ -818,9 +818,13 @@ QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
         return promise.future();
     }
 
-    // Return empty/canceled future if tool not found
+    // Return future with error message if tool not found
     QPromise<QList<QMcpCallToolResultContent>> promise;
     promise.start();
+    QList<QMcpCallToolResultContent> errorContent;
+    errorContent.append(QMcpCallToolResultContent(QMcpTextContent(
+        "Error: tool '%1' not found"_L1.arg(name))));
+    promise.addResult(errorContent);
     promise.finish();
     return promise.future();
 }
