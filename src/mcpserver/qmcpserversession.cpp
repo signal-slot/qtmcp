@@ -4,6 +4,7 @@
 #include "qmcpserversession.h"
 #include "qmcpserver.h"
 #include <QtCore/QFutureWatcher>
+#include <QtCore/QJsonArray>
 #include <QtCore/QMultiHash>
 #include <QtCore/QPromise>
 #include <QtCore/QTimer>
@@ -297,11 +298,11 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
     if (!prefix.isEmpty())
         prefix.append('/'_L1);
 
-    // Collect methods grouped by name, picking the overload with the most parameters
-    // and tracking the minimum parameter count to determine which params are required.
-    // Qt MOC generates multiple overloads for methods with default parameter values.
+    // Collect methods grouped by name, keeping all overloads.
+    // Track min parameter count to determine which params are required
+    // (Qt MOC generates multiple overloads for methods with default parameter values).
     struct MethodInfo {
-        QMetaMethod method;
+        QList<QMetaMethod> methods;
         int minParamCount;
     };
     QHash<QString, MethodInfo> methodMap;
@@ -314,23 +315,26 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             continue;
         const auto name = QString::fromUtf8(mm.name());
         if (!methodMap.contains(name)) {
-            methodMap.insert(name, { mm, mm.parameterCount() });
+            methodMap.insert(name, { { mm }, mm.parameterCount() });
         } else {
             auto &info = methodMap[name];
-            if (mm.parameterCount() > info.method.parameterCount()) {
-                info.minParamCount = qMin(info.minParamCount, info.method.parameterCount());
-                info.method = mm;
-            } else {
-                info.minParamCount = qMin(info.minParamCount, mm.parameterCount());
-            }
+            info.minParamCount = qMin(info.minParamCount, mm.parameterCount());
+            info.methods.append(mm);
         }
     }
 
     bool changed = false;
     for (auto it = methodMap.cbegin(); it != methodMap.cend(); ++it) {
         const auto &name = it.key();
-        const auto &mm = it.value().method;
+        const auto &methods = it.value().methods;
         const int minParams = it.value().minParamCount;
+
+        // Pick the overload with the most parameters as the canonical one
+        const QMetaMethod *canonical = &methods.first();
+        for (const auto &m : methods) {
+            if (m.parameterCount() > canonical->parameterCount())
+                canonical = &m;
+        }
 
         QMcpTool tool;
         tool.setName(prefix + name);
@@ -340,25 +344,52 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         QMcpToolInputSchema inputSchema;
         auto required = inputSchema.required();
         auto properties = inputSchema.properties();
-        const auto types = mm.parameterTypes();
-        const auto names = mm.parameterNames();
-        for (int j = 0; j < mm.parameterCount(); j++) {
-            const auto type = QString::fromUtf8(types.at(j));
-            const auto name = QString::fromUtf8(names.at(j));
-            // message
-            QHash<QString, QString> mcpTypes {
-                                             { "QString", "string" },
-                                             { "bool", "boolean" },
-                                             { "int", "integer" },
-                                             };
-            QSet<QString> internalTypes { "QUuid"_L1 };
-            QJsonObject object;
-            if (mcpTypes.contains(type))
-                object.insert("type"_L1, mcpTypes.value(type));
-            else if (internalTypes.contains(type))
-                continue;
-            else
+
+        static const QHash<QString, QString> mcpTypes {
+            { "QString", "string" },
+            { "bool", "boolean" },
+            { "int", "integer" },
+        };
+        static const QSet<QString> internalTypes { "QUuid"_L1 };
+
+        const auto canonicalTypes = canonical->parameterTypes();
+        const auto canonicalNames = canonical->parameterNames();
+        for (int j = 0; j < canonical->parameterCount(); j++) {
+            const auto name = QString::fromUtf8(canonicalNames.at(j));
+
+            // Collect all distinct MCP types for this parameter across overloads
+            QStringList typeSet;
+            for (const auto &m : methods) {
+                const auto paramNames = m.parameterNames();
+                for (int k = 0; k < m.parameterCount(); k++) {
+                    if (QString::fromUtf8(paramNames.at(k)) == name) {
+                        const auto cppType = QString::fromUtf8(m.parameterTypes().at(k));
+                        if (mcpTypes.contains(cppType)) {
+                            const auto mcpType = mcpTypes.value(cppType);
+                            if (!typeSet.contains(mcpType))
+                                typeSet.append(mcpType);
+                        }
+                    }
+                }
+            }
+
+            // Fallback to canonical type if no types were collected
+            if (typeSet.isEmpty()) {
+                const auto type = QString::fromUtf8(canonicalTypes.at(j));
+                if (internalTypes.contains(type))
+                    continue;
                 qWarning() << "Unknown type" << type;
+            }
+
+            QJsonObject object;
+            if (typeSet.size() == 1) {
+                object.insert("type"_L1, typeSet.first());
+            } else if (typeSet.size() > 1) {
+                QJsonArray typeArray;
+                for (const auto &t : std::as_const(typeSet))
+                    typeArray.append(t);
+                object.insert("type"_L1, typeArray);
+            }
 
             if (descriptions.contains("%1/%2"_L1.arg(tool.name(), name))) {
                 object.insert("description"_L1, descriptions.value("%1/%2"_L1.arg(tool.name(), name)));
