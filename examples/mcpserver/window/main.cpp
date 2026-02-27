@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
                             { "moveCursor/x", "X coordinate of cursor" },
                             { "moveCursor/y", "Y coordinate of cursor" },
                             });
+    QObject::connect(&server, &QMcpServer::finished, &app, &QCoreApplication::quit);
     server.start(address);
 
     return app.exec();

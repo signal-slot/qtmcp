@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
     const QString address = parser.value(addressOption);
 
     McpServer server(backend);
+    QObject::connect(&server, &QMcpServer::finished, &app, &QCoreApplication::quit);
     server.start(address);
 
     return app.exec();
