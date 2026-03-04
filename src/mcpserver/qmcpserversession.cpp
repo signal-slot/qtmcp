@@ -382,10 +382,7 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             if (typeSet.size() == 1) {
                 object.insert("type"_L1, typeSet.first());
             } else if (typeSet.size() > 1) {
-                QJsonArray typeArray;
-                for (const auto &t : std::as_const(typeSet))
-                    typeArray.append(t);
-                object.insert("type"_L1, typeArray);
+                object.insert("type"_L1, QJsonArray::fromStringList(typeSet));
             }
 
             if (descriptions.contains("%1/%2"_L1.arg(tool.name(), paramName))) {
