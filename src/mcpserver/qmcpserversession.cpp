@@ -355,14 +355,14 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         const auto canonicalTypes = canonical->parameterTypes();
         const auto canonicalNames = canonical->parameterNames();
         for (int j = 0; j < canonical->parameterCount(); j++) {
-            const auto name = QString::fromUtf8(canonicalNames.at(j));
+            const auto paramName = QString::fromUtf8(canonicalNames.at(j));
 
             // Collect all distinct MCP types for this parameter across overloads
             QStringList typeSet;
             for (const auto &m : methods) {
                 const auto paramNames = m.parameterNames();
                 for (int k = 0; k < m.parameterCount(); k++) {
-                    if (QString::fromUtf8(paramNames.at(k)) == name) {
+                    if (QString::fromUtf8(paramNames.at(k)) == paramName) {
                         const auto cppType = QString::fromUtf8(m.parameterTypes().at(k));
                         if (mcpTypes.contains(cppType)) {
                             const auto mcpType = mcpTypes.value(cppType);
@@ -391,12 +391,12 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
                 object.insert("type"_L1, typeArray);
             }
 
-            if (descriptions.contains("%1/%2"_L1.arg(tool.name(), name))) {
-                object.insert("description"_L1, descriptions.value("%1/%2"_L1.arg(tool.name(), name)));
+            if (descriptions.contains("%1/%2"_L1.arg(tool.name(), paramName))) {
+                object.insert("description"_L1, descriptions.value("%1/%2"_L1.arg(tool.name(), paramName)));
             }
-            properties.insert(name, object);
+            properties.insert(paramName, object);
             if (j < minParams)
-                required.append(name);
+                required.append(paramName);
         }
         inputSchema.setProperties(properties);
         inputSchema.setRequired(required);
