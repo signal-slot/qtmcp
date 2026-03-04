@@ -360,16 +360,13 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             // Collect all distinct MCP types for this parameter across overloads
             QStringList typeSet;
             for (const auto &m : methods) {
-                const auto paramNames = m.parameterNames();
-                for (int k = 0; k < m.parameterCount(); k++) {
-                    if (QString::fromUtf8(paramNames.at(k)) == paramName) {
-                        const auto cppType = QString::fromUtf8(m.parameterTypes().at(k));
-                        if (mcpTypes.contains(cppType)) {
-                            const auto mcpType = mcpTypes.value(cppType);
-                            if (!typeSet.contains(mcpType))
-                                typeSet.append(mcpType);
-                        }
-                    }
+                if (j >= m.parameterCount())
+                    continue;
+                const auto cppType = QString::fromUtf8(m.parameterTypes().at(j));
+                if (mcpTypes.contains(cppType)) {
+                    const auto mcpType = mcpTypes.value(cppType);
+                    if (!typeSet.contains(mcpType))
+                        typeSet.append(mcpType);
                 }
             }
 
