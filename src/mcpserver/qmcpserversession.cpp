@@ -346,9 +346,9 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
         auto properties = inputSchema.properties();
 
         static const QHash<QString, QString> mcpTypes {
-            { "QString", "string" },
-            { "bool", "boolean" },
-            { "int", "integer" },
+            { "QString"_L1, "string"_L1 },
+            { "bool"_L1, "boolean"_L1 },
+            { "int"_L1, "integer"_L1 },
         };
         static const QSet<QString> internalTypes { "QUuid"_L1 };
 
