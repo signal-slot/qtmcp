@@ -16,5 +16,6 @@ qt_internal_add_module(McpClient
         ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC_LIBRARIES
         Qt::McpCommon
+    LIBRARIES
         Qt::CorePrivate
 )
