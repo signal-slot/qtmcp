@@ -16,6 +16,45 @@
 
 QT_BEGIN_NAMESPACE
 
+static QString buildParameterErrorMessage(const QString &toolName, const QJsonObject &providedParams, const QMcpToolInputSchema &schema)
+{
+    using namespace Qt::Literals::StringLiterals;
+
+    const auto properties = schema.properties();
+    const auto required = schema.required();
+
+    QStringList supportedParams;
+    for (auto it = properties.begin(); it != properties.end(); ++it) {
+        const auto paramObj = it.value().toObject();
+        const auto type = paramObj.value("type"_L1);
+        QString typeStr;
+        if (type.isString()) {
+            typeStr = type.toString();
+        } else if (type.isArray()) {
+            QStringList types;
+            for (const auto &t : type.toArray())
+                types.append(t.toString());
+            typeStr = types.join("|"_L1);
+        }
+        supportedParams.append("%1: %2%3"_L1.arg(
+            it.key(),
+            typeStr,
+            required.contains(it.key()) ? " (required)"_L1 : " (optional)"_L1));
+    }
+
+    if (supportedParams.isEmpty()) {
+        return "Error: tool '%1' takes no parameters, but received: [%2]"_L1
+            .arg(toolName, providedParams.keys().join(", "_L1));
+    }
+
+    return "Error: parameter mismatch for tool '%1'. "
+           "Provided: [%2]. "
+           "Supported: [%3]"_L1
+        .arg(toolName,
+             providedParams.keys().join(", "_L1),
+             supportedParams.join(", "_L1));
+}
+
 class QMcpServerSession::Private
 {
 public:
@@ -515,12 +554,19 @@ QList<QMcpTool> QMcpServerSession::tools(QString *cursor) const
 QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name, const QJsonObject &params, bool *ok)
 {
     bool found = false;
+    bool toolNameFound = false;
+    QMcpTool matchedTool;
     QList<QMcpCallToolResultContent> ret;
     for (const auto &pair : std::as_const(d->tools)) {
         const auto tool = pair.first;
         // check name first
         if (tool.name() != name)
             continue;
+
+        if (!toolNameFound) {
+            toolNameFound = true;
+            matchedTool = tool;
+        }
 
         QString prefix = pair.second->objectName();
         if (!prefix.isEmpty())
@@ -694,12 +740,17 @@ QList<QMcpCallToolResultContent> QMcpServerSession::callTool(const QString &name
 
     if (ok)
         *ok = found;
-    if (!found)
-        qWarning() << name << "not found for " << params;
+    if (!found) {
+        if (toolNameFound) {
+            ret.append(QMcpTextContent(buildParameterErrorMessage(name, params, matchedTool.inputSchema())));
+        } else {
+            qWarning() << name << "not found for " << params;
+        }
+    }
     return ret;
 }
 
-QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
+QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
     const QString &name, const QJsonObject &params, const QVariant &progressToken)
 {
     using namespace Qt::Literals::StringLiterals;
@@ -828,7 +879,11 @@ QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
                 watcher->setFuture(resultFuture);
             }
 
-            return resultFuture;
+            return resultFuture.then([](const QList<QMcpCallToolResultContent> &content) {
+                QMcpCallToolResult result;
+                result.setContent(content);
+                return result;
+            });
         }
     }
 
@@ -836,20 +891,37 @@ QFuture<QList<QMcpCallToolResultContent>> QMcpServerSession::callToolAsync(
     bool ok = false;
     auto syncResult = callTool(name, params, &ok);
     if (ok) {
-        QPromise<QList<QMcpCallToolResultContent>> promise;
+        QPromise<QMcpCallToolResult> promise;
         promise.start();
-        promise.addResult(syncResult);
+        QMcpCallToolResult result;
+        result.setContent(syncResult);
+        promise.addResult(result);
         promise.finish();
         return promise.future();
     }
 
-    // Return future with error message if tool not found
-    QPromise<QList<QMcpCallToolResultContent>> promise;
+    // callTool may have returned error content (tool name found but params wrong)
+    if (!syncResult.isEmpty()) {
+        QPromise<QMcpCallToolResult> promise;
+        promise.start();
+        QMcpCallToolResult result;
+        result.setContent(syncResult);
+        result.setIsError(true);
+        promise.addResult(result);
+        promise.finish();
+        return promise.future();
+    }
+
+    // Tool truly not found
+    QPromise<QMcpCallToolResult> promise;
     promise.start();
+    QMcpCallToolResult result;
     QList<QMcpCallToolResultContent> errorContent;
     errorContent.append(QMcpCallToolResultContent(QMcpTextContent(
         "Error: tool '%1' not found"_L1.arg(name))));
-    promise.addResult(errorContent);
+    result.setContent(errorContent);
+    result.setIsError(true);
+    promise.addResult(result);
     promise.finish();
     return promise.future();
 }

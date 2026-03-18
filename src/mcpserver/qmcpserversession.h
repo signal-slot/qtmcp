@@ -10,6 +10,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QUrl>
 #include <QtCore/QUuid>
+#include <QtMcpCommon/QMcpCallToolResult>
 #include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpCreateMessageRequestParams>
 #include <QtMcpCommon/QMcpCreateMessageResult>
@@ -171,9 +172,9 @@ public:
         \param name Name of the tool to execute
         \param params Parameters for the tool
         \param progressToken Token for progress notifications (from request _meta)
-        \return Future containing the tool execution results, or empty future if tool not found
+        \return Future containing the tool execution result including isError flag
      */
-    QFuture<QList<QMcpCallToolResultContent>> callToolAsync(const QString &name, const QJsonObject &params, const QVariant &progressToken = {});
+    QFuture<QMcpCallToolResult> callToolAsync(const QString &name, const QJsonObject &params, const QVariant &progressToken = {});
 
     /*!
         Returns the list of roots available in this session.

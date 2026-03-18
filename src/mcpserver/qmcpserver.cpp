@@ -334,13 +334,7 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         }
         const auto params = request.params();
         const auto progressToken = params.meta().progressToken();
-
-        auto contentFuture = session->callToolAsync(params.name(), params.arguments(), progressToken);
-        return contentFuture.then([](const QList<QMcpCallToolResultContent> &content) {
-            QMcpCallToolResult result;
-            result.setContent(content);
-            return result;
-        });
+        return session->callToolAsync(params.name(), params.arguments(), progressToken);
     });
 
     addRequestHandler([this](const QUuid &sessionId, const QMcpListPromptsRequest &request, QMcpJSONRPCErrorError *error) {
