@@ -844,45 +844,20 @@ QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
                 break;
             }
 
-            // Set up progress monitoring if progressToken is provided.
-            // Skip if the future is already finished: QFutureWatcher::setFuture()
-            // queues initial progress signals on the event loop, which land on the
-            // client after the tool response and break clients that reject
-            // notifications for tokens they already resolved.
-            if (progressToken.isValid() && !progressToken.isNull() && !resultFuture.isFinished()) {
-                auto *watcher = new QFutureWatcher<QList<QMcpCallToolResultContent>>(this);
-                auto *server = qobject_cast<QMcpServer *>(parent());
-
-                connect(watcher, &QFutureWatcherBase::progressValueChanged, this,
-                        [this, server, progressToken](int value) {
-                    // progress=0 carries no information and may race the response.
-                    if (!server || value <= 0)
-                        return;
-                    QMcpProgressNotificationParams params;
-                    params.setProgressToken(progressToken);
-                    params.setProgress(value);
-                    QMcpProgressNotification notification;
-                    notification.setParams(params);
-                    server->notify(d->sessionId, notification);
-                });
-
-                connect(watcher, &QFutureWatcherBase::progressRangeChanged, this,
-                        [this, server, progressToken](int min, int max) {
-                    Q_UNUSED(min);
-                    if (!server || max <= 0)
-                        return;
-                    QMcpProgressNotificationParams params;
-                    params.setProgressToken(progressToken);
-                    params.setProgress(0);
-                    params.setTotal(max);
-                    QMcpProgressNotification notification;
-                    notification.setParams(params);
-                    server->notify(d->sessionId, notification);
-                });
-
-                connect(watcher, &QFutureWatcherBase::finished, watcher, &QObject::deleteLater);
-                watcher->setFuture(resultFuture);
-            }
+            // Progress notifications were previously wired up via QFutureWatcher,
+            // but its progressValueChanged/progressRangeChanged signals are
+            // emitted from the event loop *after* the call to setFuture(), and
+            // include a trailing notification once the future finishes. That
+            // trailing notification lands on the client after the tool response
+            // has been delivered, at which point strict clients (Claude Code)
+            // have already resolved the progress token and close the STDIO
+            // session when they see a notification for an unknown token.
+            //
+            // Until we expose an explicit progress reporting API that tools can
+            // drive synchronously, simply drop the progressToken: MCP allows the
+            // server to omit progress notifications, and no current tool emits
+            // meaningful progress anyway.
+            Q_UNUSED(progressToken);
 
             return resultFuture.then([](const QList<QMcpCallToolResultContent> &content) {
                 QMcpCallToolResult result;
