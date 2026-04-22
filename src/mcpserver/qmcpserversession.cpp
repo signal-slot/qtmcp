@@ -844,14 +844,19 @@ QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
                 break;
             }
 
-            // Set up progress monitoring if progressToken is provided
-            if (progressToken.isValid() && !progressToken.isNull()) {
+            // Set up progress monitoring if progressToken is provided.
+            // Skip if the future is already finished: QFutureWatcher::setFuture()
+            // queues initial progress signals on the event loop, which land on the
+            // client after the tool response and break clients that reject
+            // notifications for tokens they already resolved.
+            if (progressToken.isValid() && !progressToken.isNull() && !resultFuture.isFinished()) {
                 auto *watcher = new QFutureWatcher<QList<QMcpCallToolResultContent>>(this);
                 auto *server = qobject_cast<QMcpServer *>(parent());
 
                 connect(watcher, &QFutureWatcherBase::progressValueChanged, this,
                         [this, server, progressToken](int value) {
-                    if (!server)
+                    // progress=0 carries no information and may race the response.
+                    if (!server || value <= 0)
                         return;
                     QMcpProgressNotificationParams params;
                     params.setProgressToken(progressToken);
@@ -864,7 +869,7 @@ QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
                 connect(watcher, &QFutureWatcherBase::progressRangeChanged, this,
                         [this, server, progressToken](int min, int max) {
                     Q_UNUSED(min);
-                    if (!server)
+                    if (!server || max <= 0)
                         return;
                     QMcpProgressNotificationParams params;
                     params.setProgressToken(progressToken);
