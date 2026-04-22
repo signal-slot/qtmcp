@@ -388,6 +388,9 @@ void QMcpServerSession::registerToolSet(QObject *toolSet, const QHash<QString, Q
             { "QString", "string" },
             { "bool", "boolean" },
             { "int", "integer" },
+            { "double", "number" },
+            { "float", "number" },
+            { "qreal", "number" },
         };
         static const QSet<QString> internalTypes { "QUuid"_L1 };
 
