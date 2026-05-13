@@ -23,6 +23,10 @@ jobs:
           - os: windows-latest
             host: windows
             arch: win64_msvc2022_64
+            # aqt 3.3.0 (latest on PyPI) does not know the new per-arch repo
+            # layout used by Qt 6.11+ on Windows. Pull aqt from the merge
+            # commit of miurahr/aqtinstall#1000 until 3.3.1 ships.
+            aqtsource: 'aqtinstall @ git+https://github.com/miurahr/aqtinstall@8c3695d4a4e1ceabf6a74dc6c79681656dc6b74b'
           - os: macos-latest
             host: mac
             arch: clang_64
@@ -45,6 +49,7 @@ jobs:
           cache: true
           setup-python: 'true'
           install-deps: 'true'
+          aqtsource: ${{ matrix.aqtsource }}
 
       - name: setup MSVC
         if: runner.os == 'Windows'
