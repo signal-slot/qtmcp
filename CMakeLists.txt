@@ -11,11 +11,11 @@ project(QtMcp
     LANGUAGES CXX C
 )
 
-find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS
+find_package(Qt6 6.8 CONFIG REQUIRED COMPONENTS
     BuildInternals
     Core
 )
-find_package(Qt6 ${PROJECT_VERSION} CONFIG OPTIONAL_COMPONENTS
+find_package(Qt6 6.8 CONFIG OPTIONAL_COMPONENTS
     Gui
     Widgets
     Network
