@@ -30,7 +30,7 @@ The Model Context Protocol (MCP) defines a standardized way for applications to 
 
 ## Requirements
 
-- Qt 6.8.1 or later
+- Qt 6.8 or later
 - CMake 3.16.0 or later
 - C++20 compatible compiler
 
