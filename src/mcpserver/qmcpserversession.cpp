@@ -536,6 +536,18 @@ T callMethod(QObject *object, const QMetaMethod *method, const QVariantList &arg
     }
     return result;
 }
+
+template<class T>
+void invokeMethod(QObject *object, const QMetaMethod &method, const QVariantList &args, T *result)
+{
+    QVector<void *> argv;
+    argv.reserve(args.size() + 1);
+    argv.append(result);
+    for (const auto &arg : args)
+        argv.append(const_cast<void *>(arg.constData()));
+
+    QMetaObject::metacall(object, QMetaObject::InvokeMetaMethod, method.methodIndex(), argv.data());
+}
 }
 
 QList<QMcpTool> QMcpServerSession::tools(QString *cursor) const
@@ -764,6 +776,7 @@ QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
             continue;
 
         const auto mo = pair.second->metaObject();
+        QMetaMethod canonicalMethod;
         for (int i = mo->methodOffset(); i < mo->methodCount(); ++i) {
             const auto mm = mo->method(i);
             if (mm.methodType() != QMetaMethod::Method)
@@ -778,96 +791,84 @@ QFuture<QMcpCallToolResult> QMcpServerSession::callToolAsync(
             if (!returnTypeName.startsWith("QFuture<"))
                 continue;
 
-            // Build converted arguments
-            QVariantList convertedArgs;
-            for (int j = 0; j < mm.parameterCount(); ++j) {
-                const auto paramName = QString::fromUtf8(mm.parameterNames().at(j));
-                const auto type = mm.parameterMetaType(j);
+            if (!canonicalMethod.isValid() || mm.parameterCount() > canonicalMethod.parameterCount())
+                canonicalMethod = mm;
+        }
 
-                // Handle special parameter types
-                if (type.id() == QMetaType::QUuid) {
-                    convertedArgs.append(d->sessionId);
-                    continue;
-                }
+        if (!canonicalMethod.isValid())
+            continue;
 
-                if (!params.contains(paramName))
-                    break;
+        const auto parameterNames = canonicalMethod.parameterNames();
+        QStringList supportedNames;
+        for (int j = 0; j < canonicalMethod.parameterCount(); ++j) {
+            if (canonicalMethod.parameterMetaType(j).id() != QMetaType::QUuid)
+                supportedNames.append(QString::fromUtf8(parameterNames.at(j)));
+        }
 
-                auto value = params.value(paramName).toVariant();
+        bool hasUnknownParameter = false;
+        for (const auto &paramName : params.keys()) {
+            if (!supportedNames.contains(paramName)) {
+                hasUnknownParameter = true;
+                break;
+            }
+        }
+        if (hasUnknownParameter)
+            break;
+
+        // Build converted arguments for the canonical method. Qt MOC exposes
+        // invokable default arguments as shorter overloads, but MCP passes named
+        // JSON parameters. Use default-constructed values for omitted optional
+        // arguments so sparse optional params such as "order_by" are not dropped.
+        QVariantList convertedArgs;
+        for (int j = 0; j < canonicalMethod.parameterCount(); ++j) {
+            const auto paramName = QString::fromUtf8(parameterNames.at(j));
+            const auto type = canonicalMethod.parameterMetaType(j);
+
+            if (type.id() == QMetaType::QUuid) {
+                convertedArgs.append(d->sessionId);
+                continue;
+            }
+
+            QVariant value(type);
+            if (params.contains(paramName)) {
+                value = params.value(paramName).toVariant();
                 if (!value.convert(type)) {
                     qWarning() << "Failed to convert parameter" << paramName;
                     break;
                 }
-                convertedArgs.append(value);
-            }
-
-            if (convertedArgs.count() != mm.parameterCount())
-                continue;
-
-            // Invoke the method and get the QFuture
-            QFuture<QList<QMcpCallToolResultContent>> resultFuture;
-            QGenericReturnArgument ret(mm.returnMetaType().name(), &resultFuture);
-
-            switch (mm.parameterCount()) {
-            case 0:
-                mm.invoke(pair.second, ret);
-                break;
-            case 1:
-                mm.invoke(pair.second, ret,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()));
-                break;
-            case 2:
-                mm.invoke(pair.second, ret,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()));
-                break;
-            case 3:
-                mm.invoke(pair.second, ret,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
-                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()));
-                break;
-            case 4:
-                mm.invoke(pair.second, ret,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
-                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
-                          QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData()));
-                break;
-            case 5:
-                mm.invoke(pair.second, ret,
-                          QGenericArgument(convertedArgs[0].typeName(), convertedArgs[0].constData()),
-                          QGenericArgument(convertedArgs[1].typeName(), convertedArgs[1].constData()),
-                          QGenericArgument(convertedArgs[2].typeName(), convertedArgs[2].constData()),
-                          QGenericArgument(convertedArgs[3].typeName(), convertedArgs[3].constData()),
-                          QGenericArgument(convertedArgs[4].typeName(), convertedArgs[4].constData()));
-                break;
-            default:
-                qWarning() << "callToolAsync: too many parameters";
+            } else if (tool.inputSchema().required().contains(paramName)) {
                 break;
             }
-
-            // Progress notifications were previously wired up via QFutureWatcher,
-            // but its progressValueChanged/progressRangeChanged signals are
-            // emitted from the event loop *after* the call to setFuture(), and
-            // include a trailing notification once the future finishes. That
-            // trailing notification lands on the client after the tool response
-            // has been delivered, at which point strict clients (Claude Code)
-            // have already resolved the progress token and close the STDIO
-            // session when they see a notification for an unknown token.
-            //
-            // Until we expose an explicit progress reporting API that tools can
-            // drive synchronously, simply drop the progressToken: MCP allows the
-            // server to omit progress notifications, and no current tool emits
-            // meaningful progress anyway.
-            Q_UNUSED(progressToken);
-
-            return resultFuture.then([](const QList<QMcpCallToolResultContent> &content) {
-                QMcpCallToolResult result;
-                result.setContent(content);
-                return result;
-            });
+            convertedArgs.append(value);
         }
+
+        if (convertedArgs.count() != canonicalMethod.parameterCount())
+            break;
+
+        // Invoke the method and get the QFuture.
+        QFuture<QList<QMcpCallToolResultContent>> resultFuture;
+        invokeMethod(pair.second, canonicalMethod, convertedArgs, &resultFuture);
+
+        // Progress notifications were previously wired up via QFutureWatcher,
+        // but its progressValueChanged/progressRangeChanged signals are
+        // emitted from the event loop *after* the call to setFuture(), and
+        // include a trailing notification once the future finishes. That
+        // trailing notification lands on the client after the tool response
+        // has been delivered, at which point strict clients (Claude Code)
+        // have already resolved the progress token and close the STDIO
+        // session when they see a notification for an unknown token.
+        //
+        // Until we expose an explicit progress reporting API that tools can
+        // drive synchronously, simply drop the progressToken: MCP allows the
+        // server to omit progress notifications, and no current tool emits
+        // meaningful progress anyway.
+        Q_UNUSED(progressToken);
+
+        return resultFuture.then([](const QList<QMcpCallToolResultContent> &content) {
+            QMcpCallToolResult result;
+            result.setContent(content);
+            return result;
+        });
     }
 
     // If no async tool found, try sync callTool and wrap result

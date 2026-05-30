@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include <QtCore/QEventLoop>
+#include <QtCore/QFuture>
 #include <QtCore/QJsonObject>
+#include <QtCore/QPromise>
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtCore/QUuid>
@@ -17,9 +19,33 @@
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
 #include <QtMcpCommon/QMcpAnnotated>
+#include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtMcpServer/QMcpServer>
 #include <QtMcpServer/QMcpServerSession>
+
+namespace {
+QFuture<QList<QMcpCallToolResultContent>> readyTextResult(const QString &text)
+{
+    QPromise<QList<QMcpCallToolResultContent>> promise;
+    promise.start();
+    promise.addResult({QMcpTextContent(text)});
+    promise.finish();
+    return promise.future();
+}
+
+class AsyncToolSet : public QObject
+{
+    Q_OBJECT
+public:
+    Q_INVOKABLE QFuture<QList<QMcpCallToolResultContent>>
+    sparseOptionalArguments(const QString &prefix, const QString &middle = {},
+                            const QString &suffix = {})
+    {
+        return readyTextResult(prefix + u"|" + middle + u"|" + suffix);
+    }
+};
+} // namespace
 
 class tst_QMcpServerSession : public QObject
 {
@@ -59,6 +85,7 @@ private slots:
     // Tool management
     void testTools();
     void testCallTool();
+    void testCallToolAsyncSparseOptionalArguments();
 
     // Root management
     void testRoots();
@@ -313,6 +340,25 @@ void tst_QMcpServerSession::testCallTool()
     auto result = m_session->callTool(QStringLiteral("test"), params, &ok);
     QVERIFY(!ok); // Should fail as no tools are registered
     QVERIFY(result.isEmpty());
+}
+
+void tst_QMcpServerSession::testCallToolAsyncSparseOptionalArguments()
+{
+    AsyncToolSet toolSet;
+    m_session->registerToolSet(&toolSet);
+
+    QJsonObject params;
+    params.insert(QStringLiteral("prefix"), QStringLiteral("first"));
+    params.insert(QStringLiteral("suffix"), QStringLiteral("last"));
+
+    auto future =
+        m_session->callToolAsync(QStringLiteral("sparseOptionalArguments"), params);
+    future.waitForFinished();
+
+    const auto result = future.result();
+    QVERIFY(!result.isError());
+    QCOMPARE(result.content().size(), 1);
+    QCOMPARE(result.content().first().textContent().text(), QStringLiteral("first||last"));
 }
 
 void tst_QMcpServerSession::testRoots()
