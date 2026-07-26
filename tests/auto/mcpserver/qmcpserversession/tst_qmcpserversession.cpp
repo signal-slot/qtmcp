@@ -63,6 +63,9 @@ private slots:
     // Root management
     void testRoots();
 
+    // *ListChanged notification gating
+    void testListChangedNotificationsSuppressedBeforeInitialization();
+
 private:
     static const int TIMEOUT = 1000; // 1 second
     QMcpServerSession *m_session = nullptr;
@@ -236,6 +239,10 @@ void tst_QMcpServerSession::testResourceOperations()
     textContent.setText(QStringLiteral("Test content"));
     QMcpReadResourceResultContents content(textContent);
 
+    // *ListChanged notifications are only sent once the session is
+    // initialized; see testListChangedNotificationsSuppressedBeforeInitialization().
+    m_session->setInitialized(true);
+
     QSignalSpy resourceListSpy(m_session, &QMcpServerSession::resourceListChanged);
     m_session->appendResource(resource, content);
 
@@ -273,6 +280,10 @@ void tst_QMcpServerSession::testPromptOperations()
     QMcpPromptMessage message;
     message.setRole(QMcpRole::user);
     message.setContent(QMcpTextContent("Test message"_L1));
+
+    // *ListChanged notifications are only sent once the session is
+    // initialized; see testListChangedNotificationsSuppressedBeforeInitialization().
+    m_session->setInitialized(true);
 
     QSignalSpy promptListSpy(m_session, &QMcpServerSession::promptListChanged);
     m_session->appendPrompt(prompt, message);
@@ -331,6 +342,49 @@ void tst_QMcpServerSession::testRoots()
     QCOMPARE(roots.size(), 1);
     QCOMPARE(roots.first().name(), QStringLiteral("test"));
     QCOMPARE(rootsSpy.count(), 1);
+}
+
+// Registrations made before the client has completed the initialize
+// handshake (e.g. tools registered by the server right after construction)
+// must not schedule a *ListChanged notification: the client has not
+// requested a list yet, so there is nothing for it to have changed relative
+// to, and sending one anyway raced the handshake in practice, occasionally
+// delivering a notification (which carries no request id) in between two
+// unrelated responses on the wire.
+void tst_QMcpServerSession::testListChangedNotificationsSuppressedBeforeInitialization()
+{
+    QVERIFY(!m_session->isInitialized());
+
+    QSignalSpy resourceListSpy(m_session, &QMcpServerSession::resourceListChanged);
+    QSignalSpy promptListSpy(m_session, &QMcpServerSession::promptListChanged);
+
+    QMcpResource resource;
+    resource.setUri(QUrl(QStringLiteral("test://resource")));
+    resource.setName(QStringLiteral("Test Resource"));
+    QMcpTextResourceContents textContent;
+    textContent.setMimeType(QStringLiteral("text/plain"));
+    textContent.setText(QStringLiteral("Test content"));
+    m_session->appendResource(resource, QMcpReadResourceResultContents(textContent));
+
+    QMcpPrompt prompt;
+    prompt.setName(QStringLiteral("test"));
+    QMcpPromptMessage message;
+    message.setRole(QMcpRole::user);
+    message.setContent(QMcpTextContent("Test message"_L1));
+    m_session->appendPrompt(prompt, message);
+
+    QTest::qWait(10);
+    QCOMPARE(resourceListSpy.count(), 0);
+    QCOMPARE(promptListSpy.count(), 0);
+
+    // Once initialized, the same operations do notify.
+    m_session->setInitialized(true);
+    m_session->appendResource(resource, QMcpReadResourceResultContents(textContent));
+    m_session->appendPrompt(prompt, message);
+
+    QTest::qWait(10);
+    QCOMPARE(resourceListSpy.count(), 1);
+    QCOMPARE(promptListSpy.count(), 1);
 }
 
 QTEST_MAIN(tst_QMcpServerSession)
