@@ -42,7 +42,7 @@ public:
     sparseOptionalArguments(const QString &prefix, const QString &middle = {},
                             const QString &suffix = {})
     {
-        return readyTextResult(prefix + u"|" + middle + u"|" + suffix);
+        return readyTextResult(prefix + u'|' + middle + u'|' + suffix);
     }
 };
 } // namespace

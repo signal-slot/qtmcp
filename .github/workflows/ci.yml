@@ -51,6 +51,21 @@ jobs:
           install-deps: 'true'
           aqtsource: ${{ matrix.aqtsource }}
 
+      # Qt 6.8's FindWrapOpenGL.cmake links WrapOpenGL against AGL, which
+      # Xcode 26.5 no longer ships, so linking fails with
+      # "ld: framework 'AGL' not found". Qt 6.9+ dropped the AGL linkage;
+      # delete it here regardless of whether find_library(AGL) still finds
+      # a leftover framework directory in the SDK.
+      - name: Drop AGL linkage from FindWrapOpenGL.cmake
+        if: runner.os == 'macOS'
+        run: |
+          f="$QT_ROOT_DIR/lib/cmake/Qt6/FindWrapOpenGL.cmake"
+          sed -i '' '/{__opengl_agl_fw_path})/d' "$f"
+          echo "--- remaining AGL references ---"
+          grep -n "AGL" "$f" || true
+          echo "--- AGL in SDK ---"
+          ls "$(xcrun --show-sdk-path)/System/Library/Frameworks" | grep -i agl || echo "none"
+
       - name: setup MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
