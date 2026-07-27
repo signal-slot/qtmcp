@@ -51,6 +51,15 @@ jobs:
           install-deps: 'true'
           aqtsource: ${{ matrix.aqtsource }}
 
+      # Qt 6.8's FindWrapOpenGL.cmake falls back to a hard-coded
+      # "-framework AGL" when find_library(AGL) fails. Xcode 26.5 removed
+      # the AGL framework from the macOS SDK, so that fallback breaks the
+      # link. Qt 6.9+ dropped the fallback; do the same for older Qt.
+      - name: Drop AGL fallback from FindWrapOpenGL.cmake
+        if: runner.os == 'macOS'
+        run: |
+          sed -i '' 's/set(__opengl_agl_fw_path "-framework AGL")//' "$QT_ROOT_DIR/lib/cmake/Qt6/FindWrapOpenGL.cmake"
+
       - name: setup MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
