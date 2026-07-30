@@ -67,6 +67,13 @@
           <property name="text">
            <string>2025-03-26</string>
           </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="clientProtocolVersion20250618">
+          <property name="text">
+           <string>2025-06-18</string>
+          </property>
           <property name="checked">
            <bool>true</bool>
           </property>

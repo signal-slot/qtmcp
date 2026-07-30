@@ -31,6 +31,7 @@ private slots:
     void testSpecificVersionNegotiation_data();
     void testSpecificVersionNegotiation();
     void testUnsupportedVersionFallback();
+    void testDowngradeNegotiation();
 
 private:
     QMcpServer *m_server = nullptr;
@@ -48,8 +49,8 @@ void tst_VersionNegotiation::init()
     m_server = new QMcpServer("sse", this);
 
     // Set supported protocol versions
-    m_server->setSupportedProtocolVersions({QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2024_11_05});
-    m_server->setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26); // Default to latest version
+    m_server->setSupportedProtocolVersions({QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2024_11_05});
+    m_server->setProtocolVersion(QtMcp::ProtocolVersion::v2025_06_18); // Default to latest version
 
     // Start the server with specific address
     m_server->start("127.0.0.1:10101");
@@ -138,7 +139,8 @@ void tst_VersionNegotiation::testSpecificVersionNegotiation_data()
     QTest::addColumn<QtMcp::ProtocolVersion>("requestedVersion");
     QTest::addColumn<QtMcp::ProtocolVersion>("expectedVersion");
 
-    QTest::newRow("Latest version") << QtMcp::ProtocolVersion::v2025_03_26 << QtMcp::ProtocolVersion::v2025_03_26;
+    QTest::newRow("Latest version") << QtMcp::ProtocolVersion::v2025_06_18 << QtMcp::ProtocolVersion::v2025_06_18;
+    QTest::newRow("2025-03-26") << QtMcp::ProtocolVersion::v2025_03_26 << QtMcp::ProtocolVersion::v2025_03_26;
     QTest::newRow("Old version") << QtMcp::ProtocolVersion::v2024_11_05 << QtMcp::ProtocolVersion::v2024_11_05;
 }
 
@@ -168,13 +170,29 @@ void tst_VersionNegotiation::testUnsupportedVersionFallback()
 
     const auto clientProtocolVersion = connectClientServer();
 
-    // Server should fall back to the latest supported version
-    QCOMPARE(clientProtocolVersion, QtMcp::ProtocolVersion::v2025_03_26);
+    // Unknown version strings map to Latest on the client, which the server supports
+    QCOMPARE(clientProtocolVersion, QtMcp::ProtocolVersion::Latest);
 
     // Verify the server session uses the latest supported version as fallback
     QMcpServerSession *session = getServerSession();
     QVERIFY(session);
     QCOMPARE(session->protocolVersion(), clientProtocolVersion);
+}
+
+void tst_VersionNegotiation::testDowngradeNegotiation()
+{
+    // The server only supports older revisions; a client requesting a newer
+    // one must be offered the newest version the server supports.
+    m_server->setSupportedProtocolVersions({QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26});
+
+    m_client->setProtocolVersion(QtMcp::ProtocolVersion::v2025_06_18);
+
+    const auto clientProtocolVersion = connectClientServer();
+    QCOMPARE(clientProtocolVersion, QtMcp::ProtocolVersion::v2025_03_26);
+
+    QMcpServerSession *session = getServerSession();
+    QVERIFY(session);
+    QCOMPARE(session->protocolVersion(), QtMcp::ProtocolVersion::v2025_03_26);
 }
 
 QTEST_MAIN(tst_VersionNegotiation)

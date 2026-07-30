@@ -66,6 +66,7 @@ QMcpInitializeResult tst_QMcpClient::initialize()
     clientInfo.setVersion("1.0.0");
     params.setClientInfo(clientInfo);
     params.setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
+    request.setParams(params);
 
     m_client->request(request, [&](const QMcpInitializeResult &result, const QMcpJSONRPCErrorError *) {
         QMcpInitializedNotification notification;

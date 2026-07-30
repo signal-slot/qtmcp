@@ -46,6 +46,8 @@ InitializeWidget::Private::Private(::InitializeWidget *parent)
             params.setProtocolVersion(QtMcp::ProtocolVersion::v2024_11_05);
         else if (clientProtocolVersion20250326->isChecked())
             params.setProtocolVersion(QtMcp::ProtocolVersion::v2025_03_26);
+        else if (clientProtocolVersion20250618->isChecked())
+            params.setProtocolVersion(QtMcp::ProtocolVersion::v2025_06_18);
         request.setParams(params);
 
         auto settings = q->settings();
