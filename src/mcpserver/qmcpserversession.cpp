@@ -989,5 +989,23 @@ void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &para
     });
 }
 
+void QMcpServerSession::elicit(const QMcpElicitRequestParams &params)
+{
+    auto server = qobject_cast<QMcpServer *>(parent());
+    if (!server)
+        return;
+    if (protocolVersion() < QtMcp::ProtocolVersion::v2025_06_18) {
+        qWarning() << "elicitation/create requires MCP 2025-06-18 or later, session uses"
+                   << QtMcp::protocolVersionToString(protocolVersion());
+        return;
+    }
+    QMcpElicitRequest request;
+    request.setParams(params);
+    server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpElicitResult &result) {
+        Q_ASSERT(d->sessionId == sessionId);
+        emit elicitFinished(result);
+    });
+}
+
 
 QT_END_NAMESPACE

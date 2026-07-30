@@ -3,6 +3,7 @@
 
 #include "qmcpclientsse.h"
 
+#include <optional>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QLoggingCategory>
@@ -26,6 +27,7 @@ public:
     QUrl sse;
     QUrl message;
     QNetworkAccessManager networkAccessManager;
+    std::optional<QtMcp::ProtocolVersion> negotiatedProtocolVersion;
 private:
     QScopedPointer<QNetworkReply> eventStream;
 };
@@ -152,6 +154,13 @@ void QMcpClientSse::send(const QJsonObject &object)
     }
     QNetworkRequest request(d->message);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    // Since 2025-06-18 the spec requires the negotiated version on every
+    // subsequent HTTP request.
+    if (d->negotiatedProtocolVersion
+        && *d->negotiatedProtocolVersion >= QtMcp::ProtocolVersion::v2025_06_18) {
+        request.setRawHeader("MCP-Protocol-Version",
+                             QtMcp::protocolVersionToString(*d->negotiatedProtocolVersion).toLatin1());
+    }
 
     QJsonDocument doc(object);
     QByteArray data = doc.toJson(QJsonDocument::Compact);
@@ -172,6 +181,11 @@ void QMcpClientSse::send(const QJsonObject &object)
 void QMcpClientSse::notify(const QJsonObject &object)
 {
     send(object); // For SSE, notifications are sent the same way as regular messages
+}
+
+void QMcpClientSse::setNegotiatedProtocolVersion(QtMcp::ProtocolVersion protocolVersion)
+{
+    d->negotiatedProtocolVersion = protocolVersion;
 }
 
 QT_END_NAMESPACE

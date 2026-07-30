@@ -3,6 +3,7 @@
 
 #include "qmcpserver.h"
 #include "qmcpserversession.h"
+#include <algorithm>
 #include <QtCore/QMetaType>
 #include <QtCore/QPromise>
 #include <QtCore/private/qfactoryloader_p.h>
@@ -31,7 +32,7 @@ public:
     QMcpServerCapabilities capabilities;
     QString instructions;
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
-    QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26};
+    QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18};
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonValue(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
@@ -225,14 +226,14 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         QtMcp::ProtocolVersion requestedVersion = request.params().protocolVersion();
         QtMcp::ProtocolVersion negotiatedVersion;
 
-        // Check if requested version is supported
         if (supportedProtocolVersions().contains(requestedVersion)) {
             negotiatedVersion = requestedVersion;
         } else {
-            // If requested version is not supported, return an error
-            error->setCode(20241105);
-            error->setMessage("Protocol Version '%1' is not supported"_L1.arg(QtMcp::protocolVersionToString(requestedVersion)));
-            return result;
+            // The lifecycle spec requires responding with a version the server
+            // supports instead of erroring; the client decides whether to
+            // disconnect. Offer the newest supported version.
+            const auto versions = supportedProtocolVersions();
+            negotiatedVersion = *std::max_element(versions.cbegin(), versions.cend());
         }
 
         // Store the negotiated version in the session
@@ -505,12 +506,9 @@ bool QMcpServer::isProtocolVersionSupported(QtMcp::ProtocolVersion version) cons
 
 QtMcp::ProtocolVersion QMcpServer::versionToUse(const QUuid &session, QtMcp::ProtocolVersion defaultVersion) const
 {
-    // If defaultVersion is not Latest, use it directly
-    if (defaultVersion != QtMcp::ProtocolVersion::Latest) {
-        return defaultVersion;
-    }
-
-    // Try to find the session's negotiated version
+    // The version negotiated for the session is authoritative: messages on a
+    // session must always use the format the peer agreed to, so it takes
+    // precedence over any caller-supplied default.
     const auto sessions = this->sessions();
     for (const auto *s : sessions) {
         if (s->sessionId() == session) {
@@ -518,7 +516,10 @@ QtMcp::ProtocolVersion QMcpServer::versionToUse(const QUuid &session, QtMcp::Pro
         }
     }
 
-    // If session not found, use server's default protocol version
+    // No such session: honor an explicit override, then the server default
+    if (defaultVersion != QtMcp::ProtocolVersion::Latest) {
+        return defaultVersion;
+    }
     return protocolVersion();
 }
 

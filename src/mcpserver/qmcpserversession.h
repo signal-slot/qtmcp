@@ -14,6 +14,8 @@
 #include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpCreateMessageRequestParams>
 #include <QtMcpCommon/QMcpCreateMessageResult>
+#include <QtMcpCommon/QMcpElicitRequestParams>
+#include <QtMcpCommon/QMcpElicitResult>
 #include <QtMcpCommon/QMcpPrompt>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
@@ -236,6 +238,10 @@ public slots:
 
     void createMessage(const QMcpCreateMessageRequestParams &params);
 
+    // Requires a client that negotiated MCP 2025-06-18 or later with the
+    // elicitation capability.
+    void elicit(const QMcpElicitRequestParams &params);
+
 signals:
     void initializedChanged(bool initialized);
     void resourceUpdated(const QMcpResource &resource);
@@ -244,6 +250,7 @@ signals:
     void toolListChanged();
     void rootsChanged(const QList<QMcpRoot> &roots);
     void createMessageFinished(const QMcpCreateMessageResult &result);
+    void elicitFinished(const QMcpElicitResult &result);
 
 private:
     class Private;

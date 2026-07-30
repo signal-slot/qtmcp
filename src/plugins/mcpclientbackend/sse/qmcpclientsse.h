@@ -22,6 +22,7 @@ public slots:
     void start(const QString &server) override;
     void send(const QJsonObject &object) override;
     void notify(const QJsonObject &object) override;
+    void setNegotiatedProtocolVersion(QtMcp::ProtocolVersion protocolVersion) override;
 
 private:
     class Private;

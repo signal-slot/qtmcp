@@ -18,7 +18,7 @@ class QMcpClient::Private
 {
 public:
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
-    const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26};
+    const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18};
 
     Private(const QString &type, QMcpClient *parent)
         : q(parent)
@@ -180,7 +180,16 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
                 // Convert to enum first
                 QtMcp::ProtocolVersion serverVersion = QtMcp::stringToProtocolVersion(serverVersionStr);
                 if (d->supportedVersions.contains(serverVersion)) {
-                    d->protocolVersion = serverVersion;
+                    setProtocolVersion(serverVersion);
+                    // Let the transport embed the negotiated version where its
+                    // protocol requires it, e.g. the MCP-Protocol-Version
+                    // header on HTTP (required since 2025-06-18).
+                    d->backend->setNegotiatedProtocolVersion(serverVersion);
+                } else {
+                    // The lifecycle spec says the client SHOULD disconnect
+                    // when it cannot support the server's version.
+                    qWarning() << "Server negotiated unsupported protocol version"
+                               << serverVersionStr << "- disconnecting is recommended";
                 }
             }
 
