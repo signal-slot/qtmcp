@@ -48,9 +48,8 @@ void tst_VersionNegotiation::init()
     // Set up the MCP server with sse backend
     m_server = new QMcpServer("sse", this);
 
-    // Set supported protocol versions
-    m_server->setSupportedProtocolVersions({QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2024_11_05});
-    m_server->setProtocolVersion(QtMcp::ProtocolVersion::v2025_06_18); // Default to latest version
+    // The server keeps its default supported version list, which covers every
+    // revision; tests that need a restricted server set their own list.
 
     // Start the server with specific address
     m_server->start("127.0.0.1:10101");
@@ -139,7 +138,8 @@ void tst_VersionNegotiation::testSpecificVersionNegotiation_data()
     QTest::addColumn<QtMcp::ProtocolVersion>("requestedVersion");
     QTest::addColumn<QtMcp::ProtocolVersion>("expectedVersion");
 
-    QTest::newRow("Latest version") << QtMcp::ProtocolVersion::v2025_06_18 << QtMcp::ProtocolVersion::v2025_06_18;
+    QTest::newRow("2025-11-25") << QtMcp::ProtocolVersion::v2025_11_25 << QtMcp::ProtocolVersion::v2025_11_25;
+    QTest::newRow("2025-06-18") << QtMcp::ProtocolVersion::v2025_06_18 << QtMcp::ProtocolVersion::v2025_06_18;
     QTest::newRow("2025-03-26") << QtMcp::ProtocolVersion::v2025_03_26 << QtMcp::ProtocolVersion::v2025_03_26;
     QTest::newRow("Old version") << QtMcp::ProtocolVersion::v2024_11_05 << QtMcp::ProtocolVersion::v2024_11_05;
 }

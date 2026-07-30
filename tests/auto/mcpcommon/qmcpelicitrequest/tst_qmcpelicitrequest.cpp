@@ -19,6 +19,7 @@ private slots:
     void copy_data();
     void copy();
     void method();
+    void urlMode();
 };
 
 void tst_QMcpElicitRequest::convert_data()
@@ -125,6 +126,29 @@ void tst_QMcpElicitRequest::convert_data()
             }}
         }}
     };
+
+    // In "url" mode the user is sent to a URL instead of being shown a form, so
+    // there is no requestedSchema.
+    QTest::newRow("url mode") << R"({
+        "id": "req-2",
+        "params": {
+            "mode": "url",
+            "message": "Sign in to continue",
+            "url": "https://example.invalid/consent",
+            "elicitationId": "elicit-1"
+        }
+    })"_ba
+    << QVariantMap {
+        { "id", "req-2"_L1 },
+        { "jsonrpc", "2.0"_L1 },
+        { "method", "elicitation/create"_L1 },
+        { "params", QVariantMap {
+            { "mode", "url"_L1 },
+            { "message", "Sign in to continue"_L1 },
+            { "url", "https://example.invalid/consent"_L1 },
+            { "elicitationId", "elicit-1"_L1 }
+        }}
+    };
 }
 
 void tst_QMcpElicitRequest::convert()
@@ -186,6 +210,61 @@ void tst_QMcpElicitRequest::method()
     // The method is constant and part of every serialization.
     const QMcpElicitRequest request;
     QCOMPARE(request.method(), "elicitation/create"_L1);
+}
+
+void tst_QMcpElicitRequest::urlMode()
+{
+    QMcpElicitRequestParams params;
+    params.setMode("url"_L1);
+    params.setMessage("Sign in to continue"_L1);
+    params.setUrl(QUrl("https://example.invalid/consent"_L1));
+    params.setElicitationId("elicit-1"_L1);
+
+    const auto latest = params.toJsonObject();
+    QCOMPARE(latest.value("mode"_L1).toString(), "url"_L1);
+    QCOMPARE(latest.value("url"_L1).toString(), "https://example.invalid/consent"_L1);
+    QCOMPARE(latest.value("elicitationId"_L1).toString(), "elicit-1"_L1);
+    // requestedSchema is a form mode member, even though it is REQUIRED there.
+    QVERIFY(!latest.contains("requestedSchema"_L1));
+
+    // The 2025-06-18 revision knows form elicitation only.
+    const auto old = params.toJsonObject(QtMcp::ProtocolVersion::v2025_06_18);
+    QVERIFY(!old.contains("mode"_L1));
+    QVERIFY(!old.contains("url"_L1));
+    QVERIFY(!old.contains("elicitationId"_L1));
+    QVERIFY(old.contains("requestedSchema"_L1));
+
+    // Parsing follows the same rules: without requestedSchema the object is a
+    // valid url mode request, but not a valid 2025-06-18 one.
+    const QJsonObject object {
+        { "mode"_L1, "url"_L1 },
+        { "message"_L1, "Sign in to continue"_L1 },
+        { "url"_L1, "https://example.invalid/consent"_L1 },
+        { "elicitationId"_L1, "elicit-1"_L1 },
+    };
+    QMcpElicitRequestParams parsed;
+    QVERIFY(parsed.fromJsonObject(object));
+    QCOMPARE(parsed.mode(), "url"_L1);
+    QCOMPARE(parsed.url(), QUrl("https://example.invalid/consent"_L1));
+    QCOMPARE(parsed.elicitationId(), "elicit-1"_L1);
+    QCOMPARE(parsed.toJsonObject(), object);
+
+    QMcpElicitRequestParams tooOld;
+    QVERIFY(!tooOld.fromJsonObject(object, QtMcp::ProtocolVersion::v2025_06_18));
+
+    // A form request keeps working, and mode defaults to "form".
+    QMcpElicitRequestParams form;
+    QVERIFY(form.fromJsonObject(QJsonObject {
+        { "message"_L1, "Confirm?"_L1 },
+        { "requestedSchema"_L1, QJsonObject {
+            { "type"_L1, "object"_L1 },
+            { "properties"_L1, QJsonObject {} },
+        }},
+    }));
+    QCOMPARE(form.mode(), "form"_L1);
+    QVERIFY(form.toJsonObject().contains("requestedSchema"_L1));
+    // "form" is the default, so it is not serialized.
+    QVERIFY(!form.toJsonObject().contains("mode"_L1));
 }
 
 QTEST_MAIN(tst_QMcpElicitRequest)
