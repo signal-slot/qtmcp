@@ -24,6 +24,17 @@ class Q_MCPCOMMON_EXPORT QMcpResult : public QMcpGadget
     Q_PROPERTY(QMcpResultMeta _meta READ meta WRITE setMeta)
     Q_PROPERTY(QJsonObject additionalProperties READ additionalProperties WRITE setAdditionalProperties)
 
+    /*!
+        \property QMcpResult::resultType
+        \brief The type of the result: "complete" for ordinary results,
+        "input_required" for multi round-trip interim results.
+
+        Required on the wire since MCP 2026-07-28; earlier revisions never
+        serialize it. A missing field on an incoming result means "complete".
+        \since MCP 2026-07-28
+    */
+    Q_PROPERTY(QString resultType READ resultType WRITE setResultType REQUIRED)
+
 public:
     QMcpResult() : QMcpGadget(new Private) {}
 protected:
@@ -48,14 +59,42 @@ public:
         d<Private>()->additionalProperties = props;
     }
 
+    QString resultType() const {
+        return d<Private>()->resultType;
+    }
+
+    void setResultType(const QString &resultType) {
+        if (this->resultType() == resultType) return;
+        d<Private>()->resultType = resultType;
+    }
+
+    bool fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) override {
+        // Even on 2026-07-28, where the field is mandatory, tolerate results
+        // of servers that omit it: the spec's compatibility rule is to treat
+        // an absent resultType as "complete".
+        if (protocolVersion >= QtMcp::ProtocolVersion::v2026_07_28 && !object.contains("resultType"_L1)) {
+            auto copy = object;
+            copy.insert("resultType"_L1, "complete"_L1);
+            return QMcpGadget::fromJsonObject(copy, protocolVersion);
+        }
+        return QMcpGadget::fromJsonObject(object, protocolVersion);
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
 
 protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "resultType")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2026_07_28;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
     struct Private : public QMcpGadget::Private {
         QMcpResultMeta _meta;
         QJsonObject additionalProperties;
+        QString resultType = QStringLiteral("complete");
 
         Private *clone() const override { return new Private(*this); }
     };
