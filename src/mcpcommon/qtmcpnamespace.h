@@ -16,8 +16,9 @@ enum class ProtocolVersion {
     v2024_11_05 = 20241105,
     v2025_03_26 = 20250326,
     v2025_06_18 = 20250618,
+    v2025_11_25 = 20251125,
 
-    Latest = v2025_06_18
+    Latest = v2025_11_25
 };
 
 // Convert protocol version enum to string
@@ -28,8 +29,10 @@ inline QString protocolVersionToString(ProtocolVersion version) {
     case ProtocolVersion::v2025_03_26:
         return QStringLiteral("2025-03-26");
     case ProtocolVersion::v2025_06_18:
-    default:
         return QStringLiteral("2025-06-18");
+    case ProtocolVersion::v2025_11_25:
+    default:
+        return QStringLiteral("2025-11-25");
     }
 }
 
@@ -41,6 +44,8 @@ inline ProtocolVersion stringToProtocolVersion(const QString &versionStr) {
         return ProtocolVersion::v2025_03_26;
     else if (versionStr == QLatin1String("2025-06-18"))
         return ProtocolVersion::v2025_06_18;
+    else if (versionStr == QLatin1String("2025-11-25"))
+        return ProtocolVersion::v2025_11_25;
     else
         return ProtocolVersion::Latest; // Default to latest for unknown values
 }
