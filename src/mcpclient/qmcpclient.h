@@ -351,6 +351,22 @@ signals:
     void protocolVersionChanged(QtMcp::ProtocolVersion protocolVersion);
 
     /*!
+        Emitted when a request returns a multi round-trip interim result
+        (resultType "input_required", MCP 2026-07-28).
+
+        The pending request is not complete: fulfill the input requests in
+        \a interimResult and retry the original request with inputResponses
+        and the returned requestState. The callback passed to the original
+        request() is not invoked for interim results; the retried request
+        delivers the final result to its own callback.
+
+        \param requestId The JSON-RPC id of the request that returned the interim result
+        \param interimResult The raw interim result carrying inputRequests and requestState
+        \since MCP 2026-07-28
+    */
+    void inputRequired(const QJsonValue &requestId, const QJsonObject &interimResult);
+
+    /*!
         Emitted when the client has successfully started.
     */
     void started();

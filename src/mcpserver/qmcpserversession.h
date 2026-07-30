@@ -16,6 +16,7 @@
 #include <QtMcpCommon/QMcpCreateMessageResult>
 #include <QtMcpCommon/QMcpElicitRequestParams>
 #include <QtMcpCommon/QMcpElicitResult>
+#include <QtMcpCommon/QMcpSubscriptionFilter>
 #include <QtMcpCommon/QMcpPrompt>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
@@ -241,6 +242,13 @@ public slots:
     // Requires a client that negotiated MCP 2025-06-18 or later with the
     // elicitation capability.
     void elicit(const QMcpElicitRequestParams &params);
+
+    // subscriptions/listen opt-ins (2026-07-28). Sessions on that revision
+    // only receive the change notifications they subscribed to.
+    bool hasListenSubscriptions() const;
+    QMcpSubscriptionFilter listenSubscriptions() const;
+    void setListenSubscriptions(const QMcpSubscriptionFilter &filter);
+    QString listenSubscriptionId() const;
 
 signals:
     void initializedChanged(bool initialized);

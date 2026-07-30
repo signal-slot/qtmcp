@@ -94,6 +94,10 @@ public:
     QList<QMcpRoot> roots;
     QMultiHash<QUrl, QUrl> subscriptions;
 
+    bool listenSubscribed = false;
+    QMcpSubscriptionFilter listenFilter;
+    QString listenSubscriptionId;
+
     QTimer notifyResourceListChanged;
     QTimer notifyPromptListChanged;
     QTimer notifyToolListChanged;
@@ -148,6 +152,29 @@ void QMcpServerSession::setProtocolVersion(const QString &protocolVersionStr)
 
     // Use the enum-based method
     setProtocolVersion(version);
+}
+
+bool QMcpServerSession::hasListenSubscriptions() const
+{
+    return d->listenSubscribed;
+}
+
+QMcpSubscriptionFilter QMcpServerSession::listenSubscriptions() const
+{
+    return d->listenFilter;
+}
+
+void QMcpServerSession::setListenSubscriptions(const QMcpSubscriptionFilter &filter)
+{
+    d->listenSubscribed = true;
+    d->listenFilter = filter;
+    if (d->listenSubscriptionId.isEmpty())
+        d->listenSubscriptionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+QString QMcpServerSession::listenSubscriptionId() const
+{
+    return d->listenSubscriptionId;
 }
 
 bool QMcpServerSession::isInitialized() const
@@ -982,6 +1009,11 @@ void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &para
     auto server = qobject_cast<QMcpServer *>(parent());
     if (!server)
         return;
+    if (protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "sampling/createMessage was removed in MCP 2026-07-28;"
+                   << "return an input_required result (MRTR) instead";
+        return;
+    }
     QMcpCreateMessageRequest request;
     request.setParams(params);
     server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
@@ -998,6 +1030,11 @@ void QMcpServerSession::elicit(const QMcpElicitRequestParams &params)
     if (protocolVersion() < QtMcp::ProtocolVersion::v2025_06_18) {
         qWarning() << "elicitation/create requires MCP 2025-06-18 or later, session uses"
                    << QtMcp::protocolVersionToString(protocolVersion());
+        return;
+    }
+    if (protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "elicitation/create was removed in MCP 2026-07-28;"
+                   << "return an input_required result (MRTR) instead";
         return;
     }
     QMcpElicitRequest request;

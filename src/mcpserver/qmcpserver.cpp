@@ -19,12 +19,27 @@ QT_BEGIN_NAMESPACE
 Q_GLOBAL_STATIC_WITH_ARGS(QFactoryLoader, backendLoader,
                           (QMcpServerBackendPluginFactoryInterface_iid, "/mcpserverbackend"_L1, Qt::CaseInsensitive))
 
+// Methods a 2026-07-28 session must reject with -32601: ping and
+// logging/setLevel were dropped, resources/(un)subscribe were replaced by
+// subscriptions/listen.
+static const QStringList &methodsRemovedIn2026_07_28()
+{
+    static const QStringList methods = {
+        "ping"_L1,
+        "logging/setLevel"_L1,
+        "resources/subscribe"_L1,
+        "resources/unsubscribe"_L1,
+    };
+    return methods;
+}
+
 class QMcpServer::Private
 {
 public:
     Private(const QString &type, QMcpServer *parent);
 
     QMcpServerSession *findSession(const QUuid &sessionId, bool isInitialized, QMcpJSONRPCErrorError *error = nullptr) const;
+    void sendTaggedNotification(QMcpServerSession *session, const QMcpNotification &notification) const;
 private:
     QMcpServer *q;
 public:
@@ -32,7 +47,7 @@ public:
     QMcpServerCapabilities capabilities;
     QString instructions;
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
-    QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_11_25};
+    QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_11_25, QtMcp::ProtocolVersion::v2026_07_28};
     QHash<QUuid, QHash<QJsonValue, std::function<void(const QUuid &session, const QJsonObject &)>>> callbacks;
     QHash<QString, std::function<QJsonValue(const QUuid &, const QJsonObject&, QMcpJSONRPCErrorError *)>> requestHandlers;
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
@@ -84,9 +99,24 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
 #endif
 
         sessions.insert(sessionId, session);
+        // On sessions before 2026-07-28 change notifications flow freely once
+        // the session is initialized; since 2026-07-28 they only go to clients
+        // that opted in via subscriptions/listen, tagged with the
+        // subscription id.
         connect(session, &QMcpServerSession::resourceUpdated, q, [this, session](const QMcpResource &resource) {
             if (!session->isInitialized()) return;
             const auto uri = resource.uri();
+            if (session->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                if (!session->hasListenSubscriptions()
+                    || !session->listenSubscriptions().resourceSubscriptions().contains(uri.toString()))
+                    return;
+                QMcpResourceUpdatedNotification notification;
+                auto params = notification.params();
+                params.setUri(uri);
+                notification.setParams(params);
+                sendTaggedNotification(session, notification);
+                return;
+            }
             if (session->isSubscribed(uri)) {
                 QMcpResourceUpdatedNotification notification;
                 auto params = notification.params();
@@ -98,16 +128,31 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
         connect(session, &QMcpServerSession::resourceListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpResourceListChangedNotification notification;
+            if (session->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                if (session->hasListenSubscriptions() && session->listenSubscriptions().resourcesListChanged())
+                    sendTaggedNotification(session, notification);
+                return;
+            }
             q->notify(session->sessionId(), notification, session->protocolVersion());
         });
         connect(session, &QMcpServerSession::promptListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpPromptListChangedNotification notification;
+            if (session->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                if (session->hasListenSubscriptions() && session->listenSubscriptions().promptsListChanged())
+                    sendTaggedNotification(session, notification);
+                return;
+            }
             q->notify(session->sessionId(), notification, session->protocolVersion());
         });
         connect(session, &QMcpServerSession::toolListChanged, q, [this, session]() {
             if (!session->isInitialized()) return;
             QMcpToolListChangedNotification notification;
+            if (session->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                if (session->hasListenSubscriptions() && session->listenSubscriptions().toolsListChanged())
+                    sendTaggedNotification(session, notification);
+                return;
+            }
             q->notify(session->sessionId(), notification, session->protocolVersion());
         });
 
@@ -134,9 +179,36 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
         if (object.contains("method"_L1)) {
             const auto method = object.value("method"_L1).toString();
 
+            // Stateless lifecycle (2026-07-28): instead of an initialize
+            // handshake, every request carries the protocol version in its
+            // params _meta. The first such request initializes the session.
+            const auto requestMeta = object.value("params"_L1).toObject().value("_meta"_L1).toObject();
+            const auto metaVersion = requestMeta.value("io.modelcontextprotocol/protocolVersion"_L1).toString();
+            if (!metaVersion.isEmpty()) {
+                const auto version = QtMcp::stringToProtocolVersion(metaVersion);
+                if (version >= QtMcp::ProtocolVersion::v2026_07_28 && q->isProtocolVersionSupported(version)) {
+                    if (auto *sessionObj = sessions.value(session); sessionObj && !sessionObj->isInitialized()) {
+                        sessionObj->setProtocolVersion(version);
+                        sessionObj->setInitialized(true);
+                    }
+                }
+            }
+
             // request
             if (object.contains("id"_L1)) {
                 const auto id = object.value("id"_L1);
+                const auto sessionForMethod = sessions.value(session);
+                if (sessionForMethod && sessionForMethod->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28
+                    && methodsRemovedIn2026_07_28().contains(method)) {
+                    QMcpJSONRPCError response;
+                    response.setId(id.toVariant());
+                    auto error = response.error();
+                    error.setCode(-32601);
+                    error.setMessage("Method '%1' was removed in MCP 2026-07-28"_L1.arg(method));
+                    response.setError(error);
+                    q->send(session, response.toJsonObject(sessionForMethod->protocolVersion()));
+                    return;
+                }
                 if (requestHandlers.contains(method)) {
                     const auto handler = requestHandlers.value(method);
                     QMcpJSONRPCErrorError error;
@@ -153,10 +225,20 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                         QMcpJSONRPCResponse response;
                         response.setId(id);
                         auto sessionObj = sessions.value(session);
-                        auto object = response.toJsonObject(sessionObj ?
-                                     sessionObj->protocolVersion() :
-                                     protocolVersion);
-                        object.insert("result"_L1, result.toObject());
+                        const auto version = sessionObj ? sessionObj->protocolVersion() : protocolVersion;
+                        auto object = response.toJsonObject(version);
+                        auto resultObject = result.toObject();
+                        if (version >= QtMcp::ProtocolVersion::v2026_07_28) {
+                            // Since 2026-07-28 the server identifies itself in
+                            // every result instead of only in initialize.
+                            auto resultMeta = resultObject.value("_meta"_L1).toObject();
+                            QJsonObject serverInfo;
+                            serverInfo.insert("name"_L1, QCoreApplication::applicationName());
+                            serverInfo.insert("version"_L1, QCoreApplication::applicationVersion());
+                            resultMeta.insert("io.modelcontextprotocol/serverInfo"_L1, serverInfo);
+                            resultObject.insert("_meta"_L1, resultMeta);
+                        }
+                        object.insert("result"_L1, resultObject);
                         q->send(session, object);
                     }
                 } else {
@@ -175,6 +257,15 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             }
 
             // notification
+            if (method == "notifications/roots/list_changed"_L1) {
+                // Removed in 2026-07-28 together with the other
+                // server-initiated request flows; ignore it there.
+                const auto sessionObj = sessions.value(session);
+                if (sessionObj && sessionObj->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                    qWarning() << method << "was removed in MCP 2026-07-28, ignoring";
+                    return;
+                }
+            }
             if (notificationHandlers.contains(method)) {
                 const auto handlers = notificationHandlers.values(method);
                 for (auto &handler : handlers) {
@@ -186,6 +277,19 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
 
         qWarning() << "not handled" << object;
     });
+}
+
+// Sends a notification on a 2026-07-28 subscriptions/listen stream, tagged
+// with the session's subscription id as the spec requires.
+void QMcpServer::Private::sendTaggedNotification(QMcpServerSession *session, const QMcpNotification &notification) const
+{
+    auto object = notification.toJsonObject(session->protocolVersion());
+    auto params = object.value("params"_L1).toObject();
+    auto meta = params.value("_meta"_L1).toObject();
+    meta.insert("io.modelcontextprotocol/subscriptionId"_L1, session->listenSubscriptionId());
+    params.insert("_meta"_L1, meta);
+    object.insert("params"_L1, params);
+    q->send(session->sessionId(), object);
 }
 
 QMcpServerSession *QMcpServer::Private::findSession(const QUuid &sessionId, bool isInitialized, QMcpJSONRPCErrorError *error) const
@@ -256,6 +360,36 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         if (!session)
             return;
         session->setInitialized(true);
+    });
+    // Mandatory since 2026-07-28, but answered on every session: it is the
+    // version probe a client may send before knowing what the server speaks.
+    addRequestHandler([this](const QUuid &sessionId, const QMcpDiscoverRequest &request, QMcpJSONRPCErrorError *error) {
+        Q_UNUSED(sessionId);
+        Q_UNUSED(request);
+        Q_UNUSED(error);
+        QMcpDiscoverResult result;
+        QList<QString> versions;
+        const auto supported = supportedProtocolVersions();
+        for (const auto version : supported)
+            versions.append(QtMcp::protocolVersionToString(version));
+        result.setSupportedVersions(versions);
+        result.setCapabilities(d->capabilities);
+        result.setInstructions(d->instructions);
+        return result;
+    });
+    addRequestHandler([this](const QUuid &sessionId, const QMcpSubscriptionsListenRequest &request, QMcpJSONRPCErrorError *error) {
+        QMcpSubscriptionsListenResult result;
+        auto session = d->findSession(sessionId, true, error);
+        if (!session)
+            return result;
+        session->setListenSubscriptions(request.params().notifications());
+
+        QMcpSubscriptionsAcknowledgedNotification acknowledged;
+        auto params = acknowledged.params();
+        params.setNotifications(session->listenSubscriptions());
+        acknowledged.setParams(params);
+        d->sendTaggedNotification(session, acknowledged);
+        return result;
     });
 
     addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {
