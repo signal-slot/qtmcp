@@ -195,6 +195,15 @@ public:
     virtual const QMetaObject* metaObject() const { return &staticMetaObject; }
 
 protected:
+    // Returns false when the named property does not exist in the given
+    // protocol revision. Unavailable properties are dropped by toJsonObject()
+    // and ignored by fromJsonObject(), including their REQUIRED check.
+    virtual bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const {
+        Q_UNUSED(name);
+        Q_UNUSED(protocolVersion);
+        return true;
+    }
+
     template<typename DerivedData>
     const DerivedData *d() const {
         const DerivedData *ret = static_cast<const DerivedData *>(data.constData());
