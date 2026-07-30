@@ -15,6 +15,8 @@ QT_BEGIN_NAMESPACE
     \brief The client's response to an elicitation request.
 
     This result has been introduced in the 2025-06-18 revision of the protocol.
+    The 2025-11-25 revision leaves action as it is and only widens content, see
+    the property documentation.
 */
 class Q_MCPCOMMON_EXPORT QMcpElicitResult : public QMcpResult
 {
@@ -36,7 +38,12 @@ class Q_MCPCOMMON_EXPORT QMcpElicitResult : public QMcpResult
         \property QMcpElicitResult::content
         \brief The submitted form data, only present when action is "accept".
 
-        Contains values matching the requested schema.
+        Contains values matching the requested schema: strings, integers and
+        booleans, and since MCP 2025-11-25 also arrays of strings for the
+        multi select enumeration schemas.
+
+        Empty for an elicitation whose QMcpElicitRequestParams::mode was "url":
+        the user answered out of band, so there is no form data to submit.
     */
     Q_PROPERTY(QJsonObject content READ content WRITE setContent)
 

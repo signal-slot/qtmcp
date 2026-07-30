@@ -4,29 +4,37 @@
 #ifndef QMCPSAMPLINGMESSAGECONTENT_H
 #define QMCPSAMPLINGMESSAGECONTENT_H
 
-#include <QtMcpCommon/qmcpmessagecontentbase.h>
+#include <QtMcpCommon/qmcpsamplingmessagecontentbase.h>
 
 QT_BEGIN_NAMESPACE
 
-class Q_MCPCOMMON_EXPORT QMcpSamplingMessageContent : public QMcpMessageContentBase
+class Q_MCPCOMMON_EXPORT QMcpSamplingMessageContent : public QMcpSamplingMessageContentBase
 {
     Q_GADGET
 public:
-    QMcpSamplingMessageContent() : QMcpMessageContentBase(new Private) {}
+    QMcpSamplingMessageContent() : QMcpSamplingMessageContentBase(new Private) {}
     QMcpSamplingMessageContent(const QMcpTextContent &textContent)
-        : QMcpMessageContentBase(new Private) { setTextContent(textContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setTextContent(textContent); }
     QMcpSamplingMessageContent(const QMcpImageContent &imageContent)
-        : QMcpMessageContentBase(new Private) { setImageContent(imageContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setImageContent(imageContent); }
     QMcpSamplingMessageContent(const QMcpAudioContent &audioContent)
-        : QMcpMessageContentBase(new Private) { setAudioContent(audioContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setAudioContent(audioContent); }
+    /*! \since MCP 2025-11-25 */
+    QMcpSamplingMessageContent(const QMcpToolUseContent &toolUse)
+        : QMcpSamplingMessageContentBase(new Private) { setToolUse(toolUse); }
+    /*! \since MCP 2025-11-25 */
+    QMcpSamplingMessageContent(const QMcpToolResultContent &toolResult)
+        : QMcpSamplingMessageContentBase(new Private) { setToolResult(toolResult); }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
 
 private:
-    struct Private : public QMcpMessageContentBase::Private {
+    struct Private : public QMcpSamplingMessageContentBase::Private {
         Private *clone() const override { return new Private(*this); }
+
+        // findPropertyIndex() is inherited from QMcpSamplingMessageContentBase::Private.
     };
 };
 

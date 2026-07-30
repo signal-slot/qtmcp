@@ -1,8 +1,8 @@
 // Copyright (C) 2025 Signal Slot Inc.
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#ifndef QMCPENUMSCHEMA_H
-#define QMCPENUMSCHEMA_H
+#ifndef QMCPUNTITLEDSINGLESELECTENUMSCHEMA_H
+#define QMCPUNTITLEDSINGLESELECTENUMSCHEMA_H
 
 #include <QtCore/QByteArray>
 #include <QtCore/QJsonObject>
@@ -12,14 +12,12 @@
 
 QT_BEGIN_NAMESPACE
 
-/*! \class QMcpEnumSchema
+/*! \class QMcpUntitledSingleSelectEnumSchema
     \inmodule QtMcpCommon
-    \brief A restricted JSON Schema for a value picked from a fixed set of strings.
+    \brief A restricted JSON Schema for one value picked from a fixed set of strings, without display titles.
 
-    This type is the LegacyTitledEnumSchema of the 2025-11-25 revision, which
-    that revision deprecates in favour of QMcpTitledSingleSelectEnumSchema
-    because enumNames is not part of JSON Schema 2020-12. It is still the only
-    enumeration schema of the 2025-06-18 revision, so it is kept as is.
+    The user picks exactly one of enumValues. Use
+    QMcpTitledSingleSelectEnumSchema when the options need a display label.
 
     \note The schema calls the properties holding the accepted values and the
     initial value "enum" and "default", which are C++ keywords and therefore
@@ -27,43 +25,37 @@ QT_BEGIN_NAMESPACE
     defaultValue instead and the JSON keys are translated by fromJsonObject()
     and toJsonObject().
 
-    \sa QMcpPrimitiveSchemaDefinition, QMcpTitledSingleSelectEnumSchema
+    \sa QMcpPrimitiveSchemaDefinition
+    \since MCP 2025-11-25
 */
-class Q_MCPCOMMON_EXPORT QMcpEnumSchema : public QMcpGadget
+class Q_MCPCOMMON_EXPORT QMcpUntitledSingleSelectEnumSchema : public QMcpGadget
 {
     Q_GADGET
 
     /*!
-        \property QMcpEnumSchema::defaultValue
+        \property QMcpUntitledSingleSelectEnumSchema::defaultValue
         \brief The value to be used unless the user picks another one.
 
         This property is serialized as "default".
-        \since MCP 2025-11-25
     */
     Q_PROPERTY(QString defaultValue READ defaultValue WRITE setDefaultValue)
 
     /*!
-        \property QMcpEnumSchema::description
+        \property QMcpUntitledSingleSelectEnumSchema::description
         \brief A human-readable description of the requested value.
     */
     Q_PROPERTY(QString description READ description WRITE setDescription)
 
     /*!
-        \property QMcpEnumSchema::enumNames
-        \brief Human-readable labels for enumValues, in the same order.
-    */
-    Q_PROPERTY(QList<QString> enumNames READ enumNames WRITE setEnumNames)
-
-    /*!
-        \property QMcpEnumSchema::enumValues
-        \brief The accepted values.
+        \property QMcpUntitledSingleSelectEnumSchema::enumValues
+        \brief The values to choose from.
 
         This property is serialized as "enum".
     */
     Q_PROPERTY(QList<QString> enumValues READ enumValues WRITE setEnumValues REQUIRED)
 
     /*!
-        \property QMcpEnumSchema::title
+        \property QMcpUntitledSingleSelectEnumSchema::title
         \brief A human-readable title of the requested value.
     */
     Q_PROPERTY(QString title READ title WRITE setTitle)
@@ -71,7 +63,7 @@ class Q_MCPCOMMON_EXPORT QMcpEnumSchema : public QMcpGadget
     Q_PROPERTY(QByteArray type READ type CONSTANT REQUIRED)
 
 public:
-    QMcpEnumSchema() : QMcpGadget(new Private) {}
+    QMcpUntitledSingleSelectEnumSchema() : QMcpGadget(new Private) {}
 
     QString defaultValue() const {
         return d<Private>()->defaultValue;
@@ -89,15 +81,6 @@ public:
     void setDescription(const QString &description) {
         if (this->description() == description) return;
         d<Private>()->description = description;
-    }
-
-    QList<QString> enumNames() const {
-        return d<Private>()->enumNames;
-    }
-
-    void setEnumNames(const QList<QString> &enumNames) {
-        if (this->enumNames() == enumNames) return;
-        d<Private>()->enumNames = enumNames;
     }
 
     QList<QString> enumValues() const {
@@ -135,13 +118,6 @@ public:
         return renamedKey(object, defaultPropertyKey(), defaultJsonKey());
     }
 
-protected:
-    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
-        if (name == "defaultValue")
-            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
-        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
-    }
-
 private:
     static QString enumJsonKey() { return QStringLiteral("enum"); }
     static QString enumPropertyKey() { return QStringLiteral("enumValues"); }
@@ -151,7 +127,6 @@ private:
     struct Private : public QMcpGadget::Private {
         QString defaultValue;
         QString description;
-        QList<QString> enumNames;
         QList<QString> enumValues;
         QString title;
 
@@ -159,8 +134,8 @@ private:
     };
 };
 
-Q_DECLARE_SHARED(QMcpEnumSchema)
+Q_DECLARE_SHARED(QMcpUntitledSingleSelectEnumSchema)
 
 QT_END_NAMESPACE
 
-#endif // QMCPENUMSCHEMA_H
+#endif // QMCPUNTITLEDSINGLESELECTENUMSCHEMA_H

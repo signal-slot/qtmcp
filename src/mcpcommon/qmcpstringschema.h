@@ -5,6 +5,7 @@
 #define QMCPSTRINGSCHEMA_H
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
 
@@ -14,11 +15,25 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief A restricted JSON Schema for a string value requested via elicitation.
 
+    \note The schema calls the property holding the initial value "default",
+    which is a C++ keyword and therefore cannot be used as a Q_PROPERTY name.
+    The property is named defaultValue instead and the JSON key is translated
+    by fromJsonObject() and toJsonObject().
+
     \sa QMcpPrimitiveSchemaDefinition
 */
 class Q_MCPCOMMON_EXPORT QMcpStringSchema : public QMcpGadget
 {
     Q_GADGET
+
+    /*!
+        \property QMcpStringSchema::defaultValue
+        \brief The value to be used unless the user enters another one.
+
+        This property is serialized as "default".
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QString defaultValue READ defaultValue WRITE setDefaultValue)
 
     /*!
         \property QMcpStringSchema::description
@@ -60,6 +75,15 @@ class Q_MCPCOMMON_EXPORT QMcpStringSchema : public QMcpGadget
 
 public:
     QMcpStringSchema() : QMcpGadget(new Private) {}
+
+    QString defaultValue() const {
+        return d<Private>()->defaultValue;
+    }
+
+    void setDefaultValue(const QString &defaultValue) {
+        if (this->defaultValue() == defaultValue) return;
+        d<Private>()->defaultValue = defaultValue;
+    }
 
     QString description() const {
         return d<Private>()->description;
@@ -112,8 +136,27 @@ public:
         return &staticMetaObject;
     }
 
+    bool fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) override {
+        return QMcpGadget::fromJsonObject(renamedKey(object, jsonKey(), propertyKey()), protocolVersion);
+    }
+
+    QJsonObject toJsonObject(QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest) const override {
+        return renamedKey(QMcpGadget::toJsonObject(protocolVersion), propertyKey(), jsonKey());
+    }
+
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "defaultValue")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
+    static QString jsonKey() { return QStringLiteral("default"); }
+    static QString propertyKey() { return QStringLiteral("defaultValue"); }
+
     struct Private : public QMcpGadget::Private {
+        QString defaultValue;
         QString description;
         QString format;
         int maxLength = 0;

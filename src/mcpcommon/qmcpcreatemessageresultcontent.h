@@ -4,29 +4,37 @@
 #ifndef QMCPCREATEMESSAGERESULTCONTENT_H
 #define QMCPCREATEMESSAGERESULTCONTENT_H
 
-#include <QtMcpCommon/qmcpmessagecontentbase.h>
+#include <QtMcpCommon/qmcpsamplingmessagecontentbase.h>
 
 QT_BEGIN_NAMESPACE
 
-class Q_MCPCOMMON_EXPORT QMcpCreateMessageResultContent : public QMcpMessageContentBase
+class Q_MCPCOMMON_EXPORT QMcpCreateMessageResultContent : public QMcpSamplingMessageContentBase
 {
     Q_GADGET
 public:
-    QMcpCreateMessageResultContent() : QMcpMessageContentBase(new Private) {}
+    QMcpCreateMessageResultContent() : QMcpSamplingMessageContentBase(new Private) {}
     QMcpCreateMessageResultContent(const QMcpTextContent &textContent)
-        : QMcpMessageContentBase(new Private) { setTextContent(textContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setTextContent(textContent); }
     QMcpCreateMessageResultContent(const QMcpImageContent &imageContent)
-        : QMcpMessageContentBase(new Private) { setImageContent(imageContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setImageContent(imageContent); }
     QMcpCreateMessageResultContent(const QMcpAudioContent &audioContent)
-        : QMcpMessageContentBase(new Private) { setAudioContent(audioContent); }
+        : QMcpSamplingMessageContentBase(new Private) { setAudioContent(audioContent); }
+    /*! \since MCP 2025-11-25 */
+    QMcpCreateMessageResultContent(const QMcpToolUseContent &toolUse)
+        : QMcpSamplingMessageContentBase(new Private) { setToolUse(toolUse); }
+    /*! \since MCP 2025-11-25 */
+    QMcpCreateMessageResultContent(const QMcpToolResultContent &toolResult)
+        : QMcpSamplingMessageContentBase(new Private) { setToolResult(toolResult); }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
 
 private:
-    struct Private : public QMcpMessageContentBase::Private {
+    struct Private : public QMcpSamplingMessageContentBase::Private {
         Private *clone() const override { return new Private(*this); }
+
+        // findPropertyIndex() is inherited from QMcpSamplingMessageContentBase::Private.
     };
 };
 

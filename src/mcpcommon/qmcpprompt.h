@@ -6,6 +6,7 @@
 
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qmcpicon.h>
 #include <QtMcpCommon/qmcppromptargument.h>
 #include <QtCore/QList>
 
@@ -32,6 +33,14 @@ class Q_MCPCOMMON_EXPORT QMcpPrompt : public QMcpGadget
     Q_PROPERTY(QString description READ description WRITE setDescription)
 
     /*!
+        \property QMcpPrompt::icons
+        \brief An optional set of sized icons that the client can display in a user interface.
+
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QList<QMcpIcon> icons READ icons WRITE setIcons)
+
+    /*!
         \property QMcpPrompt::name
         \brief The name of the prompt or prompt template.
     */
@@ -52,6 +61,7 @@ class Q_MCPCOMMON_EXPORT QMcpPrompt : public QMcpGadget
 public:
     QMcpPrompt() : QMcpGadget(new Private) {
         qRegisterMetaType<QMcpPromptArgument>();
+        qRegisterMetaType<QMcpIcon>();
     }
 
     QList<QMcpPromptArgument> arguments() const {
@@ -70,6 +80,15 @@ public:
     void setDescription(const QString &description) {
         if (this->description() == description) return;
         d<Private>()->description = description;
+    }
+
+    QList<QMcpIcon> icons() const {
+        return d<Private>()->icons;
+    }
+
+    void setIcons(const QList<QMcpIcon> &icons) {
+        if (this->icons() == icons) return;
+        d<Private>()->icons = icons;
     }
 
     QString name() const {
@@ -96,6 +115,8 @@ public:
 
 protected:
     bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "icons")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
         if (name == "title")
             return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
         return QMcpGadget::isPropertyAvailable(name, protocolVersion);
@@ -105,6 +126,7 @@ private:
     struct Private : public QMcpGadget::Private {
         QList<QMcpPromptArgument> arguments;
         QString description;
+        QList<QMcpIcon> icons;
         QString name;
         QString title;
 

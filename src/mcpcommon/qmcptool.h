@@ -4,8 +4,10 @@
 #ifndef QMCPTOOL_H
 #define QMCPTOOL_H
 
+#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qmcpicon.h>
 #include <QtMcpCommon/qmcptoolinputschema.h>
 #include <QtMcpCommon/qmcptooloutputschema.h>
 
@@ -24,6 +26,14 @@ class Q_MCPCOMMON_EXPORT QMcpTool : public QMcpGadget
         \brief A human-readable description of the tool.
     */
     Q_PROPERTY(QString description READ description WRITE setDescription)
+
+    /*!
+        \property QMcpTool::icons
+        \brief An optional set of sized icons that the client can display in a user interface.
+
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QList<QMcpIcon> icons READ icons WRITE setIcons)
 
     /*!
         \property QMcpTool::inputSchema
@@ -61,7 +71,9 @@ class Q_MCPCOMMON_EXPORT QMcpTool : public QMcpGadget
     Q_PROPERTY(QString title READ title WRITE setTitle)
 
 public:
-    QMcpTool() : QMcpGadget(new Private) {}
+    QMcpTool() : QMcpGadget(new Private) {
+        qRegisterMetaType<QMcpIcon>();
+    }
 
     QString description() const {
         return d<Private>()->description;
@@ -70,6 +82,15 @@ public:
     void setDescription(const QString &description) {
         if (this->description() == description) return;
         d<Private>()->description = description;
+    }
+
+    QList<QMcpIcon> icons() const {
+        return d<Private>()->icons;
+    }
+
+    void setIcons(const QList<QMcpIcon> &icons) {
+        if (this->icons() == icons) return;
+        d<Private>()->icons = icons;
     }
 
     QMcpToolInputSchema inputSchema() const {
@@ -114,6 +135,8 @@ public:
 
 protected:
     bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "icons")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
         if (name == "outputSchema" || name == "title")
             return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
         return QMcpGadget::isPropertyAvailable(name, protocolVersion);
@@ -122,6 +145,7 @@ protected:
 private:
     struct Private : public QMcpGadget::Private {
         QString description;
+        QList<QMcpIcon> icons;
         QMcpToolInputSchema inputSchema;
         QString name;
         QMcpToolOutputSchema outputSchema;

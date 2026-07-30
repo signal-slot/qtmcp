@@ -4,9 +4,11 @@
 #ifndef QMCPRESOURCETEMPLATE_H
 #define QMCPRESOURCETEMPLATE_H
 
+#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcpannotations.h>
+#include <QtMcpCommon/qmcpicon.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -27,6 +29,14 @@ class Q_MCPCOMMON_EXPORT QMcpResourceTemplate : public QMcpGadget
         This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
     */
     Q_PROPERTY(QString description READ description WRITE setDescription)
+
+    /*!
+        \property QMcpResourceTemplate::icons
+        \brief An optional set of sized icons that the client can display in a user interface.
+
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QList<QMcpIcon> icons READ icons WRITE setIcons)
 
     /*!
         \property QMcpResourceTemplate::mimeType
@@ -61,7 +71,9 @@ class Q_MCPCOMMON_EXPORT QMcpResourceTemplate : public QMcpGadget
     Q_PROPERTY(QString uriTemplate READ uriTemplate WRITE setUriTemplate REQUIRED)
 
 public:
-    QMcpResourceTemplate() : QMcpGadget(new Private) {}
+    QMcpResourceTemplate() : QMcpGadget(new Private) {
+        qRegisterMetaType<QMcpIcon>();
+    }
 
     QMcpAnnotations annotations() const {
         return d<Private>()->annotations;
@@ -79,6 +91,15 @@ public:
     void setDescription(const QString &description) {
         if (this->description() == description) return;
         d<Private>()->description = description;
+    }
+
+    QList<QMcpIcon> icons() const {
+        return d<Private>()->icons;
+    }
+
+    void setIcons(const QList<QMcpIcon> &icons) {
+        if (this->icons() == icons) return;
+        d<Private>()->icons = icons;
     }
 
     QString mimeType() const {
@@ -123,6 +144,8 @@ public:
 
 protected:
     bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "icons")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
         if (name == "title")
             return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
         return QMcpGadget::isPropertyAvailable(name, protocolVersion);
@@ -132,6 +155,7 @@ private:
     struct Private : public QMcpGadget::Private {
         QMcpAnnotations annotations;
         QString description;
+        QList<QMcpIcon> icons;
         QString mimeType;
         QString name;
         QString title;

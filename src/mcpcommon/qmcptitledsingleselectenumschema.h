@@ -1,47 +1,62 @@
 // Copyright (C) 2025 Signal Slot Inc.
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#ifndef QMCPBOOLEANSCHEMA_H
-#define QMCPBOOLEANSCHEMA_H
+#ifndef QMCPTITLEDSINGLESELECTENUMSCHEMA_H
+#define QMCPTITLEDSINGLESELECTENUMSCHEMA_H
 
 #include <QtCore/QByteArray>
 #include <QtCore/QJsonObject>
+#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
+#include <QtMcpCommon/qmcptitledsingleselectenumschemaoneof.h>
 
 QT_BEGIN_NAMESPACE
 
-/*! \class QMcpBooleanSchema
+/*! \class QMcpTitledSingleSelectEnumSchema
     \inmodule QtMcpCommon
-    \brief A restricted JSON Schema for a boolean value requested via elicitation.
+    \brief A restricted JSON Schema for one value picked from a fixed set of options, each with a display title.
+
+    The user picks exactly one of oneOf. This is the replacement for the
+    deprecated QMcpEnumSchema (LegacyTitledEnumSchema): instead of two parallel
+    lists it keeps every value together with its label, which JSON Schema
+    2020-12 allows.
 
     \note The schema calls the property holding the initial value "default",
     which is a C++ keyword and therefore cannot be used as a Q_PROPERTY name.
     The property is named defaultValue instead and the JSON key is translated
     by fromJsonObject() and toJsonObject().
 
-    \sa QMcpPrimitiveSchemaDefinition
+    \sa QMcpPrimitiveSchemaDefinition, QMcpEnumSchema
+    \since MCP 2025-11-25
 */
-class Q_MCPCOMMON_EXPORT QMcpBooleanSchema : public QMcpGadget
+class Q_MCPCOMMON_EXPORT QMcpTitledSingleSelectEnumSchema : public QMcpGadget
 {
     Q_GADGET
 
     /*!
-        \property QMcpBooleanSchema::defaultValue
+        \property QMcpTitledSingleSelectEnumSchema::defaultValue
         \brief The value to be used unless the user picks another one.
 
-        This property is serialized as "default". The default value is false.
+        This property is serialized as "default". It holds the constValue of one
+        of the oneOf options, not its title.
     */
-    Q_PROPERTY(bool defaultValue READ defaultValue WRITE setDefaultValue)
+    Q_PROPERTY(QString defaultValue READ defaultValue WRITE setDefaultValue)
 
     /*!
-        \property QMcpBooleanSchema::description
+        \property QMcpTitledSingleSelectEnumSchema::description
         \brief A human-readable description of the requested value.
     */
     Q_PROPERTY(QString description READ description WRITE setDescription)
 
     /*!
-        \property QMcpBooleanSchema::title
+        \property QMcpTitledSingleSelectEnumSchema::oneOf
+        \brief The options to choose from, each with a value and a display label.
+    */
+    Q_PROPERTY(QList<QMcpTitledSingleSelectEnumSchemaOneOf> oneOf READ oneOf WRITE setOneOf REQUIRED)
+
+    /*!
+        \property QMcpTitledSingleSelectEnumSchema::title
         \brief A human-readable title of the requested value.
     */
     Q_PROPERTY(QString title READ title WRITE setTitle)
@@ -49,13 +64,16 @@ class Q_MCPCOMMON_EXPORT QMcpBooleanSchema : public QMcpGadget
     Q_PROPERTY(QByteArray type READ type CONSTANT REQUIRED)
 
 public:
-    QMcpBooleanSchema() : QMcpGadget(new Private) {}
+    QMcpTitledSingleSelectEnumSchema() : QMcpGadget(new Private) {
+        // QMcpGadget looks the element type of a list property up by name.
+        qRegisterMetaType<QMcpTitledSingleSelectEnumSchemaOneOf>();
+    }
 
-    bool defaultValue() const {
+    QString defaultValue() const {
         return d<Private>()->defaultValue;
     }
 
-    void setDefaultValue(bool defaultValue) {
+    void setDefaultValue(const QString &defaultValue) {
         if (this->defaultValue() == defaultValue) return;
         d<Private>()->defaultValue = defaultValue;
     }
@@ -69,6 +87,15 @@ public:
         d<Private>()->description = description;
     }
 
+    QList<QMcpTitledSingleSelectEnumSchemaOneOf> oneOf() const {
+        return d<Private>()->oneOf;
+    }
+
+    void setOneOf(const QList<QMcpTitledSingleSelectEnumSchemaOneOf> &oneOf) {
+        if (this->oneOf() == oneOf) return;
+        d<Private>()->oneOf = oneOf;
+    }
+
     QString title() const {
         return d<Private>()->title;
     }
@@ -78,7 +105,7 @@ public:
         d<Private>()->title = title;
     }
 
-    static QByteArray type() { return QByteArrayLiteral("boolean"); }
+    static QByteArray type() { return QByteArrayLiteral("string"); }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
@@ -97,16 +124,17 @@ private:
     static QString propertyKey() { return QStringLiteral("defaultValue"); }
 
     struct Private : public QMcpGadget::Private {
-        bool defaultValue = false;
+        QString defaultValue;
         QString description;
+        QList<QMcpTitledSingleSelectEnumSchemaOneOf> oneOf;
         QString title;
 
         Private *clone() const override { return new Private(*this); }
     };
 };
 
-Q_DECLARE_SHARED(QMcpBooleanSchema)
+Q_DECLARE_SHARED(QMcpTitledSingleSelectEnumSchema)
 
 QT_END_NAMESPACE
 
-#endif // QMCPBOOLEANSCHEMA_H
+#endif // QMCPTITLEDSINGLESELECTENUMSCHEMA_H

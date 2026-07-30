@@ -11,6 +11,10 @@
 #include <QtMcpCommon/qmcpenumschema.h>
 #include <QtMcpCommon/qmcpnumberschema.h>
 #include <QtMcpCommon/qmcpstringschema.h>
+#include <QtMcpCommon/qmcptitledmultiselectenumschema.h>
+#include <QtMcpCommon/qmcptitledsingleselectenumschema.h>
+#include <QtMcpCommon/qmcpuntitledmultiselectenumschema.h>
+#include <QtMcpCommon/qmcpuntitledsingleselectenumschema.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -18,8 +22,12 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief Restricted schema definitions that only allow primitive types without nested objects or arrays.
 
-    Exactly one of stringSchema, numberSchema, booleanSchema and enumSchema is
-    set; refType() tells which one.
+    Exactly one of the variants is set; refType() tells which one. The 2025-06-18
+    revision knows stringSchema, numberSchema, booleanSchema and enumSchema. The
+    2025-11-25 revision adds untitledSingleSelectEnumSchema,
+    titledSingleSelectEnumSchema, untitledMultiSelectEnumSchema and
+    titledMultiSelectEnumSchema, and demotes enumSchema to its
+    LegacyTitledEnumSchema.
 */
 class Q_MCPCOMMON_EXPORT QMcpPrimitiveSchemaDefinition : public QMcpAnyOf
 {
@@ -29,6 +37,10 @@ class Q_MCPCOMMON_EXPORT QMcpPrimitiveSchemaDefinition : public QMcpAnyOf
     Q_PROPERTY(QMcpNumberSchema numberSchema READ numberSchema WRITE setNumberSchema)
     Q_PROPERTY(QMcpBooleanSchema booleanSchema READ booleanSchema WRITE setBooleanSchema)
     Q_PROPERTY(QMcpEnumSchema enumSchema READ enumSchema WRITE setEnumSchema)
+    Q_PROPERTY(QMcpUntitledSingleSelectEnumSchema untitledSingleSelectEnumSchema READ untitledSingleSelectEnumSchema WRITE setUntitledSingleSelectEnumSchema)
+    Q_PROPERTY(QMcpTitledSingleSelectEnumSchema titledSingleSelectEnumSchema READ titledSingleSelectEnumSchema WRITE setTitledSingleSelectEnumSchema)
+    Q_PROPERTY(QMcpUntitledMultiSelectEnumSchema untitledMultiSelectEnumSchema READ untitledMultiSelectEnumSchema WRITE setUntitledMultiSelectEnumSchema)
+    Q_PROPERTY(QMcpTitledMultiSelectEnumSchema titledMultiSelectEnumSchema READ titledMultiSelectEnumSchema WRITE setTitledMultiSelectEnumSchema)
 
 public:
     QMcpPrimitiveSchemaDefinition() : QMcpAnyOf(new Private) {}
@@ -40,6 +52,14 @@ public:
         : QMcpAnyOf(new Private) { setBooleanSchema(booleanSchema); }
     QMcpPrimitiveSchemaDefinition(const QMcpEnumSchema &enumSchema)
         : QMcpAnyOf(new Private) { setEnumSchema(enumSchema); }
+    QMcpPrimitiveSchemaDefinition(const QMcpUntitledSingleSelectEnumSchema &untitledSingleSelectEnumSchema)
+        : QMcpAnyOf(new Private) { setUntitledSingleSelectEnumSchema(untitledSingleSelectEnumSchema); }
+    QMcpPrimitiveSchemaDefinition(const QMcpTitledSingleSelectEnumSchema &titledSingleSelectEnumSchema)
+        : QMcpAnyOf(new Private) { setTitledSingleSelectEnumSchema(titledSingleSelectEnumSchema); }
+    QMcpPrimitiveSchemaDefinition(const QMcpUntitledMultiSelectEnumSchema &untitledMultiSelectEnumSchema)
+        : QMcpAnyOf(new Private) { setUntitledMultiSelectEnumSchema(untitledMultiSelectEnumSchema); }
+    QMcpPrimitiveSchemaDefinition(const QMcpTitledMultiSelectEnumSchema &titledMultiSelectEnumSchema)
+        : QMcpAnyOf(new Private) { setTitledMultiSelectEnumSchema(titledMultiSelectEnumSchema); }
 
     QMcpStringSchema stringSchema() const {
         return d<Private>()->stringSchema;
@@ -84,6 +104,46 @@ public:
         d<Private>()->enumSchema = enumSchema;
     }
 
+    QMcpUntitledSingleSelectEnumSchema untitledSingleSelectEnumSchema() const {
+        return d<Private>()->untitledSingleSelectEnumSchema;
+    }
+
+    void setUntitledSingleSelectEnumSchema(const QMcpUntitledSingleSelectEnumSchema &untitledSingleSelectEnumSchema) {
+        setRefType("untitledSingleSelectEnumSchema"_ba);
+        if (this->untitledSingleSelectEnumSchema() == untitledSingleSelectEnumSchema) return;
+        d<Private>()->untitledSingleSelectEnumSchema = untitledSingleSelectEnumSchema;
+    }
+
+    QMcpTitledSingleSelectEnumSchema titledSingleSelectEnumSchema() const {
+        return d<Private>()->titledSingleSelectEnumSchema;
+    }
+
+    void setTitledSingleSelectEnumSchema(const QMcpTitledSingleSelectEnumSchema &titledSingleSelectEnumSchema) {
+        setRefType("titledSingleSelectEnumSchema"_ba);
+        if (this->titledSingleSelectEnumSchema() == titledSingleSelectEnumSchema) return;
+        d<Private>()->titledSingleSelectEnumSchema = titledSingleSelectEnumSchema;
+    }
+
+    QMcpUntitledMultiSelectEnumSchema untitledMultiSelectEnumSchema() const {
+        return d<Private>()->untitledMultiSelectEnumSchema;
+    }
+
+    void setUntitledMultiSelectEnumSchema(const QMcpUntitledMultiSelectEnumSchema &untitledMultiSelectEnumSchema) {
+        setRefType("untitledMultiSelectEnumSchema"_ba);
+        if (this->untitledMultiSelectEnumSchema() == untitledMultiSelectEnumSchema) return;
+        d<Private>()->untitledMultiSelectEnumSchema = untitledMultiSelectEnumSchema;
+    }
+
+    QMcpTitledMultiSelectEnumSchema titledMultiSelectEnumSchema() const {
+        return d<Private>()->titledMultiSelectEnumSchema;
+    }
+
+    void setTitledMultiSelectEnumSchema(const QMcpTitledMultiSelectEnumSchema &titledMultiSelectEnumSchema) {
+        setRefType("titledMultiSelectEnumSchema"_ba);
+        if (this->titledMultiSelectEnumSchema() == titledMultiSelectEnumSchema) return;
+        d<Private>()->titledMultiSelectEnumSchema = titledMultiSelectEnumSchema;
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
     }
@@ -115,13 +175,33 @@ public:
             return true;
         }
         if (type == "string"_L1) {
-            // Both QMcpStringSchema and QMcpEnumSchema use "string" as type;
-            // only the latter enumerates the accepted values.
-            if (object.contains("enum"_L1)) {
-                QMcpEnumSchema schema;
+            // Four variants use "string" as type. They are told apart by the
+            // member that enumerates the accepted values:
+            //   "oneOf"              -> TitledSingleSelectEnumSchema
+            //   "enum" + "enumNames" -> LegacyTitledEnumSchema (QMcpEnumSchema)
+            //   "enum"               -> UntitledSingleSelectEnumSchema
+            //   neither              -> StringSchema
+            // A plain "enum" without "enumNames" matches both the legacy and
+            // the untitled variant, so the newer one wins - but only from
+            // 2025-11-25 on, where it exists at all.
+            const bool hasSelectVariants = protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
+            if (hasSelectVariants && object.contains("oneOf"_L1)) {
+                QMcpTitledSingleSelectEnumSchema schema;
                 if (!schema.fromJsonObject(object, protocolVersion))
                     return false;
-                setEnumSchema(schema);
+                setTitledSingleSelectEnumSchema(schema);
+            } else if (object.contains("enum"_L1)) {
+                if (!hasSelectVariants || object.contains("enumNames"_L1)) {
+                    QMcpEnumSchema schema;
+                    if (!schema.fromJsonObject(object, protocolVersion))
+                        return false;
+                    setEnumSchema(schema);
+                } else {
+                    QMcpUntitledSingleSelectEnumSchema schema;
+                    if (!schema.fromJsonObject(object, protocolVersion))
+                        return false;
+                    setUntitledSingleSelectEnumSchema(schema);
+                }
             } else {
                 QMcpStringSchema schema;
                 if (!schema.fromJsonObject(object, protocolVersion))
@@ -129,6 +209,29 @@ public:
                 setStringSchema(schema);
             }
             return true;
+        }
+        if (type == "array"_L1 && protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25) {
+            // Both multi select variants use "array" as type and both require
+            // "items"; what that object holds tells them apart: a list of
+            // {const, title} options in "anyOf" is the titled variant, a plain
+            // list of values in "enum" the untitled one.
+            const auto items = object.value("items"_L1).toObject();
+            if (items.contains("anyOf"_L1)) {
+                QMcpTitledMultiSelectEnumSchema schema;
+                if (!schema.fromJsonObject(object, protocolVersion))
+                    return false;
+                setTitledMultiSelectEnumSchema(schema);
+                return true;
+            }
+            if (items.contains("enum"_L1)) {
+                QMcpUntitledMultiSelectEnumSchema schema;
+                if (!schema.fromJsonObject(object, protocolVersion))
+                    return false;
+                setUntitledMultiSelectEnumSchema(schema);
+                return true;
+            }
+            qWarning() << "Multi select enum schema without enumerated items" << items;
+            return false;
         }
         qWarning() << "Unknown primitive schema type" << type;
         return false;
@@ -140,6 +243,10 @@ private:
         QMcpNumberSchema numberSchema;
         QMcpBooleanSchema booleanSchema;
         QMcpEnumSchema enumSchema;
+        QMcpUntitledSingleSelectEnumSchema untitledSingleSelectEnumSchema;
+        QMcpTitledSingleSelectEnumSchema titledSingleSelectEnumSchema;
+        QMcpUntitledMultiSelectEnumSchema untitledMultiSelectEnumSchema;
+        QMcpTitledMultiSelectEnumSchema titledMultiSelectEnumSchema;
 
         Private *clone() const override { return new Private(*this); }
     };
