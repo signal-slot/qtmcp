@@ -41,8 +41,16 @@ schema 差分(ワイヤー影響分):
 5. sampling へのツール呼び出し対応: `tools`/`toolChoice` パラメータ、
    `QMcpToolUseContent`/`QMcpToolResultContent`
 6. tasks(experimental): `tasks/create` 系メソッド、`QMcpTask`、`QMcpTaskStatusNotification` 等
-   ※ 2026-07-28 で extension に移動するため、実装範囲は要検討(最小実装 or スキップ可)
+   → 決定: **型のみ実装**し、QMcpServer/QMcpClient のランタイム配線(タスク永続化・
+   ポーリング応答)は保留。2026-07-28 で extension 化・再設計されるため、ランタイムは
+   extension 対応(Phase 3 以降)で扱う
 7. schema 上の standalone *Params 分離はワイヤー不変のため型追加のみで対応可
+8. → 実装メモ: URL mode elicitation は Form/URL の union ではなくフラットな
+   `QMcpElicitRequestParams` に統合し、`mode` を判別子として `isPropertyAvailable` を
+   mode 依存に拡張(fromJsonObject が mode を先読み)。enum schema の新変種 4 型は
+   `QMcpPrimitiveSchemaDefinition` の判別ロジックに統合し、既存 `QMcpEnumSchema` は
+   LegacyTitledEnumSchema 相当として維持。`QMcpAnyOf::fromJsonObject` は変種自身の
+   fromJsonObject への委譲に簡素化(バージョンゲート・キー変換が union 内でも効くように)
 
 ## Phase 3: 2026-07-28
 
