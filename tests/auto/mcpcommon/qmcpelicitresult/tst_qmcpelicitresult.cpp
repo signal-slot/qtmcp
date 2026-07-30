@@ -37,6 +37,7 @@ void tst_QMcpElicitResult::convert_data()
         }
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "action", "accept"_L1 },
         { "content", QVariantMap {
             { "agree", true },
@@ -51,6 +52,7 @@ void tst_QMcpElicitResult::convert_data()
         "action": "decline"
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "action", "decline"_L1 }
     };
 
@@ -59,6 +61,7 @@ void tst_QMcpElicitResult::convert_data()
         "action": "cancel"
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "action", "cancel"_L1 }
     };
 }

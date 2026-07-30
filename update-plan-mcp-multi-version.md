@@ -75,6 +75,23 @@ schema 差分(ワイヤー影響分):
    -32020〜-32099 の MCP 予約帯
 10. HTTP: `Mcp-Session-Id` 廃止、`Mcp-Method`/`Mcp-Name` ヘッダ必須、SSE resumability 廃止
 
+### Phase 3 実装メモ
+
+- ステートレス化: サーバーは params `_meta` の `io.modelcontextprotocol/protocolVersion` で
+  セッションを自動初期化(initialize は旧版互換として存続)。クライアントは 2026-07-28 時に
+  全リクエストへ `_meta`(protocolVersion / clientInfo)を注入し、応答 `_meta` に serverInfo を返す
+- `resultType` は `QMcpResult` 基底で実装(REQUIRED + バージョンゲート、欠落受信は "complete" 扱い)。
+  `ttlMs`/`cacheScope` は各 list Result に同パターンで実装
+- `subscriptions/listen`: opt-in フィルタと subscriptionId を `QMcpServerSession` に保持し、
+  2026-07-28 セッションの変更通知はフィルタ通過分のみ `_meta` タグ付きで送出。
+  専用ストリームの概念は stdio/旧 SSE では通常の通知フローに縮退(Streamable HTTP 実装時に再訪)
+- MRTR: 型(`QMcpInputRequiredResult` 等)+ クライアントの `inputRequired` シグナル
+  (interim result 検出、リトライはアプリ責務)まで実装。サーバー側でツールハンドラが
+  input_required を返す高レベル API と、roots/sampling/elicitation の MRTR 変換は**未実装**
+  (フォローアップ)。2026-07-28 セッションでの `elicit()`/`createMessage()` は警告して送信しない
+- リソース不在エラーコード -32002→-32602: qtmcp は -32002 を使っていなかったため対応不要
+- 2025-11-25 の experimental tasks 同様、tasks extension(`io.modelcontextprotocol/tasks`)は未実装
+
 ## 横断課題
 
 - **Streamable HTTP トランスポートが未実装**(現状は stdio と旧 HTTP+SSE のみ)。

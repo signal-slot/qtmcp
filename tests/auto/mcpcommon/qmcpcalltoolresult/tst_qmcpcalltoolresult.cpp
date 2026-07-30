@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "../testhelper.h"
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonParseError>
@@ -26,6 +27,7 @@ private slots:
     void copy_data();
     void copy();
     void versionGating();
+    void resultTypeGating();
 };
 
 QMcpCallToolResult tst_QMcpCallToolResult::resultWithText(const QString &text)
@@ -52,6 +54,7 @@ void tst_QMcpCallToolResult::convert_data()
         ]
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "content", QVariantList {
             QVariantMap {
                 { "type", "text"_L1 },
@@ -72,6 +75,7 @@ void tst_QMcpCallToolResult::convert_data()
         }
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "content", QVariantList {
             QVariantMap {
                 { "type", "text"_L1 },
@@ -93,6 +97,7 @@ void tst_QMcpCallToolResult::convert_data()
         "isError": true
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "content", QVariantList {
             QVariantMap {
                 { "type", "text"_L1 },
@@ -169,6 +174,27 @@ void tst_QMcpCallToolResult::versionGating()
     const auto newObject = result.toJsonObject(QtMcp::ProtocolVersion::v2025_06_18);
     QVERIFY(newObject.contains("structuredContent"_L1));
     QCOMPARE(newObject.value("structuredContent"_L1).toObject().value("answer"_L1).toInt(), 42);
+}
+
+void tst_QMcpCallToolResult::resultTypeGating()
+{
+    auto result = resultWithText("42"_L1);
+
+    // Result::resultType has been added in 2026-07-28: every result carries it
+    // from then on, and no result may carry it before that.
+    QVERIFY(!result.toJsonObject(QtMcp::ProtocolVersion::v2024_11_05).contains("resultType"_L1));
+    QVERIFY(!result.toJsonObject(QtMcp::ProtocolVersion::v2025_06_18).contains("resultType"_L1));
+    QVERIFY(!result.toJsonObject(QtMcp::ProtocolVersion::v2025_11_25).contains("resultType"_L1));
+
+    const auto newObject = result.toJsonObject(QtMcp::ProtocolVersion::v2026_07_28);
+    QCOMPARE(newObject.value("resultType"_L1).toString(), "complete"_L1);
+
+    // A 2026-07-28 server that omits the mandatory member still has to be
+    // understood, and an absent resultType means "complete".
+    QMcpCallToolResult parsed;
+    QVERIFY(parsed.fromJsonObject(QJsonObject { { "content"_L1, QJsonArray {} } },
+                                  QtMcp::ProtocolVersion::v2026_07_28));
+    QCOMPARE(parsed.resultType(), "complete"_L1);
 }
 
 QTEST_MAIN(tst_QMcpCallToolResult)

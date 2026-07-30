@@ -56,6 +56,7 @@ void tst_QMcpInitializeResult::convert_data()
         }
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "capabilities", QVariantMap {
             { "experimental", QVariantMap {
                 { "additionalProperties", QVariantMap {
@@ -98,6 +99,7 @@ void tst_QMcpInitializeResult::convert_data()
         }
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
         { "capabilities", QVariantMap {
         }},
         { "protocolVersion", "2024-11-05"_L1 },
