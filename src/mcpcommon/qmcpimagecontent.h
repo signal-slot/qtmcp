@@ -5,6 +5,7 @@
 #define QMCPIMAGECONTENT_H
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpannotations.h>
 #include <QtMcpCommon/qmcpgadget.h>
@@ -23,6 +24,13 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCOMMON_EXPORT QMcpImageContent : public QMcpGadget
 {
     Q_GADGET
+
+    /*!
+        \property QMcpImageContent::_meta
+        \brief Reserved by MCP to allow clients and servers to attach additional metadata.
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject _meta READ meta WRITE setMeta)
 
     Q_PROPERTY(QMcpAnnotations annotations READ annotations WRITE setAnnotations)
 
@@ -55,6 +63,15 @@ public:
         }
     }
 #endif
+
+    QJsonObject meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QJsonObject &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
+    }
 
     QMcpAnnotations annotations() const {
         return d<Private>()->annotations;
@@ -89,8 +106,16 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "_meta")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
+        QJsonObject _meta;
         QMcpAnnotations annotations;
         QByteArray data;
         QString mimeType;

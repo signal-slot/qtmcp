@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcptoolinputschema.h>
+#include <QtMcpCommon/qmcptooloutputschema.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -35,6 +36,29 @@ class Q_MCPCOMMON_EXPORT QMcpTool : public QMcpGadget
         \brief The name of the tool.
     */
     Q_PROPERTY(QString name READ name WRITE setName REQUIRED)
+
+    /*!
+        \property QMcpTool::outputSchema
+        \brief An optional JSON Schema object defining the structure of the tool's output.
+
+        The output is returned in the structuredContent property of a
+        QMcpCallToolResult.
+
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QMcpToolOutputSchema outputSchema READ outputSchema WRITE setOutputSchema)
+
+    /*!
+        \property QMcpTool::title
+        \brief Intended for UI and end-user contexts.
+
+        Optimized to be human-readable and easily understood, even by those
+        unfamiliar with domain-specific terminology. If not provided,
+        annotations.title should be given precedence over using name.
+
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QString title READ title WRITE setTitle)
 
 public:
     QMcpTool() : QMcpGadget(new Private) {}
@@ -66,8 +90,33 @@ public:
         d<Private>()->name = name;
     }
 
+    QMcpToolOutputSchema outputSchema() const {
+        return d<Private>()->outputSchema;
+    }
+
+    void setOutputSchema(const QMcpToolOutputSchema &outputSchema) {
+        if (this->outputSchema() == outputSchema) return;
+        d<Private>()->outputSchema = outputSchema;
+    }
+
+    QString title() const {
+        return d<Private>()->title;
+    }
+
+    void setTitle(const QString &title) {
+        if (this->title() == title) return;
+        d<Private>()->title = title;
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
+    }
+
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "outputSchema" || name == "title")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
     }
 
 private:
@@ -75,6 +124,8 @@ private:
         QString description;
         QMcpToolInputSchema inputSchema;
         QString name;
+        QMcpToolOutputSchema outputSchema;
+        QString title;
 
         Private *clone() const override { return new Private(*this); }
     };

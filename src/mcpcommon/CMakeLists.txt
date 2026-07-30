@@ -31,7 +31,9 @@ qt_internal_add_module(McpCommon
         qmcpcalltoolresultcontent.h
         qmcpcancellednotification.h
         qmcpcancellednotificationparams.h
+        qmcpbooleanschema.h
         qmcpclientcapabilities.h
+        qmcpclientcapabilitieselicitation.h
         qmcpclientcapabilitiesexperimental.h
         qmcpclientcapabilitiesroots.h
         qmcpclientcapabilitiessampling.h
@@ -41,6 +43,7 @@ qt_internal_add_module(McpCommon
         qmcpcompleterequest.h
         qmcpcompleterequestparams.h
         qmcpcompleterequestparamsargument.h
+        qmcpcompleterequestparamscontext.h
         qmcpcompleterequestparamsref.h
         qmcpcompleteresult.h
         qmcpcompleteresultcompletion.h
@@ -49,9 +52,14 @@ qt_internal_add_module(McpCommon
         qmcpcreatemessagerequestparamsmetadata.h
         qmcpcreatemessageresult.h
         qmcpcreatemessageresultcontent.h
+        qmcpelicitrequest.h
+        qmcpelicitrequestparams.h
+        qmcpelicitrequestparamsrequestedschema.h
+        qmcpelicitresult.h
         qmcpembeddedresource.h
         qmcpembeddedresourceresource.h
         qmcpemptyresult.h
+        qmcpenumschema.h
         qmcpgetpromptrequest.h
         qmcpgetpromptrequestparams.h
         qmcpgetpromptresult.h
@@ -89,12 +97,14 @@ qt_internal_add_module(McpCommon
         qmcpnotification.h
         qmcpnotificationparams.h
         qmcpnotificationparamsmeta.h
+        qmcpnumberschema.h
         qmcppaginatedrequest.h
         qmcppaginatedrequestparams.h
         qmcppaginatedresult.h
         qmcppingrequest.h
         qmcppingrequestparams.h
         qmcppingrequestparamsmeta.h
+        qmcpprimitiveschemadefinition.h
         qmcpprogressnotification.h
         qmcpprogressnotificationparams.h
         qmcpprogresstoken.h
@@ -115,6 +125,7 @@ qt_internal_add_module(McpCommon
         qmcprequestparamsmeta.h
         qmcpresource.h
         qmcpresourcecontents.h
+        qmcpresourcelink.h
         qmcpresourcelistchangednotification.h
         qmcpresourcelistchangednotificationparamsmeta.h
         qmcpresourcereference.h
@@ -141,6 +152,7 @@ qt_internal_add_module(McpCommon
         qmcpserverresult.h
         qmcpsetlevelrequest.h
         qmcpsetlevelrequestparams.h
+        qmcpstringschema.h
         qmcpsubscriberequest.h
         qmcpsubscriberequestparams.h
         qmcptextcontent.h
@@ -148,6 +160,7 @@ qt_internal_add_module(McpCommon
         qmcptool.h
         qmcptoolinputschema.h
         qmcptoollistchangednotification.h
+        qmcptooloutputschema.h
         qmcptoollistchangednotificationparamsmeta.h
         qmcpunsubscriberequest.h
         qmcpunsubscriberequestparams.h

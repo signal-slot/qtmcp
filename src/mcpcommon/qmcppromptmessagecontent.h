@@ -33,6 +33,11 @@ public:
     {
         setEmbeddedResource(embeddedResource);
     }
+    QMcpPromptMessageContent(const QMcpResourceLink &resourceLink)
+        : QMcpExtendedMessageContent(new Private)
+    {
+        setResourceLink(resourceLink);
+    }
 
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;

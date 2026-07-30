@@ -4,6 +4,7 @@
 #ifndef QMCPCLIENTCAPABILITIES_H
 #define QMCPCLIENTCAPABILITIES_H
 
+#include <QtMcpCommon/qmcpclientcapabilitieselicitation.h>
 #include <QtMcpCommon/qmcpclientcapabilitiesexperimental.h>
 #include <QtMcpCommon/qmcpclientcapabilitiesroots.h>
 #include <QtMcpCommon/qmcpclientcapabilitiessampling.h>
@@ -18,6 +19,15 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCOMMON_EXPORT QMcpClientCapabilities : public QMcpGadget
 {
     Q_GADGET
+
+    /*!
+        \property QMcpClientCapabilities::elicitation
+        \brief Present if the client supports elicitation from the server.
+
+        This property has been introduced in the 2025-06-18 revision of the
+        protocol.
+    */
+    Q_PROPERTY(QMcpClientCapabilitiesElicitation elicitation READ elicitation WRITE setElicitation)
 
     /*!
         \property QMcpClientCapabilities::experimental
@@ -39,6 +49,15 @@ class Q_MCPCOMMON_EXPORT QMcpClientCapabilities : public QMcpGadget
 
 public:
     QMcpClientCapabilities() : QMcpGadget(new Private) {}
+
+    QMcpClientCapabilitiesElicitation elicitation() const {
+        return d<Private>()->elicitation;
+    }
+
+    void setElicitation(const QMcpClientCapabilitiesElicitation &elicitation) {
+        if (this->elicitation() == elicitation) return;
+        d<Private>()->elicitation = elicitation;
+    }
 
     QMcpClientCapabilitiesExperimental experimental() const {
         return d<Private>()->experimental;
@@ -71,8 +90,16 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "elicitation")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
+        QMcpClientCapabilitiesElicitation elicitation;
         QMcpClientCapabilitiesExperimental experimental;
         QMcpClientCapabilitiesRoots roots;
         QMcpClientCapabilitiesSampling sampling;

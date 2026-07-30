@@ -37,6 +37,18 @@ class Q_MCPCOMMON_EXPORT QMcpPrompt : public QMcpGadget
     */
     Q_PROPERTY(QString name READ name WRITE setName REQUIRED)
 
+    /*!
+        \property QMcpPrompt::title
+        \brief Intended for UI and end-user contexts.
+
+        Optimized to be human-readable and easily understood, even by those
+        unfamiliar with domain-specific terminology. If not provided, the name
+        should be used for display.
+
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QString title READ title WRITE setTitle)
+
 public:
     QMcpPrompt() : QMcpGadget(new Private) {
         qRegisterMetaType<QMcpPromptArgument>();
@@ -69,8 +81,24 @@ public:
         d<Private>()->name = name;
     }
 
+    QString title() const {
+        return d<Private>()->title;
+    }
+
+    void setTitle(const QString &title) {
+        if (this->title() == title) return;
+        d<Private>()->title = title;
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
+    }
+
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "title")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
     }
 
 private:
@@ -78,6 +106,7 @@ private:
         QList<QMcpPromptArgument> arguments;
         QString description;
         QString name;
+        QString title;
 
         Private *clone() const override { return new Private(*this); }
     };

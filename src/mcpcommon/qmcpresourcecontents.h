@@ -4,6 +4,7 @@
 #ifndef QMCPRESOURCECONTENTS_H
 #define QMCPRESOURCECONTENTS_H
 
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtCore/QUrl>
 #include <QtMcpCommon/qmcpgadget.h>
@@ -19,6 +20,13 @@ class Q_MCPCOMMON_EXPORT QMcpResourceContents : public QMcpGadget
     Q_GADGET
 
     /*!
+        \property QMcpResourceContents::_meta
+        \brief Reserved by MCP to allow clients and servers to attach additional metadata.
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject _meta READ meta WRITE setMeta)
+
+    /*!
         \property QMcpResourceContents::mimeType
         \brief The MIME type of this resource, if known.
     */
@@ -32,6 +40,15 @@ class Q_MCPCOMMON_EXPORT QMcpResourceContents : public QMcpGadget
 
 public:
     QMcpResourceContents() : QMcpGadget(new Private) {}
+
+    QJsonObject meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QJsonObject &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
+    }
 
     QString mimeType() const {
         return d<Private>()->mimeType;
@@ -55,8 +72,16 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "_meta")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
+        QJsonObject _meta;
         QString mimeType;
         QUrl uri;
 
