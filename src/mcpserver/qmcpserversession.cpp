@@ -12,6 +12,7 @@
 #include <QtGui/QAction>
 #endif
 #include <QtMcpCommon/QMcpCreateMessageRequest>
+#include <QtMcpCommon/QMcpElicitRequest>
 #include <QtMcpCommon/QMcpProgressNotification>
 
 QT_BEGIN_NAMESPACE
