@@ -5,7 +5,7 @@
 #define QMCPLISTRESOURCETEMPLATESRESULT_H
 
 #include <QtCore/QString>
-#include <QtMcpCommon/qmcpresult.h>
+#include <QtMcpCommon/qmcpcacheableresult.h>
 #include <QtMcpCommon/qmcpresourcetemplate.h>
 #include <QtCore/QList>
 
@@ -15,7 +15,7 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief The server's response to a resources/templates/list request from the client.
 */
-class Q_MCPCOMMON_EXPORT QMcpListResourceTemplatesResult : public QMcpResult
+class Q_MCPCOMMON_EXPORT QMcpListResourceTemplatesResult : public QMcpCacheableResult
 {
     Q_GADGET
 
@@ -29,7 +29,7 @@ class Q_MCPCOMMON_EXPORT QMcpListResourceTemplatesResult : public QMcpResult
     Q_PROPERTY(QList<QMcpResourceTemplate> resourceTemplates READ resourceTemplates WRITE setResourceTemplates REQUIRED)
 
 public:
-    QMcpListResourceTemplatesResult() : QMcpResult(new Private) {
+    QMcpListResourceTemplatesResult() : QMcpCacheableResult(new Private) {
         qRegisterMetaType<QMcpResourceTemplate>();
     }
 
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    struct Private : public QMcpResult::Private {
+    struct Private : public QMcpCacheableResult::Private {
         QString nextCursor;
         QList<QMcpResourceTemplate> resourceTemplates;
 

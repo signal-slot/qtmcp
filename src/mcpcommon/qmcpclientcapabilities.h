@@ -4,6 +4,7 @@
 #ifndef QMCPCLIENTCAPABILITIES_H
 #define QMCPCLIENTCAPABILITIES_H
 
+#include <QtCore/QJsonObject>
 #include <QtMcpCommon/qmcpclientcapabilitieselicitation.h>
 #include <QtMcpCommon/qmcpclientcapabilitiesexperimental.h>
 #include <QtMcpCommon/qmcpclientcapabilitiesroots.h>
@@ -34,6 +35,20 @@ class Q_MCPCOMMON_EXPORT QMcpClientCapabilities : public QMcpGadget
         \brief Experimental, non-standard capabilities that the client supports.
     */
     Q_PROPERTY(QMcpClientCapabilitiesExperimental experimental READ experimental WRITE setExperimental)
+
+    /*!
+        \property QMcpClientCapabilities::extensions
+        \brief Optional MCP extensions that the client supports.
+
+        Keys are extension identifiers, for example
+        "io.modelcontextprotocol/oauth-client-credentials", and values are
+        per-extension settings objects. An empty object indicates support with
+        no settings. Keys must follow the \c _meta key naming rules, with a
+        mandatory prefix.
+
+        \since MCP 2026-07-28
+    */
+    Q_PROPERTY(QJsonObject extensions READ extensions WRITE setExtensions)
 
     /*!
         \property QMcpClientCapabilities::roots
@@ -68,6 +83,15 @@ public:
         d<Private>()->experimental = experimental;
     }
 
+    QJsonObject extensions() const {
+        return d<Private>()->extensions;
+    }
+
+    void setExtensions(const QJsonObject &extensions) {
+        if (this->extensions() == extensions) return;
+        d<Private>()->extensions = extensions;
+    }
+
     QMcpClientCapabilitiesRoots roots() const {
         return d<Private>()->roots;
     }
@@ -94,6 +118,8 @@ protected:
     bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
         if (name == "elicitation")
             return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        if (name == "extensions")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2026_07_28;
         return QMcpGadget::isPropertyAvailable(name, protocolVersion);
     }
 
@@ -101,6 +127,7 @@ private:
     struct Private : public QMcpGadget::Private {
         QMcpClientCapabilitiesElicitation elicitation;
         QMcpClientCapabilitiesExperimental experimental;
+        QJsonObject extensions;
         QMcpClientCapabilitiesRoots roots;
         QMcpClientCapabilitiesSampling sampling;
 

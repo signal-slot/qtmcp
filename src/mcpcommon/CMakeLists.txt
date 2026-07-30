@@ -25,6 +25,7 @@ qt_internal_add_module(McpCommon
         qmcpjsonrpcresponse.h
         qmcpannotated.h qmcpannotated.cpp
         qmcpblobresourcecontents.h
+        qmcpcacheableresult.h
         qmcpcalltoolrequest.h
         qmcpcalltoolrequestparams.h
         qmcpcalltoolresult.h
@@ -56,6 +57,8 @@ qt_internal_add_module(McpCommon
         qmcpcreatemessageresult.h
         qmcpcreatemessageresultcontent.h
         qmcpcreatetaskresult.h
+        qmcpdiscoverrequest.h
+        qmcpdiscoverresult.h
         qmcpelicitationcompletenotification.h
         qmcpelicitationcompletenotificationparams.h
         qmcpelicitrequest.h
@@ -87,6 +90,8 @@ qt_internal_add_module(McpCommon
         qmcpinitializerequest.h
         qmcpinitializerequestparams.h
         qmcpinitializeresult.h
+        qmcpinputrequiredresult.h
+        qmcpinputresponserequestparams.h
         qmcplistpromptsrequest.h
         qmcplistpromptsrequestparams.h
         qmcplistpromptsresult.h
@@ -172,6 +177,12 @@ qt_internal_add_module(McpCommon
         qmcpstringschema.h
         qmcpsubscriberequest.h
         qmcpsubscriberequestparams.h
+        qmcpsubscriptionfilter.h
+        qmcpsubscriptionsacknowledgednotification.h
+        qmcpsubscriptionsacknowledgednotificationparams.h
+        qmcpsubscriptionslistenrequest.h
+        qmcpsubscriptionslistenrequestparams.h
+        qmcpsubscriptionslistenresult.h
         qmcptextcontent.h
         qmcptextresourcecontents.h
         qmcptask.h
