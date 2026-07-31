@@ -343,6 +343,16 @@ public slots:
     */
     void start(const QString &args);
 
+    /*!
+        Declares the io.modelcontextprotocol/tasks extension in the client
+        capabilities sent with every request on MCP 2026-07-28. A server
+        that also supports the extension may then answer long-running
+        requests with a task handle (resultType "task") to poll via
+        tasks/get.
+    */
+    void setTasksExtensionEnabled(bool enabled);
+    bool isTasksExtensionEnabled() const;
+
 signals:
     /*!
         Emitted when the protocol version changes.

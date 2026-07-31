@@ -265,7 +265,10 @@ public:
                     QMcpJSONRPCResponse response;
                     response.setId(id.toVariant());
                     auto object = response.toJsonObject(versionToUse);
-                    object.insert("result"_L1, result.toJsonObject(versionToUse));
+                    // MRTR interim results and tasks-extension handles
+                    // replace the handler's result (2026-07-28).
+                    const auto interim = takePendingResultOverride(session);
+                    object.insert("result"_L1, interim.isEmpty() ? result.toJsonObject(versionToUse) : interim);
                     send(session, object);
                 });
 
@@ -383,6 +386,14 @@ public slots:
     */
     void start(const QString &args = QString());
 
+    /*!
+        Enables the io.modelcontextprotocol/tasks extension: long-running
+        tool calls of clients that declare the extension return a task
+        handle which is polled via tasks/get.
+    */
+    void setTasksExtensionEnabled(bool enabled);
+    bool isTasksExtensionEnabled() const;
+
     void registerToolSet(QObject *toolSet, const QHash<QString, QString> &descriptions = {});
     void unregisterToolSet(QObject *toolSet);
 #ifdef QT_GUI_LIB
@@ -460,6 +471,18 @@ private:
                                         QtMcp::ProtocolVersion defaultVersion = QtMcp::ProtocolVersion::Latest) const;
     
     void notifyResourceUpdated(const QUuid &session, const QMcpResource &resource);
+
+    /*!
+        \internal
+        Returns the pre-serialized result that replaces the handler's result
+        for the current request, or an empty object. Sources: an
+        input_required interim result when the handler called
+        QMcpServerSession::requireInput() (MRTR, 2026-07-28), or a
+        CreateTaskResult minted by the tasks extension. Consumes the state.
+    */
+    QJsonObject takePendingResultOverride(const QUuid &session);
+
+
     void send(const QUuid &session, const QJsonObject &message, std::function<void(const QUuid &session, const QJsonObject &)> callback = nullptr);
     void registerRequestHandler(const QString &method, std::function<QJsonValue(const QUuid &, const QJsonObject &, QMcpJSONRPCErrorError *)>);
     void registerNotificationHandler(const QString &method, std::function<void(const QUuid &, const QJsonObject &)>);

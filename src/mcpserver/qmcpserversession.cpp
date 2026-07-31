@@ -98,6 +98,15 @@ public:
     QMcpSubscriptionFilter listenFilter;
     QString listenSubscriptionId;
 
+    QJsonObject inputResponses;
+    QJsonValue clientRequestState;
+    bool inputRequired = false;
+    QJsonObject requiredInputRequests;
+    QJsonValue requiredRequestState;
+
+    QJsonObject clientCapabilities;
+    QJsonObject resultOverride;
+
     QTimer notifyResourceListChanged;
     QTimer notifyPromptListChanged;
     QTimer notifyToolListChanged;
@@ -175,6 +184,79 @@ void QMcpServerSession::setListenSubscriptions(const QMcpSubscriptionFilter &fil
 QString QMcpServerSession::listenSubscriptionId() const
 {
     return d->listenSubscriptionId;
+}
+
+QJsonObject QMcpServerSession::inputResponses() const
+{
+    return d->inputResponses;
+}
+
+QJsonValue QMcpServerSession::clientRequestState() const
+{
+    return d->clientRequestState;
+}
+
+void QMcpServerSession::requireInput(const QJsonObject &inputRequests, const QJsonValue &requestState)
+{
+    if (protocolVersion() < QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "requireInput() needs MCP 2026-07-28, session uses"
+                   << QtMcp::protocolVersionToString(protocolVersion());
+        return;
+    }
+    d->inputRequired = true;
+    d->requiredInputRequests = inputRequests;
+    d->requiredRequestState = requestState;
+}
+
+QJsonObject QMcpServerSession::elicitationInputRequest(const QMcpElicitRequestParams &params)
+{
+    QJsonObject request;
+    request.insert("method"_L1, "elicitation/create"_L1);
+    request.insert("params"_L1, params.toJsonObject(QtMcp::ProtocolVersion::v2026_07_28));
+    return request;
+}
+
+void QMcpServerSession::provideInputResponses(const QJsonObject &responses, const QJsonValue &requestState)
+{
+    d->inputResponses = responses;
+    d->clientRequestState = requestState;
+    d->inputRequired = false;
+    d->requiredInputRequests = QJsonObject();
+    d->requiredRequestState = QJsonValue();
+}
+
+QJsonObject QMcpServerSession::clientCapabilitiesJson() const
+{
+    return d->clientCapabilities;
+}
+
+void QMcpServerSession::setClientCapabilitiesJson(const QJsonObject &capabilities)
+{
+    d->clientCapabilities = capabilities;
+}
+
+void QMcpServerSession::overrideResult(const QJsonObject &result)
+{
+    d->resultOverride = result;
+}
+
+QJsonObject QMcpServerSession::takeResultOverride()
+{
+    return std::exchange(d->resultOverride, QJsonObject());
+}
+
+bool QMcpServerSession::takeRequiredInput(QJsonObject *inputRequests, QJsonValue *requestState)
+{
+    if (!d->inputRequired)
+        return false;
+    if (inputRequests)
+        *inputRequests = d->requiredInputRequests;
+    if (requestState)
+        *requestState = d->requiredRequestState;
+    d->inputRequired = false;
+    d->requiredInputRequests = QJsonObject();
+    d->requiredRequestState = QJsonValue();
+    return true;
 }
 
 bool QMcpServerSession::isInitialized() const

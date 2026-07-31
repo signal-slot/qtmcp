@@ -19,6 +19,7 @@ class QMcpClient::Private
 {
 public:
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
+    bool tasksExtensionEnabled = false;
     const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_11_25, QtMcp::ProtocolVersion::v2026_07_28};
 
     Private(const QString &type, QMcpClient *parent)
@@ -70,7 +71,7 @@ public:
                         const auto handler = requestHandlers.value(method);
                         QMcpJSONRPCErrorError error;
                         const auto result = handler(object, &error);
-                        if (error.code() > 0) {
+                        if (error.code() != 0) {
                             QMcpJSONRPCError response;
                             response.setId(id.toVariant());
                             // Extract protocol version if available in the request
@@ -159,6 +160,16 @@ void QMcpClient::start(const QString &args)
     d->backend->start(args);
 }
 
+void QMcpClient::setTasksExtensionEnabled(bool enabled)
+{
+    d->tasksExtensionEnabled = enabled;
+}
+
+bool QMcpClient::isTasksExtensionEnabled() const
+{
+    return d->tasksExtensionEnabled;
+}
+
 void QMcpClient::send(const QJsonObject &request, std::function<void(const QJsonObject &, const QJsonObject &)> callback)
 {
     if (!d->backend) return;
@@ -239,6 +250,13 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
         clientInfo.insert("name"_L1, QCoreApplication::applicationName());
         clientInfo.insert("version"_L1, QCoreApplication::applicationVersion());
         meta.insert("io.modelcontextprotocol/clientInfo"_L1, clientInfo);
+        QJsonObject clientCapabilities;
+        if (d->tasksExtensionEnabled) {
+            QJsonObject extensions;
+            extensions.insert("io.modelcontextprotocol/tasks"_L1, QJsonObject());
+            clientCapabilities.insert("extensions"_L1, extensions);
+        }
+        meta.insert("io.modelcontextprotocol/clientCapabilities"_L1, clientCapabilities);
         params.insert("_meta"_L1, meta);
         message.insert("params"_L1, params);
     }

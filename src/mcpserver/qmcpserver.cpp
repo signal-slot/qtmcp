@@ -4,6 +4,7 @@
 #include "qmcpserver.h"
 #include "qmcpserversession.h"
 #include <algorithm>
+#include <QtCore/QDateTime>
 #include <QtCore/QMetaType>
 #include <QtCore/QPromise>
 #include <QtCore/private/qfactoryloader_p.h>
@@ -53,6 +54,24 @@ public:
     QMultiHash<QString, std::function<void(const QUuid &, const QJsonObject&)>> notificationHandlers;
     QHash<QUuid, QMcpServerSession *> sessions;
     QHash<QObject *, QHash<QString, QString>> toolSets;
+
+    // io.modelcontextprotocol/tasks extension
+    struct TaskEntry {
+        QUuid session;
+        QMcpTaskStatus::QMcpTaskStatus status = QMcpTaskStatus::working;
+        QString createdAt;
+        QString lastUpdatedAt;
+        QFuture<QMcpCallToolResult> future;
+        QJsonObject result;
+        QJsonObject inputResponses;
+    };
+    // Shared with the task futures' continuations: a continuation may fire
+    // while the server is being destroyed (QObject cancels them from its
+    // destructor, after ~Private already ran), so it must own the registry
+    // rather than reach through the dangling d pointer.
+    using TaskMap = QHash<QString, TaskEntry>;
+    std::shared_ptr<TaskMap> tasks = std::make_shared<TaskMap>();
+    bool tasksExtensionEnabled = false;
 #ifdef QT_GUI_LIB
     QHash<QAction *, QString> actions;
 #endif
@@ -187,9 +206,15 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
             if (!metaVersion.isEmpty()) {
                 const auto version = QtMcp::stringToProtocolVersion(metaVersion);
                 if (version >= QtMcp::ProtocolVersion::v2026_07_28 && q->isProtocolVersionSupported(version)) {
-                    if (auto *sessionObj = sessions.value(session); sessionObj && !sessionObj->isInitialized()) {
-                        sessionObj->setProtocolVersion(version);
-                        sessionObj->setInitialized(true);
+                    if (auto *sessionObj = sessions.value(session)) {
+                        if (!sessionObj->isInitialized()) {
+                            sessionObj->setProtocolVersion(version);
+                            sessionObj->setInitialized(true);
+                        }
+                        // Stateless clients re-declare their capabilities,
+                        // including extensions, on every request.
+                        sessionObj->setClientCapabilitiesJson(
+                            requestMeta.value("io.modelcontextprotocol/clientCapabilities"_L1).toObject());
                     }
                 }
             }
@@ -211,9 +236,28 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
                 }
                 if (requestHandlers.contains(method)) {
                     const auto handler = requestHandlers.value(method);
+                    // MRTR (2026-07-28): make the retry's inputResponses and
+                    // requestState available to the handler; both are empty on
+                    // a first attempt.
+                    if (sessionForMethod && sessionForMethod->protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+                        const auto params = object.value("params"_L1).toObject();
+                        sessionForMethod->provideInputResponses(params.value("inputResponses"_L1).toObject(),
+                                                                params.value("requestState"_L1));
+                    }
                     QMcpJSONRPCErrorError error;
-                    const auto result = handler(session, object, &error);
-                    if (error.code() > 0) {
+                    auto result = handler(session, object, &error);
+                    // Substitute only for synchronous handlers: an async
+                    // handler returns an empty value here and its future
+                    // continuation performs the same substitution when it
+                    // sends the response.
+                    if (result.isObject()) {
+                        const auto interim = q->takePendingResultOverride(session);
+                        if (!interim.isEmpty())
+                            result = interim;
+                    }
+                    // JSON-RPC error codes are negative; any non-zero code
+                    // set by the handler is an error.
+                    if (error.code() != 0) {
                         QMcpJSONRPCError response;
                         response.setId(id);
                         response.setError(error);
@@ -296,7 +340,7 @@ QMcpServerSession *QMcpServer::Private::findSession(const QUuid &sessionId, bool
 {
     if (!sessions.contains(sessionId)) {
         if (error) {
-            error->setCode(1);
+            error->setCode(-32000);
             error->setMessage("No session found"_L1);
         }
         return nullptr;
@@ -304,7 +348,7 @@ QMcpServerSession *QMcpServer::Private::findSession(const QUuid &sessionId, bool
     auto session = sessions.value(sessionId);
     if (session->isInitialized() != isInitialized) {
         if (error) {
-            error->setCode(1);
+            error->setCode(-32000);
             error->setMessage("Initialized state mismatch"_L1);
         }
         return nullptr;
@@ -315,6 +359,36 @@ QMcpServerSession *QMcpServer::Private::findSession(const QUuid &sessionId, bool
 QStringList QMcpServer::backends()
 {
     return backendLoader()->keyMap().values();
+}
+
+QJsonObject QMcpServer::takePendingResultOverride(const QUuid &session)
+{
+    auto *sessionObj = d->sessions.value(session);
+    if (!sessionObj || sessionObj->protocolVersion() < QtMcp::ProtocolVersion::v2026_07_28)
+        return QJsonObject();
+
+    QJsonObject inputRequests;
+    QJsonValue requestState;
+    if (sessionObj->takeRequiredInput(&inputRequests, &requestState)) {
+        QMcpInputRequiredResult result;
+        result.setInputRequests(inputRequests);
+        auto object = result.toJsonObject(sessionObj->protocolVersion());
+        if (!requestState.isUndefined() && !requestState.isNull())
+            object.insert("requestState"_L1, requestState);
+        return object;
+    }
+
+    return sessionObj->takeResultOverride();
+}
+
+void QMcpServer::setTasksExtensionEnabled(bool enabled)
+{
+    d->tasksExtensionEnabled = enabled;
+}
+
+bool QMcpServer::isTasksExtensionEnabled() const
+{
+    return d->tasksExtensionEnabled;
 }
 
 QMcpServer::QMcpServer(const QString &backend, QObject *parent)
@@ -373,7 +447,13 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         for (const auto version : supported)
             versions.append(QtMcp::protocolVersionToString(version));
         result.setSupportedVersions(versions);
-        result.setCapabilities(d->capabilities);
+        auto capabilities = d->capabilities;
+        if (d->tasksExtensionEnabled) {
+            auto extensions = capabilities.extensions();
+            extensions.insert("io.modelcontextprotocol/tasks"_L1, QJsonObject());
+            capabilities.setExtensions(extensions);
+        }
+        result.setCapabilities(capabilities);
         result.setInstructions(d->instructions);
         return result;
     });
@@ -469,7 +549,109 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         }
         const auto params = request.params();
         const auto progressToken = params.meta().progressToken();
-        return session->callToolAsync(params.name(), params.arguments(), progressToken);
+        auto future = session->callToolAsync(params.name(), params.arguments(), progressToken);
+
+        // tasks extension: when both sides declared it and the tool has not
+        // finished synchronously, hand out a durable task instead of keeping
+        // the request pending.
+        const bool clientWantsTasks = session->clientCapabilitiesJson()
+            .value("extensions"_L1).toObject().contains("io.modelcontextprotocol/tasks"_L1);
+        if (d->tasksExtensionEnabled && clientWantsTasks && !future.isFinished()) {
+            const auto taskId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            const auto now = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+            Private::TaskEntry entry;
+            entry.session = sessionId;
+            entry.createdAt = now;
+            entry.lastUpdatedAt = now;
+            entry.future = future;
+            d->tasks->insert(taskId, entry);
+            const auto version = session->protocolVersion();
+            auto tasks = d->tasks;
+            future.then(this, [tasks, taskId, version](const QMcpCallToolResult &result) {
+                auto &entry = (*tasks)[taskId];
+                entry.status = QMcpTaskStatus::completed;
+                entry.lastUpdatedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+                entry.result = result.toJsonObject(version);
+            }).onCanceled(this, [tasks, taskId]() {
+                auto &entry = (*tasks)[taskId];
+                entry.status = QMcpTaskStatus::cancelled;
+                entry.lastUpdatedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+            });
+
+            QMcpExtCreateTaskResult createTask;
+            createTask.setTaskId(taskId);
+            createTask.setStatus(QMcpTaskStatus::working);
+            createTask.setCreatedAt(now);
+            createTask.setLastUpdatedAt(now);
+            createTask.setTtlMs(300000);
+            createTask.setPollIntervalMs(500);
+            session->overrideResult(createTask.toJsonObject(version));
+
+            // The handler still must return a future; hand back a finished
+            // placeholder, the override above is what reaches the client.
+            QPromise<QMcpCallToolResult> promise;
+            promise.start();
+            promise.addResult(QMcpCallToolResult());
+            promise.finish();
+            return promise.future();
+        }
+        return future;
+    });
+    registerRequestHandler("tasks/get"_L1, [this](const QUuid &sessionId, const QJsonObject &object, QMcpJSONRPCErrorError *error) -> QJsonValue {
+        const auto taskId = object.value("params"_L1).toObject().value("taskId"_L1).toString();
+        if (!d->tasksExtensionEnabled || !d->tasks->contains(taskId)) {
+            error->setCode(-32602);
+            error->setMessage("Unknown task '%1'"_L1.arg(taskId));
+            return QJsonValue();
+        }
+        const auto entry = d->tasks->value(taskId);
+        QMcpExtGetTaskResult result;
+        result.setTaskId(taskId);
+        result.setStatus(entry.status);
+        result.setCreatedAt(entry.createdAt);
+        result.setLastUpdatedAt(entry.lastUpdatedAt);
+        result.setTtlMs(300000);
+        result.setPollIntervalMs(500);
+        if (entry.status == QMcpTaskStatus::completed)
+            result.setResult(entry.result);
+        return result.toJsonObject(versionToUse(sessionId));
+    });
+    registerRequestHandler("tasks/cancel"_L1, [this](const QUuid &sessionId, const QJsonObject &object, QMcpJSONRPCErrorError *error) -> QJsonValue {
+        Q_UNUSED(sessionId);
+        const auto taskId = object.value("params"_L1).toObject().value("taskId"_L1).toString();
+        if (!d->tasksExtensionEnabled || !d->tasks->contains(taskId)) {
+            error->setCode(-32602);
+            error->setMessage("Unknown task '%1'"_L1.arg(taskId));
+            return QJsonValue();
+        }
+        auto &entry = (*d->tasks)[taskId];
+        // Cancellation is cooperative; the future decides whether it honors it.
+        if (entry.status == QMcpTaskStatus::working)
+            entry.future.cancel();
+        QJsonObject result;
+        result.insert("resultType"_L1, "complete"_L1);
+        return result;
+    });
+    registerRequestHandler("tasks/update"_L1, [this](const QUuid &sessionId, const QJsonObject &object, QMcpJSONRPCErrorError *error) -> QJsonValue {
+        Q_UNUSED(sessionId);
+        const auto params = object.value("params"_L1).toObject();
+        const auto taskId = params.value("taskId"_L1).toString();
+        if (!d->tasksExtensionEnabled || !d->tasks->contains(taskId)) {
+            error->setCode(-32602);
+            error->setMessage("Unknown task '%1'"_L1.arg(taskId));
+            return QJsonValue();
+        }
+        auto &entry = (*d->tasks)[taskId];
+        // Stored for tools that requested input mid-task; wiring the
+        // responses back into a suspended tool is an application concern for
+        // now (the entry keeps the latest responses).
+        entry.inputResponses = params.value("inputResponses"_L1).toObject();
+        entry.lastUpdatedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+        if (entry.status == QMcpTaskStatus::input_required)
+            entry.status = QMcpTaskStatus::working;
+        QJsonObject result;
+        result.insert("resultType"_L1, "complete"_L1);
+        return result;
     });
 
     addRequestHandler([this](const QUuid &sessionId, const QMcpListPromptsRequest &request, QMcpJSONRPCErrorError *error) {
