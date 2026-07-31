@@ -69,6 +69,15 @@ qt_internal_add_module(McpCommon
         qmcpembeddedresourceresource.h
         qmcpemptyresult.h
         qmcpenumschema.h
+        qmcpextcanceltaskresult.h
+        qmcpextcreatetaskresult.h
+        qmcpextgettaskresult.h
+        qmcpexttask.h
+        qmcpexttaskstatusnotification.h
+        qmcpexttaskstatusnotificationparams.h
+        qmcpextupdatetaskrequest.h
+        qmcpextupdatetaskrequestparams.h
+        qmcpextupdatetaskresult.h
         qmcpgetpromptrequest.h
         qmcpgetpromptrequestparams.h
         qmcpgetpromptresult.h
@@ -187,6 +196,7 @@ qt_internal_add_module(McpCommon
         qmcptextresourcecontents.h
         qmcptask.h
         qmcptaskmetadata.h
+        qmcptasksextensioncapability.h
         qmcptaskstatus.h
         qmcptaskstatusnotification.h
         qmcptaskstatusnotificationparams.h
