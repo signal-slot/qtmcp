@@ -625,7 +625,10 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
             return QJsonValue();
         }
         auto &entry = (*d->tasks)[taskId];
-        // Cancellation is cooperative; the future decides whether it honors it.
+        // Cancelling the continuation does not reach the producing tool
+        // (QFuture::cancel() does not propagate upstream), so the tool may
+        // run to completion; its result is discarded and the task stays
+        // cancelled, which is the cooperative semantics the extension allows.
         if (entry.status == QMcpTaskStatus::working)
             entry.future.cancel();
         QJsonObject result;
