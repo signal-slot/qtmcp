@@ -94,11 +94,16 @@ schema 差分(ワイヤー影響分):
 
 ## 横断課題
 
-- **Streamable HTTP トランスポートが未実装**(現状は stdio と旧 HTTP+SSE のみ)。
-  2025-06-18 以降の HTTP 要件(`MCP-Protocol-Version` 検証、`Mcp-Session-Id`)と
-  2026-07-28 の `subscriptions/listen` を HTTP で使うには新規バックエンド実装が必要。
-  プロトコルレベル対応(型・ネゴシエーション・ライフサイクル)を先行させ、
-  トランスポートは Phase 4 として分離する
+- **Streamable HTTP トランスポート**: Phase 4 で実装済み(プラグインキー "streamablehttp"、
+  サーバー/クライアント両対応。2025-03-26〜11-25 の Mcp-Session-Id/GET ストリーム/DELETE と
+  2026-07-28 のセッションレス+ヘッダ検証+listen ストリームの両世代に対応)。
+  残 TODO(コード内に明記): 2026-07-28 の -32601 は HTTP 404 で返すべき、
+  Last-Event-ID 再開は未提供、不正な x-mcp-header 注釈はツール除外でなく警告のみ
+- **サーバー側 MRTR**: Phase 5 で実装済み(`QMcpServerSession::requireInput()` +
+  requestState ラウンドトリップでサーバーはステートレス維持)
+- **tasks extension**: Phase 6 で実装済み(型 + サーバーレジストリ + tasks/get/cancel/update、
+  discover での広告、クライアント宣言 API)。タスク中の input_required とツール再開の
+  自動接続は tasks/update での保存まで(アプリ責務)
 - バージョン分岐の表現: `QMcpGadget::isPropertyAvailable(name, version)` を導入済み。
   enum 値は日付順の数値なので `version >= v2025_06_18` の順序比較で分岐する
 - 型の追加はすべて追加的(既存型の削除はしない)。旧バージョンで存在しないフィールドは
