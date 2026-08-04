@@ -4,6 +4,7 @@
 #ifndef QMCPAUDIOCONTENT_H
 #define QMCPAUDIOCONTENT_H
 
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include <QtMcpCommon/qmcpgadget.h>
@@ -18,6 +19,13 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCOMMON_EXPORT QMcpAudioContent : public QMcpGadget
 {
     Q_GADGET
+
+    /*!
+        \property QMcpAudioContent::_meta
+        \brief Reserved by MCP to allow clients and servers to attach additional metadata.
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject _meta READ meta WRITE setMeta)
 
     /*!
         \property QMcpAudioContent::type
@@ -45,6 +53,15 @@ class Q_MCPCOMMON_EXPORT QMcpAudioContent : public QMcpGadget
 
 public:
     QMcpAudioContent() : QMcpGadget(new Private) {}
+
+    QJsonObject meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QJsonObject &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
+    }
 
     QString type() const {
         return "audio"_L1;
@@ -81,8 +98,16 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "_meta")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
+        QJsonObject _meta;
         QByteArray data;
         QString mimeType;
         QMcpAnnotations annotations;

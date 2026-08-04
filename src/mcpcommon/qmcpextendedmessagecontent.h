@@ -6,6 +6,7 @@
 
 #include <QtMcpCommon/qmcpmessagecontentbase.h>
 #include <QtMcpCommon/qmcpembeddedresource.h>
+#include <QtMcpCommon/qmcpresourcelink.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -14,6 +15,7 @@ class Q_MCPCOMMON_EXPORT QMcpExtendedMessageContent : public QMcpMessageContentB
     Q_GADGET
 
     Q_PROPERTY(QMcpEmbeddedResource embeddedResource READ embeddedResource WRITE setEmbeddedResource)
+    Q_PROPERTY(QMcpResourceLink resourceLink READ resourceLink WRITE setResourceLink)
 
 public:
     QMcpEmbeddedResource embeddedResource() const {
@@ -26,12 +28,34 @@ public:
         d<Private>()->embeddedResource = embeddedResource;
     }
 
+    QMcpResourceLink resourceLink() const {
+        return d<Private>()->resourceLink;
+    }
+
+    void setResourceLink(const QMcpResourceLink &resourceLink) {
+        if (this->resourceLink() == resourceLink) return;
+        setRefType("resourceLink"_ba);
+        d<Private>()->resourceLink = resourceLink;
+    }
+
 protected:
     // Protected constructor for base class
     QMcpExtendedMessageContent(Private *d) : QMcpMessageContentBase(d) {}
 
     struct Private : public QMcpMessageContentBase::Private {
         QMcpEmbeddedResource embeddedResource;
+        QMcpResourceLink resourceLink;
+
+        int findPropertyIndex(const QJsonObject &object) const override {
+            // A resource link may carry a mimeType, so it has to be detected by
+            // its type discriminator before the mimeType based detection of the
+            // base class kicks in.
+            if (object.value("type"_L1).toString() == "resource_link"_L1) {
+                const auto mo = QMcpExtendedMessageContent::staticMetaObject;
+                return mo.indexOfProperty("resourceLink");
+            }
+            return QMcpMessageContentBase::Private::findPropertyIndex(object);
+        }
     };
 };
 

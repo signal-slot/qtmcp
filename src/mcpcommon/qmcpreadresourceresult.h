@@ -4,7 +4,7 @@
 #ifndef QMCPREADRESOURCERESULT_H
 #define QMCPREADRESOURCERESULT_H
 
-#include <QtMcpCommon/qmcpresult.h>
+#include <QtMcpCommon/qmcpcacheableresult.h>
 #include <QtMcpCommon/qmcpreadresourceresultcontents.h>
 #include <QtCore/QList>
 
@@ -14,14 +14,14 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief The server's response to a resources/read request from the client.
 */
-class Q_MCPCOMMON_EXPORT QMcpReadResourceResult : public QMcpResult
+class Q_MCPCOMMON_EXPORT QMcpReadResourceResult : public QMcpCacheableResult
 {
     Q_GADGET
 
     Q_PROPERTY(QList<QMcpReadResourceResultContents> contents READ contents WRITE setContents REQUIRED)
 
 public:
-    QMcpReadResourceResult() : QMcpResult(new Private) {
+    QMcpReadResourceResult() : QMcpCacheableResult(new Private) {
         qRegisterMetaType<QMcpReadResourceResultContents>();
     }
 
@@ -38,7 +38,7 @@ public:
         return &staticMetaObject;
     }
 public:
-    struct Private : public QMcpResult::Private {
+    struct Private : public QMcpCacheableResult::Private {
         QList<QMcpReadResourceResultContents> contents;
 
         Private *clone() const override { return new Private(*this); }

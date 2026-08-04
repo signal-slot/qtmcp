@@ -5,6 +5,7 @@
 #define QMCPEMBEDDEDRESOURCE_H
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonObject>
 #include <QtMcpCommon/qmcpannotations.h>
 #include <QtMcpCommon/qmcpembeddedresourceresource.h>
 #include <QtMcpCommon/qmcpgadget.h>
@@ -22,12 +23,28 @@ class Q_MCPCOMMON_EXPORT QMcpEmbeddedResource : public QMcpGadget
 {
     Q_GADGET
 
+    /*!
+        \property QMcpEmbeddedResource::_meta
+        \brief Reserved by MCP to allow clients and servers to attach additional metadata.
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject _meta READ meta WRITE setMeta)
+
     Q_PROPERTY(QMcpAnnotations annotations READ annotations WRITE setAnnotations)
     Q_PROPERTY(QMcpEmbeddedResourceResource resource READ resource WRITE setResource REQUIRED)
     Q_PROPERTY(QByteArray type READ type CONSTANT REQUIRED)
 
 public:
     QMcpEmbeddedResource() : QMcpGadget(new Private) {}
+
+    QJsonObject meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QJsonObject &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
+    }
 
     QMcpAnnotations annotations() const {
         return d<Private>()->annotations;
@@ -53,9 +70,17 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "_meta")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
     public:
+        QJsonObject _meta;
         QMcpAnnotations annotations;
         QMcpEmbeddedResourceResource resource;
 

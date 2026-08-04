@@ -4,4 +4,5 @@
 add_subdirectory(stdio)
 if(TARGET Qt6::Network)
     add_subdirectory(sse)
+    add_subdirectory(streamablehttp)
 endif()

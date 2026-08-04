@@ -195,6 +195,30 @@ public:
     virtual const QMetaObject* metaObject() const { return &staticMetaObject; }
 
 protected:
+    // Returns false when the named property does not exist in the given
+    // protocol revision. Unavailable properties are dropped by toJsonObject()
+    // and ignored by fromJsonObject(), including their REQUIRED check.
+    virtual bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const {
+        Q_UNUSED(name);
+        Q_UNUSED(protocolVersion);
+        return true;
+    }
+
+    // Returns \a object with the key \a from renamed to \a to, or \a object
+    // unchanged when it does not contain \a from.
+    //
+    // Some members of the protocol are named after C++ keywords ("default",
+    // "enum", "const") and therefore cannot be used as Q_PROPERTY names. The
+    // types holding such a member name the property differently and translate
+    // the key in their fromJsonObject() and toJsonObject() overrides.
+    static QJsonObject renamedKey(QJsonObject object, const QString &from, const QString &to) {
+        if (object.contains(from)) {
+            object.insert(to, object.value(from));
+            object.remove(from);
+        }
+        return object;
+    }
+
     template<typename DerivedData>
     const DerivedData *d() const {
         const DerivedData *ret = static_cast<const DerivedData *>(data.constData());

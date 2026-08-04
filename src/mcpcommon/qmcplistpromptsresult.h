@@ -5,7 +5,7 @@
 #define QMCPLISTPROMPTSRESULT_H
 
 #include <QtCore/QString>
-#include <QtMcpCommon/qmcpresult.h>
+#include <QtMcpCommon/qmcpcacheableresult.h>
 #include <QtMcpCommon/qmcpprompt.h>
 #include <QtCore/QList>
 
@@ -15,7 +15,7 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief The server's response to a prompts/list request from the client.
 */
-class Q_MCPCOMMON_EXPORT QMcpListPromptsResult : public QMcpResult
+class Q_MCPCOMMON_EXPORT QMcpListPromptsResult : public QMcpCacheableResult
 {
     Q_GADGET
 
@@ -29,7 +29,7 @@ class Q_MCPCOMMON_EXPORT QMcpListPromptsResult : public QMcpResult
     Q_PROPERTY(QList<QMcpPrompt> prompts READ prompts WRITE setPrompts REQUIRED)
 
 public:
-    QMcpListPromptsResult() : QMcpResult(new Private) {
+    QMcpListPromptsResult() : QMcpCacheableResult(new Private) {
         qRegisterMetaType<QMcpPrompt>();
     }
 
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    struct Private : public QMcpResult::Private {
+    struct Private : public QMcpCacheableResult::Private {
         QString nextCursor;
         QList<QMcpPrompt> prompts;
 

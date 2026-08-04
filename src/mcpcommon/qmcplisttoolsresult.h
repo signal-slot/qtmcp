@@ -5,7 +5,7 @@
 #define QMCPLISTTOOLSRESULT_H
 
 #include <QtCore/QString>
-#include <QtMcpCommon/qmcpresult.h>
+#include <QtMcpCommon/qmcpcacheableresult.h>
 #include <QtMcpCommon/qmcptool.h>
 #include <QtCore/QList>
 
@@ -15,7 +15,7 @@ QT_BEGIN_NAMESPACE
     \inmodule QtMcpCommon
     \brief The server's response to a tools/list request from the client.
 */
-class Q_MCPCOMMON_EXPORT QMcpListToolsResult : public QMcpResult
+class Q_MCPCOMMON_EXPORT QMcpListToolsResult : public QMcpCacheableResult
 {
     Q_GADGET
 
@@ -29,7 +29,7 @@ class Q_MCPCOMMON_EXPORT QMcpListToolsResult : public QMcpResult
     Q_PROPERTY(QList<QMcpTool> tools READ tools WRITE setTools REQUIRED)
 
 public:
-    QMcpListToolsResult() : QMcpResult(new Private) {
+    QMcpListToolsResult() : QMcpCacheableResult(new Private) {
         qRegisterMetaType<QMcpTool>();
     }
 
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    struct Private : public QMcpResult::Private {
+    struct Private : public QMcpCacheableResult::Private {
         QString nextCursor;
         QList<QMcpTool> tools;
 

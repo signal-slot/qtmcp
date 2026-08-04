@@ -14,6 +14,9 @@
 #include <QtMcpCommon/QMcpCallToolResultContent>
 #include <QtMcpCommon/QMcpCreateMessageRequestParams>
 #include <QtMcpCommon/QMcpCreateMessageResult>
+#include <QtMcpCommon/QMcpElicitRequestParams>
+#include <QtMcpCommon/QMcpElicitResult>
+#include <QtMcpCommon/QMcpSubscriptionFilter>
 #include <QtMcpCommon/QMcpPrompt>
 #include <QtMcpCommon/QMcpPromptMessage>
 #include <QtMcpCommon/QMcpReadResourceResultContents>
@@ -236,6 +239,42 @@ public slots:
 
     void createMessage(const QMcpCreateMessageRequestParams &params);
 
+    // Requires a client that negotiated MCP 2025-06-18 or later with the
+    // elicitation capability.
+    void elicit(const QMcpElicitRequestParams &params);
+
+    // subscriptions/listen opt-ins (2026-07-28). Sessions on that revision
+    // only receive the change notifications they subscribed to.
+    bool hasListenSubscriptions() const;
+    QMcpSubscriptionFilter listenSubscriptions() const;
+    void setListenSubscriptions(const QMcpSubscriptionFilter &filter);
+    QString listenSubscriptionId() const;
+
+    // Multi round-trip requests (2026-07-28). During request handling a tool
+    // or handler reads the input the client supplied on a retry with
+    // inputResponses(), and calls requireInput() when it cannot finish
+    // without more; the server then answers with an input_required interim
+    // result instead of the handler's result. requestState round-trips
+    // through the client, so the server stays stateless.
+    QJsonObject inputResponses() const;
+    QJsonValue clientRequestState() const;
+    void requireInput(const QJsonObject &inputRequests, const QJsonValue &requestState = QJsonValue());
+    static QJsonObject elicitationInputRequest(const QMcpElicitRequestParams &params);
+
+    // Internal plumbing for QMcpServer.
+    void provideInputResponses(const QJsonObject &responses, const QJsonValue &requestState);
+    bool takeRequiredInput(QJsonObject *inputRequests, QJsonValue *requestState);
+
+    // The client capabilities carried in the request _meta of a stateless
+    // (2026-07-28) session, e.g. declared extensions. Updated per request.
+    QJsonObject clientCapabilitiesJson() const;
+    void setClientCapabilitiesJson(const QJsonObject &capabilities);
+
+    // Replaces the pending request's result with a pre-serialized object,
+    // e.g. a CreateTaskResult from the tasks extension. Internal.
+    void overrideResult(const QJsonObject &result);
+    QJsonObject takeResultOverride();
+
 signals:
     void initializedChanged(bool initialized);
     void resourceUpdated(const QMcpResource &resource);
@@ -244,6 +283,7 @@ signals:
     void toolListChanged();
     void rootsChanged(const QList<QMcpRoot> &roots);
     void createMessageFinished(const QMcpCreateMessageResult &result);
+    void elicitFinished(const QMcpElicitResult &result);
 
 private:
     class Private;

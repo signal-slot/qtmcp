@@ -5,6 +5,7 @@
 #define QMCPCALLTOOLRESULT_H
 
 #include <QtMcpCommon/qmcpcalltoolresultcontent.h>
+#include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtMcpCommon/qmcpresult.h>
 
@@ -38,6 +39,17 @@ class Q_MCPCOMMON_EXPORT QMcpCallToolResult : public QMcpResult
     */
     Q_PROPERTY(bool isError READ isError WRITE setIsError)
 
+    /*!
+        \property QMcpCallToolResult::structuredContent
+        \brief An optional JSON object that represents the structured result of the tool call.
+
+        Its structure is described by the outputSchema property of the QMcpTool
+        that has been called.
+
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject structuredContent READ structuredContent WRITE setStructuredContent)
+
 public:
     QMcpCallToolResult() : QMcpResult(new Private) {
         qRegisterMetaType<QMcpCallToolResultContent>();
@@ -61,14 +73,31 @@ public:
         d<Private>()->isError = isError;
     }
 
+    QJsonObject structuredContent() const {
+        return d<Private>()->structuredContent;
+    }
+
+    void setStructuredContent(const QJsonObject &structuredContent) {
+        if (this->structuredContent() == structuredContent) return;
+        d<Private>()->structuredContent = structuredContent;
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
+    }
+
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "structuredContent")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpResult::isPropertyAvailable(name, protocolVersion);
     }
 
 private:
     struct Private : public QMcpResult::Private {
         QList<QMcpCallToolResultContent> content;
         bool isError = false;
+        QJsonObject structuredContent;
 
         Private *clone() const override { return new Private(*this); }
     };

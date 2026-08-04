@@ -15,6 +15,8 @@ bool QMcpGadget::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersio
         const auto property = mo->property(i);
         if (property.isConstant())
             continue;
+        if (!isPropertyAvailable(property.name(), protocolVersion))
+            continue;
         const auto propertyType = property.typeName();
         const auto propertyName = QString::fromLatin1(property.name());
         if (!object.contains(propertyName)) {
@@ -232,6 +234,8 @@ QJsonObject QMcpGadget::toJsonObject(QtMcp::ProtocolVersion protocolVersion) con
     const auto indices = requiredOrModifiedPropertyIndices(this);
     for (int i : indices) {
         const auto mp = mo->property(i);
+        if (!isPropertyAvailable(mp.name(), protocolVersion))
+            continue;
         const auto mt = mp.metaType();
         const auto name = QString::fromLatin1(mp.name());
         auto value = mp.readOnGadget(this);

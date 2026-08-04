@@ -4,8 +4,12 @@
 #include "../testhelper.h"
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonParseError>
+#include <QtCore/QJsonArray>
 #include <QtMcpCommon/QMcpTool>
 #include <QtMcpCommon/QMcpToolInputSchema>
+#include <QtMcpCommon/qmcpicon.h>
+#include <QtMcpCommon/qmcptooloutputschema.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtTest/QTest>
 
 class tst_QMcpTool : public QObject
@@ -17,6 +21,7 @@ private slots:
     void convert();
     void copy_data();
     void copy();
+    void testVersionGating();
 };
 
 void tst_QMcpTool::convert_data()
@@ -144,6 +149,55 @@ void tst_QMcpTool::copy()
     QMcpTool tool3;
     tool3 = tool2;
     QCOMPARE(tool3.toJsonObject(), QJsonObject::fromVariantMap(data));
+}
+
+void tst_QMcpTool::testVersionGating()
+{
+    QMcpToolInputSchema inputSchema;
+    inputSchema.setProperties(QJsonObject { { "question"_L1, QJsonObject { { "type"_L1, "string"_L1 } } } });
+
+    QMcpToolOutputSchema outputSchema;
+    outputSchema.setProperties(QJsonObject { { "answer"_L1, QJsonObject { { "type"_L1, "integer"_L1 } } } });
+
+    QMcpIcon icon;
+    icon.setSrc(QUrl("https://example.invalid/tool.png"_L1));
+    icon.setSizes({ "48x48"_L1 });
+
+    QMcpTool tool;
+    tool.setName("testTool"_L1);
+    tool.setInputSchema(inputSchema);
+    tool.setTitle("Test Tool"_L1);
+    tool.setOutputSchema(outputSchema);
+    tool.setIcons({ icon });
+
+    // title and outputSchema have been added in 2025-06-18 and must not leak
+    // into an older revision of the protocol.
+    const auto oldObject = tool.toJsonObject(QtMcp::ProtocolVersion::v2025_03_26);
+    QVERIFY(!oldObject.contains("title"_L1));
+    QVERIFY(!oldObject.contains("outputSchema"_L1));
+    QVERIFY(!oldObject.contains("icons"_L1));
+    // The members that already existed are still there.
+    QCOMPARE(oldObject.value("name"_L1).toString(), "testTool"_L1);
+    QVERIFY(oldObject.contains("inputSchema"_L1));
+
+    const auto newObject = tool.toJsonObject(QtMcp::ProtocolVersion::v2025_06_18);
+    QCOMPARE(newObject.value("title"_L1).toString(), "Test Tool"_L1);
+    QVERIFY(newObject.contains("outputSchema"_L1));
+    const auto outputSchemaObject = newObject.value("outputSchema"_L1).toObject();
+    QCOMPARE(outputSchemaObject.value("type"_L1).toString(), "object"_L1);
+    QCOMPARE(outputSchemaObject.value("properties"_L1).toObject(), outputSchema.properties());
+    // icons has been added in 2025-11-25 only.
+    QVERIFY(!newObject.contains("icons"_L1));
+
+    const auto newestObject = tool.toJsonObject(QtMcp::ProtocolVersion::v2025_11_25);
+    const auto icons = newestObject.value("icons"_L1).toArray();
+    QCOMPARE(icons.size(), 1);
+    QCOMPARE(icons.at(0).toObject().value("src"_L1).toString(),
+             "https://example.invalid/tool.png"_L1);
+    QCOMPARE(icons.at(0).toObject().value("sizes"_L1).toArray(), QJsonArray { "48x48"_L1 });
+    // The members of the older revisions are still there.
+    QCOMPARE(newestObject.value("title"_L1).toString(), "Test Tool"_L1);
+    QVERIFY(newestObject.contains("outputSchema"_L1));
 }
 
 QTEST_MAIN(tst_QMcpTool)

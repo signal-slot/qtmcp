@@ -12,6 +12,7 @@
 #include <QtGui/QAction>
 #endif
 #include <QtMcpCommon/QMcpCreateMessageRequest>
+#include <QtMcpCommon/QMcpElicitRequest>
 #include <QtMcpCommon/QMcpProgressNotification>
 
 QT_BEGIN_NAMESPACE
@@ -93,6 +94,19 @@ public:
     QList<QMcpRoot> roots;
     QMultiHash<QUrl, QUrl> subscriptions;
 
+    bool listenSubscribed = false;
+    QMcpSubscriptionFilter listenFilter;
+    QString listenSubscriptionId;
+
+    QJsonObject inputResponses;
+    QJsonValue clientRequestState;
+    bool inputRequired = false;
+    QJsonObject requiredInputRequests;
+    QJsonValue requiredRequestState;
+
+    QJsonObject clientCapabilities;
+    QJsonObject resultOverride;
+
     QTimer notifyResourceListChanged;
     QTimer notifyPromptListChanged;
     QTimer notifyToolListChanged;
@@ -147,6 +161,102 @@ void QMcpServerSession::setProtocolVersion(const QString &protocolVersionStr)
 
     // Use the enum-based method
     setProtocolVersion(version);
+}
+
+bool QMcpServerSession::hasListenSubscriptions() const
+{
+    return d->listenSubscribed;
+}
+
+QMcpSubscriptionFilter QMcpServerSession::listenSubscriptions() const
+{
+    return d->listenFilter;
+}
+
+void QMcpServerSession::setListenSubscriptions(const QMcpSubscriptionFilter &filter)
+{
+    d->listenSubscribed = true;
+    d->listenFilter = filter;
+    if (d->listenSubscriptionId.isEmpty())
+        d->listenSubscriptionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+QString QMcpServerSession::listenSubscriptionId() const
+{
+    return d->listenSubscriptionId;
+}
+
+QJsonObject QMcpServerSession::inputResponses() const
+{
+    return d->inputResponses;
+}
+
+QJsonValue QMcpServerSession::clientRequestState() const
+{
+    return d->clientRequestState;
+}
+
+void QMcpServerSession::requireInput(const QJsonObject &inputRequests, const QJsonValue &requestState)
+{
+    if (protocolVersion() < QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "requireInput() needs MCP 2026-07-28, session uses"
+                   << QtMcp::protocolVersionToString(protocolVersion());
+        return;
+    }
+    d->inputRequired = true;
+    d->requiredInputRequests = inputRequests;
+    d->requiredRequestState = requestState;
+}
+
+QJsonObject QMcpServerSession::elicitationInputRequest(const QMcpElicitRequestParams &params)
+{
+    QJsonObject request;
+    request.insert("method"_L1, "elicitation/create"_L1);
+    request.insert("params"_L1, params.toJsonObject(QtMcp::ProtocolVersion::v2026_07_28));
+    return request;
+}
+
+void QMcpServerSession::provideInputResponses(const QJsonObject &responses, const QJsonValue &requestState)
+{
+    d->inputResponses = responses;
+    d->clientRequestState = requestState;
+    d->inputRequired = false;
+    d->requiredInputRequests = QJsonObject();
+    d->requiredRequestState = QJsonValue();
+}
+
+QJsonObject QMcpServerSession::clientCapabilitiesJson() const
+{
+    return d->clientCapabilities;
+}
+
+void QMcpServerSession::setClientCapabilitiesJson(const QJsonObject &capabilities)
+{
+    d->clientCapabilities = capabilities;
+}
+
+void QMcpServerSession::overrideResult(const QJsonObject &result)
+{
+    d->resultOverride = result;
+}
+
+QJsonObject QMcpServerSession::takeResultOverride()
+{
+    return std::exchange(d->resultOverride, QJsonObject());
+}
+
+bool QMcpServerSession::takeRequiredInput(QJsonObject *inputRequests, QJsonValue *requestState)
+{
+    if (!d->inputRequired)
+        return false;
+    if (inputRequests)
+        *inputRequests = d->requiredInputRequests;
+    if (requestState)
+        *requestState = d->requiredRequestState;
+    d->inputRequired = false;
+    d->requiredInputRequests = QJsonObject();
+    d->requiredRequestState = QJsonValue();
+    return true;
 }
 
 bool QMcpServerSession::isInitialized() const
@@ -981,11 +1091,39 @@ void QMcpServerSession::createMessage(const QMcpCreateMessageRequestParams &para
     auto server = qobject_cast<QMcpServer *>(parent());
     if (!server)
         return;
+    if (protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "sampling/createMessage was removed in MCP 2026-07-28;"
+                   << "return an input_required result (MRTR) instead";
+        return;
+    }
     QMcpCreateMessageRequest request;
     request.setParams(params);
     server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpCreateMessageResult &result) {
         Q_ASSERT(d->sessionId == sessionId);
         emit createMessageFinished(result);
+    });
+}
+
+void QMcpServerSession::elicit(const QMcpElicitRequestParams &params)
+{
+    auto server = qobject_cast<QMcpServer *>(parent());
+    if (!server)
+        return;
+    if (protocolVersion() < QtMcp::ProtocolVersion::v2025_06_18) {
+        qWarning() << "elicitation/create requires MCP 2025-06-18 or later, session uses"
+                   << QtMcp::protocolVersionToString(protocolVersion());
+        return;
+    }
+    if (protocolVersion() >= QtMcp::ProtocolVersion::v2026_07_28) {
+        qWarning() << "elicitation/create was removed in MCP 2026-07-28;"
+                   << "return an input_required result (MRTR) instead";
+        return;
+    }
+    QMcpElicitRequest request;
+    request.setParams(params);
+    server->request(d->sessionId, request, [this](const QUuid &sessionId, const QMcpElicitResult &result) {
+        Q_ASSERT(d->sessionId == sessionId);
+        emit elicitFinished(result);
     });
 }
 

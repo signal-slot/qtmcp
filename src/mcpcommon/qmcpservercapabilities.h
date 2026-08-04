@@ -4,6 +4,7 @@
 #ifndef QMCPSERVERCAPABILITIES_H
 #define QMCPSERVERCAPABILITIES_H
 
+#include <QtCore/QJsonObject>
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcpservercapabilitiesexperimental.h>
 #include <QtMcpCommon/qmcpservercapabilitieslogging.h>
@@ -26,6 +27,19 @@ class Q_MCPCOMMON_EXPORT QMcpServerCapabilities : public QMcpGadget
         \brief Experimental, non-standard capabilities that the server supports.
     */
     Q_PROPERTY(QMcpServerCapabilitiesExperimental experimental READ experimental WRITE setExperimental)
+
+    /*!
+        \property QMcpServerCapabilities::extensions
+        \brief Optional MCP extensions that the server supports.
+
+        Keys are extension identifiers, for example
+        "io.modelcontextprotocol/tasks", and values are per-extension settings
+        objects. An empty object indicates support with no settings. Keys must
+        follow the \c _meta key naming rules, with a mandatory prefix.
+
+        \since MCP 2026-07-28
+    */
+    Q_PROPERTY(QJsonObject extensions READ extensions WRITE setExtensions)
 
     /*!
         \property QMcpServerCapabilities::logging
@@ -61,6 +75,15 @@ public:
     void setExperimental(const QMcpServerCapabilitiesExperimental &experimental) {
         if (this->experimental() == experimental) return;
         d<Private>()->experimental = experimental;
+    }
+
+    QJsonObject extensions() const {
+        return d<Private>()->extensions;
+    }
+
+    void setExtensions(const QJsonObject &extensions) {
+        if (this->extensions() == extensions) return;
+        d<Private>()->extensions = extensions;
     }
 
     QMcpServerCapabilitiesLogging logging() const {
@@ -103,9 +126,17 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "extensions")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2026_07_28;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
         QMcpServerCapabilitiesExperimental experimental;
+        QJsonObject extensions;
         QMcpServerCapabilitiesLogging logging;
         QMcpServerCapabilitiesPrompts prompts;
         QMcpServerCapabilitiesResources resources;

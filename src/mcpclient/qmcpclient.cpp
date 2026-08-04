@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "qmcpclient.h"
+#include <QtCore/qcoreapplication.h>
 #include <QtCore/qjsonobject.h>
 #include <QtCore/private/qfactoryloader_p.h>
 
@@ -18,7 +19,8 @@ class QMcpClient::Private
 {
 public:
     QtMcp::ProtocolVersion protocolVersion = QtMcp::ProtocolVersion::Latest; // Default to latest version
-    const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26};
+    bool tasksExtensionEnabled = false;
+    const QList<QtMcp::ProtocolVersion> supportedVersions = {QtMcp::ProtocolVersion::v2024_11_05, QtMcp::ProtocolVersion::v2025_03_26, QtMcp::ProtocolVersion::v2025_06_18, QtMcp::ProtocolVersion::v2025_11_25, QtMcp::ProtocolVersion::v2026_07_28};
 
     Private(const QString &type, QMcpClient *parent)
         : q(parent)
@@ -40,6 +42,14 @@ public:
                 if (object.contains("result"_L1)) {
                     if (callbacks.contains(id)) {
                         const auto result = object.value("result"_L1).toObject();
+                        // A multi round-trip interim result (2026-07-28) does
+                        // not complete the request; the caller retries with
+                        // inputResponses and gets the final result there.
+                        if (result.value("resultType"_L1).toString() == "input_required"_L1) {
+                            callbacks.remove(id);
+                            emit q->inputRequired(id, result);
+                            return;
+                        }
                         callbacks.take(id)(result, {});
                         return;
                     }
@@ -61,7 +71,7 @@ public:
                         const auto handler = requestHandlers.value(method);
                         QMcpJSONRPCErrorError error;
                         const auto result = handler(object, &error);
-                        if (error.code() > 0) {
+                        if (error.code() != 0) {
                             QMcpJSONRPCError response;
                             response.setId(id.toVariant());
                             // Extract protocol version if available in the request
@@ -150,6 +160,16 @@ void QMcpClient::start(const QString &args)
     d->backend->start(args);
 }
 
+void QMcpClient::setTasksExtensionEnabled(bool enabled)
+{
+    d->tasksExtensionEnabled = enabled;
+}
+
+bool QMcpClient::isTasksExtensionEnabled() const
+{
+    return d->tasksExtensionEnabled;
+}
+
 void QMcpClient::send(const QJsonObject &request, std::function<void(const QJsonObject &, const QJsonObject &)> callback)
 {
     if (!d->backend) return;
@@ -180,7 +200,16 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
                 // Convert to enum first
                 QtMcp::ProtocolVersion serverVersion = QtMcp::stringToProtocolVersion(serverVersionStr);
                 if (d->supportedVersions.contains(serverVersion)) {
-                    d->protocolVersion = serverVersion;
+                    setProtocolVersion(serverVersion);
+                    // Let the transport embed the negotiated version where its
+                    // protocol requires it, e.g. the MCP-Protocol-Version
+                    // header on HTTP (required since 2025-06-18).
+                    d->backend->setNegotiatedProtocolVersion(serverVersion);
+                } else {
+                    // The lifecycle spec says the client SHOULD disconnect
+                    // when it cannot support the server's version.
+                    qWarning() << "Server negotiated unsupported protocol version"
+                               << serverVersionStr << "- disconnecting is recommended";
                 }
             }
 
@@ -206,9 +235,35 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
     }
 
     // For non-initialization requests, use the standard flow
+    auto message = request;
+
+    // Stateless lifecycle (2026-07-28): there is no initialize handshake, so
+    // every request identifies the protocol version and the client in its
+    // params _meta instead.
+    if (d->protocolVersion >= QtMcp::ProtocolVersion::v2026_07_28
+        && message.contains("method"_L1) && message.contains("id"_L1)) {
+        auto params = message.value("params"_L1).toObject();
+        auto meta = params.value("_meta"_L1).toObject();
+        meta.insert("io.modelcontextprotocol/protocolVersion"_L1,
+                    QtMcp::protocolVersionToString(d->protocolVersion));
+        QJsonObject clientInfo;
+        clientInfo.insert("name"_L1, QCoreApplication::applicationName());
+        clientInfo.insert("version"_L1, QCoreApplication::applicationVersion());
+        meta.insert("io.modelcontextprotocol/clientInfo"_L1, clientInfo);
+        QJsonObject clientCapabilities;
+        if (d->tasksExtensionEnabled) {
+            QJsonObject extensions;
+            extensions.insert("io.modelcontextprotocol/tasks"_L1, QJsonObject());
+            clientCapabilities.insert("extensions"_L1, extensions);
+        }
+        meta.insert("io.modelcontextprotocol/clientCapabilities"_L1, clientCapabilities);
+        params.insert("_meta"_L1, meta);
+        message.insert("params"_L1, params);
+    }
+
     static int id = 0;
-    if (request.contains("id"_L1) && request.value("id"_L1).isNull()) {
-        auto request2 = request;
+    if (message.contains("id"_L1) && message.value("id"_L1).isNull()) {
+        auto request2 = message;
         request2.insert("id"_L1, id);
 
         if (callback)
@@ -216,7 +271,7 @@ void QMcpClient::send(const QJsonObject &request, std::function<void(const QJson
         id++;
         d->backend->send(request2);
     } else {
-        d->backend->send(request);
+        d->backend->send(message);
     }
 }
 

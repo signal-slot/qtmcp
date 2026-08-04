@@ -11,6 +11,8 @@
 #include <QtMcpCommon/qmcpgadget.h>
 #include <QtMcpCommon/qmcpmodelpreferences.h>
 #include <QtMcpCommon/qmcpsamplingmessage.h>
+#include <QtMcpCommon/qmcptool.h>
+#include <QtMcpCommon/qmcptoolchoice.h>
 #include <QtCore/QList>
 
 QT_BEGIN_NAMESPACE
@@ -60,9 +62,33 @@ class Q_MCPCOMMON_EXPORT QMcpCreateMessageRequestParams : public QMcpGadget
 
     Q_PROPERTY(qreal temperature READ temperature WRITE setTemperature)
 
+    /*!
+        \property QMcpCreateMessageRequestParams::toolChoice
+        \brief Controls how the model uses tools.
+
+        The client MUST return an error if this field is provided but
+        QMcpClientCapabilitiesSampling does not declare "tools". The default is
+        \c {{ mode: "auto" }}.
+
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QMcpToolChoice toolChoice READ toolChoice WRITE setToolChoice)
+
+    /*!
+        \property QMcpCreateMessageRequestParams::tools
+        \brief Tools that the model may use during generation.
+
+        The client MUST return an error if this field is provided but
+        QMcpClientCapabilitiesSampling does not declare "tools".
+
+        \since MCP 2025-11-25
+    */
+    Q_PROPERTY(QList<QMcpTool> tools READ tools WRITE setTools)
+
 public:
     QMcpCreateMessageRequestParams() : QMcpGadget(new Private) {
         qRegisterMetaType<QMcpSamplingMessage>();
+        qRegisterMetaType<QMcpTool>();
     }
 
     QString includeContext() const { return d<Private>()->includeContext; }
@@ -113,8 +139,27 @@ public:
         d<Private>()->temperature = value;
     }
 
+    QMcpToolChoice toolChoice() const { return d<Private>()->toolChoice; }
+    void setToolChoice(const QMcpToolChoice &value) {
+        if (toolChoice() == value) return;
+        d<Private>()->toolChoice = value;
+    }
+
+    QList<QMcpTool> tools() const { return d<Private>()->tools; }
+    void setTools(const QList<QMcpTool> &value) {
+        if (tools() == value) return;
+        d<Private>()->tools = value;
+    }
+
     const QMetaObject* metaObject() const override {
         return &staticMetaObject;
+    }
+
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "toolChoice" || name == "tools")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_11_25;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
     }
 
 private:
@@ -127,6 +172,8 @@ private:
         QList<QString> stopSequences;
         QString systemPrompt;
         qreal temperature = 0;
+        QMcpToolChoice toolChoice;
+        QList<QMcpTool> tools;
 
         Private *clone() const override { return new Private(*this); }
     };

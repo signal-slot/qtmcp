@@ -26,11 +26,20 @@ public:
         QNetworkRequest request;
         int indexOfMethod = -1;
         qint64 contentLength = -1;  // Store expected content length
-        qint64 receivedLength = 0;  // Track received data size
     };
 
     QMap<QTcpSocket*, ParseData> dataMap;
     QMap<QUuid, QTcpSocket*> sessions;
+    QMap<QUuid, QTcpSocket*> deferred;
+
+    // The socket whose request slot is currently running. The connection
+    // cannot be identified by its QNetworkRequest alone because two clients
+    // may issue byte-identical requests concurrently.
+    QTcpSocket *currentSocket = nullptr;
+    // Set by deferResponse() while currentSocket's slot runs, so that the
+    // automatic response stays suppressed even when the slot already answered
+    // synchronously through completeResponse().
+    bool responseTakenOver = false;
 };
 
 QMcpAbstractHttpServer::Private::Private(QMcpAbstractHttpServer *parent)
@@ -61,6 +70,21 @@ void QMcpAbstractHttpServer::Private::handleDisconnected(QTcpSocket *socket)
     if (dataMap.contains(socket)) {
         dataMap.remove(socket);
     }
+    if (currentSocket == socket)
+        currentSocket = nullptr;
+
+    // Deferred and SSE connections are tracked by UUID; tell the subclass the
+    // peer went away, e.g. to treat it as cancellation (2026-07-28).
+    auto id = deferred.key(socket);
+    if (!id.isNull()) {
+        deferred.remove(id);
+        emit q->connectionClosed(id);
+    }
+    id = sessions.key(socket);
+    if (!id.isNull()) {
+        sessions.remove(id);
+        emit q->connectionClosed(id);
+    }
 
     socket->deleteLater();
 }
@@ -70,9 +94,7 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
     const auto mo = q->metaObject();
 
     ParseData &data = dataMap[socket];
-    QByteArray newData = socket->readAll();
-    data.data.append(newData);
-    data.receivedLength += newData.size();
+    data.data.append(socket->readAll());
 
     if (!data.request.url().isValid()) {
         int cr = data.data.indexOf('\r');
@@ -152,8 +174,9 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
         }
     }
 
-    // Check if we have received all expected data
-    if (data.contentLength >= 0 && data.receivedLength < data.contentLength) {
+    // Check if we have received all expected data. data.data holds the body
+    // only; the request line and headers were stripped above.
+    if (data.contentLength >= 0 && data.data.size() < data.contentLength) {
         return;  // Wait for more data
     }
 
@@ -164,6 +187,8 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
 
     auto mm = mo->method(data.indexOfMethod);
     QByteArray ret;
+    currentSocket = socket;
+    responseTakenOver = false;
     switch (mm.parameterCount()) {
     case 0:
         mm.invoke(q
@@ -190,10 +215,18 @@ void QMcpAbstractHttpServer::Private::parseHttpRequest(QTcpSocket *socket)
     default:
         qFatal();
     }
-    if (sessions.key(socket).isNull())
+    currentSocket = nullptr;
+    const bool takenOver = responseTakenOver;
+    responseTakenOver = false;
+    if (takenOver) {
+        // The slot took over the connection via deferResponse(); the response
+        // was either already sent from within the slot or is sent later
+        // through completeResponse() / upgradeToSse().
+    } else if (sessions.key(socket).isNull()) {
         sendHttpResponse(socket, ret, "text/plain"_L1, 200);
-    else
+    } else {
         socket->write(ret);
+    }
     dataMap.insert(socket, ParseData());
 }
 
@@ -258,18 +291,25 @@ QUuid QMcpAbstractHttpServer::registerSseRequest(const QNetworkRequest &request)
                                             "Cache-Control: no-cache\r\n"
                                             "Connection: keep-alive\r\n"
                                             "\r\n");
-    const auto sockets = d->dataMap.keys();
-    for (QTcpSocket *socket : sockets) {
-        if (d->dataMap.value(socket).request == request) {
-            ret = QUuid::createUuid();
-            d->sessions.insert(ret, socket);
-            socket->write(response);
-            socket->flush();
-            break;
+    QTcpSocket *target = d->currentSocket;
+    if (!target) {
+        // Called outside of a request slot: fall back to matching the request.
+        const auto sockets = d->dataMap.keys();
+        for (QTcpSocket *socket : sockets) {
+            if (d->dataMap.value(socket).request == request) {
+                target = socket;
+                break;
+            }
         }
     }
-    if (ret.isNull())
+    if (target) {
+        ret = QUuid::createUuid();
+        d->sessions.insert(ret, target);
+        target->write(response);
+        target->flush();
+    } else {
         qWarning() << "sse socket for" << request.url() << "not found";
+    }
     return ret;
 }
 
@@ -287,6 +327,85 @@ void QMcpAbstractHttpServer::sendSseEvent(const QUuid &id, const QByteArray &dat
     message += "data: " + data + "\r\n\r\n";
     socket->write(message);
     socket->flush();
+}
+
+void QMcpAbstractHttpServer::sendSseComment(const QUuid &id, const QByteArray &comment)
+{
+    if (!d->sessions.contains(id)) {
+        qWarning() << "sse" << id << "not found";
+        return;
+    }
+    auto *socket = d->sessions.value(id);
+    socket->write(": " + comment + "\r\n\r\n");
+    socket->flush();
+}
+
+QUuid QMcpAbstractHttpServer::deferResponse(const QNetworkRequest &request)
+{
+    if (!d->currentSocket) {
+        qWarning() << "deferResponse() for" << request.url()
+                   << "must be called from within a request slot";
+        return {};
+    }
+    const QUuid ret = QUuid::createUuid();
+    d->deferred.insert(ret, d->currentSocket);
+    d->responseTakenOver = true;
+    return ret;
+}
+
+void QMcpAbstractHttpServer::completeResponse(const QUuid &id, int statusCode, const QByteArray &body,
+                                              const QString &contentType,
+                                              const QList<std::pair<QByteArray, QByteArray>> &extraHeaders)
+{
+    if (!d->deferred.contains(id)) {
+        qWarning() << "deferred response" << id << "not found";
+        return;
+    }
+    auto *socket = d->deferred.take(id);
+
+    QByteArray statusText;
+    switch (statusCode) {
+    case 200: statusText = "OK"_ba; break;
+    case 202: statusText = "Accepted"_ba; break;
+    case 400: statusText = "Bad Request"_ba; break;
+    case 403: statusText = "Forbidden"_ba; break;
+    case 404: statusText = "Not Found"_ba; break;
+    case 405: statusText = "Method Not Allowed"_ba; break;
+    default: statusText = "Unknown"_ba; break;
+    }
+
+    QByteArray response = "HTTP/1.1 " + QByteArray::number(statusCode) + ' ' + statusText + "\r\n";
+    if (!body.isEmpty())
+        response += "Content-Type: " + contentType.toLatin1() + "\r\n";
+    response += "Content-Length: " + QByteArray::number(body.size()) + "\r\n";
+    for (const auto &header : extraHeaders)
+        response += header.first + ": " + header.second + "\r\n";
+    response += "\r\n";
+    response += body;
+    socket->write(response);
+    socket->flush();
+}
+
+bool QMcpAbstractHttpServer::upgradeToSse(const QUuid &id, const QList<std::pair<QByteArray, QByteArray>> &extraHeaders)
+{
+    if (!d->deferred.contains(id)) {
+        qWarning() << "deferred response" << id << "not found";
+        return false;
+    }
+    auto *socket = d->deferred.take(id);
+    d->sessions.insert(id, socket);
+
+    QByteArray response = "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: text/event-stream\r\n"
+                          "Cache-Control: no-cache\r\n"
+                          "Connection: keep-alive\r\n"
+                          "X-Accel-Buffering: no\r\n"_ba;
+    for (const auto &header : extraHeaders)
+        response += header.first + ": " + header.second + "\r\n";
+    response += "\r\n";
+    socket->write(response);
+    socket->flush();
+    return true;
 }
 
 void QMcpAbstractHttpServer::closeSseConnection(const QUuid &id)

@@ -3,5 +3,6 @@
 
 if (NOT WIN32)
     add_subdirectory(qmcpclient)
+    add_subdirectory(stateless_lifecycle)
     add_subdirectory(version_negotiation)
 endif()

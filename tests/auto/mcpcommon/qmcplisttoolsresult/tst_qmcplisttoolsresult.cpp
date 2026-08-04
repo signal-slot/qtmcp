@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "../testhelper.h"
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtCore/QJsonParseError>
 #include <QtMcpCommon/QMcpListToolsResult>
 #include <QtMcpCommon/QMcpTool>
+#include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtTest/QTest>
 
 class tst_QMcpListToolsResult : public QObject
@@ -17,6 +20,7 @@ private slots:
     void convert();
     void copy_data();
     void copy();
+    void cacheHintGating();
 };
 
 void tst_QMcpListToolsResult::convert_data()
@@ -40,6 +44,9 @@ void tst_QMcpListToolsResult::convert_data()
         ]
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
+        { "ttlMs", 0 },
+        { "cacheScope", "private"_L1 },
         { "tools", QVariantList {
             QVariantMap {
                 { "name", "tool1" },
@@ -85,6 +92,9 @@ void tst_QMcpListToolsResult::convert_data()
         ]
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
+        { "ttlMs", 0 },
+        { "cacheScope", "private"_L1 },
         { "nextCursor", "cursor123" },
         { "tools", QVariantList {
             QVariantMap {
@@ -120,6 +130,9 @@ void tst_QMcpListToolsResult::convert_data()
         "tools": []
     })"_ba
     << QVariantMap {
+        { "resultType", "complete"_L1 },
+        { "ttlMs", 0 },
+        { "cacheScope", "private"_L1 },
         { "nextCursor", "cursor123" },
         { "tools", QVariantList() }
     };
@@ -173,6 +186,43 @@ void tst_QMcpListToolsResult::copy()
     QMcpListToolsResult result3;
     result3 = result2;
     QCOMPARE(result3.toJsonObject(), QJsonObject::fromVariantMap(data));
+}
+
+void tst_QMcpListToolsResult::cacheHintGating()
+{
+    QMcpListToolsResult result;
+    result.setTools({});
+    result.setCacheScope("public"_L1);
+    result.setTtlMs(60000);
+
+    // tools/list became a CacheableResult in 2026-07-28: neither the caching
+    // hints nor Result::resultType may leak into an older revision.
+    for (const auto version : { QtMcp::ProtocolVersion::v2024_11_05,
+                                QtMcp::ProtocolVersion::v2025_03_26,
+                                QtMcp::ProtocolVersion::v2025_06_18,
+                                QtMcp::ProtocolVersion::v2025_11_25 }) {
+        const auto oldObject = result.toJsonObject(version);
+        QVERIFY(!oldObject.contains("resultType"_L1));
+        QVERIFY(!oldObject.contains("cacheScope"_L1));
+        QVERIFY(!oldObject.contains("ttlMs"_L1));
+        // The member that always existed is still there.
+        QVERIFY(oldObject.contains("tools"_L1));
+    }
+
+    const auto newObject = result.toJsonObject(QtMcp::ProtocolVersion::v2026_07_28);
+    QCOMPARE(newObject.value("resultType"_L1).toString(), "complete"_L1);
+    QCOMPARE(newObject.value("cacheScope"_L1).toString(), "public"_L1);
+    QCOMPARE(newObject.value("ttlMs"_L1).toInt(), 60000);
+
+    // The hints are mandatory on the wire since 2026-07-28, but a server
+    // omitting them must not make the result unparsable: it then simply must
+    // not be cached.
+    QMcpListToolsResult parsed;
+    QVERIFY(parsed.fromJsonObject(QJsonObject { { "tools"_L1, QJsonArray {} } },
+                                  QtMcp::ProtocolVersion::v2026_07_28));
+    QCOMPARE(parsed.resultType(), "complete"_L1);
+    QCOMPARE(parsed.cacheScope(), "private"_L1);
+    QCOMPARE(parsed.ttlMs(), 0);
 }
 
 QTEST_MAIN(tst_QMcpListToolsResult)

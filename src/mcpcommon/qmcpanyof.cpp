@@ -65,45 +65,19 @@ bool QMcpAnyOf::fromJsonObject(const QJsonObject &object, QtMcp::ProtocolVersion
     }
 
     const auto property = mo->property(propertyIndex);
+    // The refType has to be set before the property is written: the setters
+    // only set it when the value actually changes, so a variant that happens to
+    // equal its default value would otherwise leave the union unset.
     setRefType(property.name());
     auto propertyValue = property.readOnGadget(this);
     if (propertyValue.canConvert<QMcpGadget>()) {
         auto *gadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-        const auto mo = gadget->metaObject();
-        for (int i = 0; i < mo->propertyCount(); i++) {
-            const auto property = mo->property(i);
-            if (property.isConstant())
-                continue;
-
-            const auto propertyType = property.typeName();
-            const auto propertyName = QString::fromLatin1(property.name());
-            if (!object.contains(propertyName))
-                continue;
-
-            const auto value = object.value(propertyName);
-            if (value.isUndefined())
-                continue;
-
-            if (value.isObject()) {
-                auto propertyValue = property.readOnGadget(gadget);
-                
-                if (propertyValue.canConvert<QMcpGadget>()) {
-                    auto *newGadget = reinterpret_cast<QMcpGadget *>(propertyValue.data());
-                    if (!newGadget->fromJsonObject(value.toObject(), protocolVersion))
-                        return false;
-                    if (!property.writeOnGadget(gadget, propertyValue))
-                        qFatal() << gadget;
-                } else if (property.typeId() == QMetaType::QJsonObject) {
-                    property.writeOnGadget(gadget, value.toObject());
-                } else {
-                    qFatal() << propertyType << "not supporeted for" << mo->className() <<  propertyName << propertyValue;
-                }
-            } else {
-                // Handle non-object properties
-                if (!property.writeOnGadget(gadget, value.toVariant()))
-                    qFatal() << value;
-            }
-        }
+        // Let the variant parse the object itself instead of duplicating the
+        // property handling here. QMcpGadget::fromJsonObject() also covers
+        // arrays, enums and version gated properties, and it keeps this in sync
+        // with toJsonObject(), which delegates to the variant as well.
+        if (!gadget->fromJsonObject(object, protocolVersion))
+            return false;
         property.writeOnGadget(this, propertyValue);
     }
     return true;

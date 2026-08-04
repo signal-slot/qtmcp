@@ -7,6 +7,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QJsonObject>
 #include <QtMcpClient/qmcpclientglobal.h>
+#include <QtMcpCommon/qtmcpnamespace.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -64,10 +65,20 @@ public slots:
     /*!
         Sends a notification to the server.
         Must be implemented by backend classes.
-        
+
         \param object The notification as a JSON object
     */
     virtual void notify(const QJsonObject &object) = 0;
+
+    /*!
+        Called once protocol version negotiation with the server completes.
+        Transports that carry the version out-of-band embed it where their
+        protocol requires, e.g. the MCP-Protocol-Version HTTP header
+        (required since MCP 2025-06-18). The default implementation ignores it.
+
+        \param protocolVersion The negotiated protocol version
+    */
+    virtual void setNegotiatedProtocolVersion(QtMcp::ProtocolVersion protocolVersion) { Q_UNUSED(protocolVersion); }
 
 signals:
     /*!

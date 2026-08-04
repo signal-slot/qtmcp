@@ -5,6 +5,7 @@
 #define QMCPBLOBRESOURCECONTENTS_H
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtCore/QUrl>
 #include <QtMcpCommon/qmcpgadget.h>
@@ -18,6 +19,13 @@ QT_BEGIN_NAMESPACE
 class Q_MCPCOMMON_EXPORT QMcpBlobResourceContents : public QMcpGadget
 {
     Q_GADGET
+
+    /*!
+        \property QMcpBlobResourceContents::_meta
+        \brief Reserved by MCP to allow clients and servers to attach additional metadata.
+        \since MCP 2025-06-18
+    */
+    Q_PROPERTY(QJsonObject _meta READ meta WRITE setMeta)
 
     /*!
         \property QMcpBlobResourceContents::blob
@@ -48,6 +56,15 @@ public:
         d<Private>()->blob = blob;
         d<Private>()->uri = resource.uri();
         d<Private>()->name = resource.name();
+    }
+
+    QJsonObject meta() const {
+        return d<Private>()->_meta;
+    }
+
+    void setMeta(const QJsonObject &meta) {
+        if (this->meta() == meta) return;
+        d<Private>()->_meta = meta;
     }
 
     QByteArray blob() const {
@@ -90,9 +107,17 @@ public:
         return &staticMetaObject;
     }
 
+protected:
+    bool isPropertyAvailable(QByteArrayView name, QtMcp::ProtocolVersion protocolVersion) const override {
+        if (name == "_meta")
+            return protocolVersion >= QtMcp::ProtocolVersion::v2025_06_18;
+        return QMcpGadget::isPropertyAvailable(name, protocolVersion);
+    }
+
 private:
     struct Private : public QMcpGadget::Private {
     public:
+        QJsonObject _meta;
         QByteArray blob;
         QString mimeType;
         QUrl uri;
