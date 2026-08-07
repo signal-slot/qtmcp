@@ -13,3 +13,13 @@ target_link_libraries(window PRIVATE
     Qt::McpServer
     Qt::Gui
 )
+
+if(NOT DEFINED INSTALL_EXAMPLESDIR)
+    set(INSTALL_EXAMPLESDIR "examples")
+endif()
+
+install(TARGETS window
+    RUNTIME DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/window"
+    BUNDLE DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/window"
+    LIBRARY DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/window"
+)
