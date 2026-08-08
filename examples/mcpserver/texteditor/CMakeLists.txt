@@ -13,3 +13,13 @@ target_link_libraries(texteditor PRIVATE
     Qt::McpServer
     Qt::Widgets
 )
+
+if(NOT DEFINED INSTALL_EXAMPLESDIR)
+    set(INSTALL_EXAMPLESDIR "examples")
+endif()
+
+install(TARGETS texteditor
+    RUNTIME DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/texteditor"
+    BUNDLE DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/texteditor"
+    LIBRARY DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/texteditor"
+)

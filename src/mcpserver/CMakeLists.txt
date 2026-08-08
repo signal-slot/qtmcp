@@ -21,8 +21,9 @@ qt_internal_add_module(McpServer
         ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC_LIBRARIES
         Qt::McpCommon
-        Qt::CorePrivate
         Qt::Network
+    LIBRARIES
+        Qt::CorePrivate
     DEFINES
         QT_BUILD_MCPSERVER_LIB
 )

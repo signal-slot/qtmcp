@@ -11,3 +11,13 @@ qt_add_executable(echo
 target_link_libraries(echo PRIVATE
     Qt::McpServer
 )
+
+if(NOT DEFINED INSTALL_EXAMPLESDIR)
+    set(INSTALL_EXAMPLESDIR "examples")
+endif()
+
+install(TARGETS echo
+    RUNTIME DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/echo"
+    BUNDLE DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/echo"
+    LIBRARY DESTINATION "${INSTALL_EXAMPLESDIR}/mcpserver/echo"
+)

@@ -30,3 +30,13 @@ target_link_libraries(mcpinspector PRIVATE
     Qt::Widgets
     Qt::McpClient
 )
+
+if(NOT DEFINED INSTALL_EXAMPLESDIR)
+    set(INSTALL_EXAMPLESDIR "examples")
+endif()
+
+install(TARGETS mcpinspector
+    RUNTIME DESTINATION "${INSTALL_EXAMPLESDIR}/mcpclient/inspector"
+    BUNDLE DESTINATION "${INSTALL_EXAMPLESDIR}/mcpclient/inspector"
+    LIBRARY DESTINATION "${INSTALL_EXAMPLESDIR}/mcpclient/inspector"
+)
