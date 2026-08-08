@@ -34,10 +34,13 @@ configure_package_config_file(
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfig.cmake
     INSTALL_DESTINATION ${INSTALL_LIBDIR}/cmake/QtMcp
 )
+# The QtMcp package carries the MCP-revision-based release version, not the
+# Qt-shaped module version. API only grows across revisions, hence
+# AnyNewerVersion.
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
+    VERSION ${QTMCP_VERSION}
+    COMPATIBILITY AnyNewerVersion
 )
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfig.cmake
