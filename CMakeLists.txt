@@ -24,3 +24,23 @@ find_package(Qt6 6.8 CONFIG OPTIONAL_COMPONENTS
 qt_internal_project_setup()
 
 qt_build_repo()
+
+# Qt MCP is an independent library that happens to use Qt's module build
+# system; offer the modules under the library's own namespace as well
+# (QtMcp::Common/Client/Server) so consumers do not have to reach into Qt6::.
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/QtMcpConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfig.cmake
+    INSTALL_DESTINATION ${INSTALL_LIBDIR}/cmake/QtMcp
+)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/QtMcpConfigVersion.cmake
+    DESTINATION ${INSTALL_LIBDIR}/cmake/QtMcp
+)

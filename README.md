@@ -5,11 +5,19 @@ providing client and server libraries for applications that talk to language
 models and AI tooling.
 
 Qt MCP is developed by [Signal Slot Inc.](https://signal-slot.co.jp/) and is
-**not part of the official Qt framework**. It is built with Qt's module build
-system, which is why its CMake targets live in the `Qt::` namespace
-(`Qt::McpCommon`, `Qt::McpClient`, `Qt::McpServer`) and are found via
-`find_package(Qt6 COMPONENTS McpServer)` — the library behaves like a Qt
-add-on module, but it is maintained independently.
+**not part of the official Qt framework**. The recommended way to consume it
+is through its own CMake package and namespace:
+
+```cmake
+find_package(QtMcp REQUIRED)
+target_link_libraries(app PRIVATE QtMcp::Server)   # or QtMcp::Client / QtMcp::Common
+```
+
+The library is built with Qt's module build system, so the same modules are
+also reachable as `Qt::McpCommon`/`Qt::McpClient`/`Qt::McpServer` via
+`find_package(Qt6 COMPONENTS McpServer)`. That spelling keeps working, but
+new code should prefer the `QtMcp::` namespace — the library behaves like a
+Qt add-on module, but it is maintained independently.
 
 ## Table of Contents
 - [Supported Protocol Revisions](#supported-protocol-revisions)

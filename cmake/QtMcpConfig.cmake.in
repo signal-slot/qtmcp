@@ -1,0 +1,29 @@
+# Copyright (C) 2025 Signal Slot Inc.
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+#
+# CMake package exposing Qt MCP under its own namespace. Consumers:
+#   find_package(QtMcp REQUIRED)
+#   target_link_libraries(app PRIVATE QtMcp::Server)
+# Available targets: QtMcp::Common, QtMcp::Client, QtMcp::Server.
+#
+# The library is built with Qt's module build system, so the same modules
+# are also reachable as Qt6::McpCommon/McpClient/McpServer via
+# find_package(Qt6 COMPONENTS ...). Both spellings stay supported; this
+# package is the recommended one for third-party consumers because Qt MCP
+# is not part of the official Qt framework.
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Qt6 COMPONENTS McpCommon McpClient McpServer)
+
+foreach(_qtmcp_module Common Client Server)
+    if(TARGET Qt6::Mcp${_qtmcp_module} AND NOT TARGET QtMcp::${_qtmcp_module})
+        add_library(QtMcp::${_qtmcp_module} INTERFACE IMPORTED)
+        set_target_properties(QtMcp::${_qtmcp_module} PROPERTIES
+            INTERFACE_LINK_LIBRARIES Qt6::Mcp${_qtmcp_module})
+    endif()
+endforeach()
+unset(_qtmcp_module)
+
+check_required_components(QtMcp)
