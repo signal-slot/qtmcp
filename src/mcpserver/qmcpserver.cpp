@@ -457,19 +457,24 @@ QMcpServer::QMcpServer(const QString &backend, QObject *parent)
         result.setInstructions(d->instructions);
         return result;
     });
-    addRequestHandler([this](const QUuid &sessionId, const QMcpSubscriptionsListenRequest &request, QMcpJSONRPCErrorError *error) {
-        QMcpSubscriptionsListenResult result;
+    // Registered with the raw JSON rather than through addRequestHandler(),
+    // because the subscription is identified by the JSON-RPC id of the request,
+    // which the typed request does not carry.
+    registerRequestHandler(QMcpSubscriptionsListenRequest().method(), [this](const QUuid &sessionId, const QJsonObject &object, QMcpJSONRPCErrorError *error) -> QJsonValue {
+        const auto version = versionToUse(sessionId);
         auto session = d->findSession(sessionId, true, error);
         if (!session)
-            return result;
-        session->setListenSubscriptions(request.params().notifications());
+            return QJsonValue();
+        QMcpSubscriptionsListenRequest request;
+        request.fromJsonObject(object, version);
+        session->setListenSubscriptions(request.params().notifications(), object.value("id"_L1));
 
         QMcpSubscriptionsAcknowledgedNotification acknowledged;
         auto params = acknowledged.params();
         params.setNotifications(session->listenSubscriptions());
         acknowledged.setParams(params);
         d->sendTaggedNotification(session, acknowledged);
-        return result;
+        return QMcpSubscriptionsListenResult().toJsonObject(version);
     });
 
     addRequestHandler([](const QUuid &session, const QMcpPingRequest &, QMcpJSONRPCErrorError *) {

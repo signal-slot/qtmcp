@@ -80,11 +80,11 @@ std::shared_ptr<CallState> call(QMcpClient *client, const Request &request)
     return state;
 }
 
-QString subscriptionIdOf(const QJsonObject &notification)
+QJsonValue subscriptionIdOf(const QJsonObject &notification)
 {
     return notification.value("params"_L1).toObject()
         .value("_meta"_L1).toObject()
-        .value("io.modelcontextprotocol/subscriptionId"_L1).toString();
+        .value("io.modelcontextprotocol/subscriptionId"_L1);
 }
 } // namespace
 
@@ -327,7 +327,7 @@ void tst_StatelessLifecycle::notificationsNeedAnOptIn()
     QVERIFY(serverSession->listenSubscriptions().toolsListChanged());
     QVERIFY(!serverSession->listenSubscriptions().promptsListChanged());
     const auto subscriptionId = serverSession->listenSubscriptionId();
-    QVERIFY(!subscriptionId.isEmpty());
+    QVERIFY(!subscriptionId.isUndefined());
 
     // The server has to acknowledge the subscription, reporting the opt-ins it
     // honors and the id every later notification is tagged with.

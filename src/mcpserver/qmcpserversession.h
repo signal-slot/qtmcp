@@ -244,11 +244,12 @@ public slots:
     void elicit(const QMcpElicitRequestParams &params);
 
     // subscriptions/listen opt-ins (2026-07-28). Sessions on that revision
-    // only receive the change notifications they subscribed to.
+    // only receive the change notifications they subscribed to. The
+    // subscription id is the JSON-RPC id of the subscriptions/listen request.
     bool hasListenSubscriptions() const;
     QMcpSubscriptionFilter listenSubscriptions() const;
-    void setListenSubscriptions(const QMcpSubscriptionFilter &filter);
-    QString listenSubscriptionId() const;
+    void setListenSubscriptions(const QMcpSubscriptionFilter &filter, const QJsonValue &subscriptionId);
+    QJsonValue listenSubscriptionId() const;
 
     // Multi round-trip requests (2026-07-28). During request handling a tool
     // or handler reads the input the client supplied on a retry with
