@@ -247,3 +247,8 @@ Licensed under:
 Issues and pull requests are welcome on
 [GitHub](https://github.com/signal-slot/qtmcp). For commercial support,
 contact [Signal Slot Inc.](https://signal-slot.co.jp/)
+
+Contributions are covered by the [Contributor License Agreement](CLA.md).
+You accept it once: a check on your first pull request adds a checkbox to
+the description, and the check passes when you tick it. Later pull requests
+find that record by themselves.
