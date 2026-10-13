@@ -96,7 +96,7 @@ public:
 
     bool listenSubscribed = false;
     QMcpSubscriptionFilter listenFilter;
-    QString listenSubscriptionId;
+    QJsonValue listenSubscriptionId;
 
     QJsonObject inputResponses;
     QJsonValue clientRequestState;
@@ -173,15 +173,14 @@ QMcpSubscriptionFilter QMcpServerSession::listenSubscriptions() const
     return d->listenFilter;
 }
 
-void QMcpServerSession::setListenSubscriptions(const QMcpSubscriptionFilter &filter)
+void QMcpServerSession::setListenSubscriptions(const QMcpSubscriptionFilter &filter, const QJsonValue &subscriptionId)
 {
     d->listenSubscribed = true;
     d->listenFilter = filter;
-    if (d->listenSubscriptionId.isEmpty())
-        d->listenSubscriptionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    d->listenSubscriptionId = subscriptionId;
 }
 
-QString QMcpServerSession::listenSubscriptionId() const
+QJsonValue QMcpServerSession::listenSubscriptionId() const
 {
     return d->listenSubscriptionId;
 }

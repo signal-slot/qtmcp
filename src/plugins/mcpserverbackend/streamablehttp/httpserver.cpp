@@ -128,6 +128,10 @@ public:
     struct Session {
         QtMcp::ProtocolVersion version = DefaultProtocolVersion;
         QUuid stream;           // the SSE stream notifications are routed to
+        // The subscriptions/listen request that opened the stream: the id the
+        // core knows it by, and the id the client used.
+        QString subscriptionInternalId;
+        QJsonValue subscriptionId;
     };
 
     bool isOriginAllowed(const QNetworkRequest &request) const;
@@ -437,6 +441,11 @@ QByteArray HttpServer::postMcp(const QNetworkRequest &request, const QByteArray 
         }
         entry.stream = true;
         d->openStream(exchange, session, version >= QtMcp::ProtocolVersion::v2026_07_28);
+        // The core tags the stream's notifications with the request id it
+        // was handed, which send() turns back into the client's.
+        auto &subscription = d->sessions[session];
+        subscription.subscriptionInternalId = internalId;
+        subscription.subscriptionId = clientId;
     }
 
     d->pending.insert(internalId, entry);
@@ -559,7 +568,17 @@ void HttpServer::send(const QUuid &session, const QJsonObject &object)
     // the session's stream.
     const auto it = d->sessions.constFind(session);
     if (it != d->sessions.constEnd() && !it->stream.isNull()) {
-        sendSseEvent(it->stream, QJsonDocument(object).toJson(QJsonDocument::Compact));
+        auto event = object;
+        const auto subscriptionIdKey = "io.modelcontextprotocol/subscriptionId"_L1;
+        auto params = event.value("params"_L1).toObject();
+        auto meta = params.value("_meta"_L1).toObject();
+        if (!it->subscriptionInternalId.isEmpty()
+                && meta.value(subscriptionIdKey) == QJsonValue(it->subscriptionInternalId)) {
+            meta.insert(subscriptionIdKey, it->subscriptionId);
+            params.insert("_meta"_L1, meta);
+            event.insert("params"_L1, params);
+        }
+        sendSseEvent(it->stream, QJsonDocument(event).toJson(QJsonDocument::Compact));
         return;
     }
 

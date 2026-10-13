@@ -86,6 +86,8 @@ private slots:
     void statelessRequest();
     void statelessHeaderMismatchIsRejected();
     void statelessRejectsGetAndDelete();
+    void listenAcknowledgementCarriesTheListenRequestId_data();
+    void listenAcknowledgementCarriesTheListenRequestId();
     void forbiddenOrigin();
 
 private:
@@ -442,6 +444,58 @@ void tst_StreamableHttp::statelessRejectsGetAndDelete()
     waitForBody(deleteReply, &statusCode);
     deleteReply->deleteLater();
     QCOMPARE(statusCode, 405);
+}
+
+void tst_StreamableHttp::listenAcknowledgementCarriesTheListenRequestId_data()
+{
+    QTest::addColumn<QJsonValue>("listenId");
+
+    QTest::newRow("string id") << QJsonValue("listen:0"_L1);
+    QTest::newRow("numeric id") << QJsonValue(42);
+}
+
+/*
+ * Scenario: a client correlates the subscription acknowledgement with its
+ *           subscriptions/listen request
+ * GIVEN a 2026-07-28 client that opens a subscription with a listen request
+ * WHEN  the server acknowledges the subscription on the stream
+ * THEN  the acknowledgement is tagged with the id of that listen request, as
+ *       required for io.modelcontextprotocol/subscriptionId
+ */
+void tst_StreamableHttp::listenAcknowledgementCarriesTheListenRequestId()
+{
+    QFETCH(QJsonValue, listenId);
+    const auto version = QtMcp::protocolVersionToString(QtMcp::ProtocolVersion::v2026_07_28);
+
+    // GIVEN: A listen request that opts in to tool list changes.
+    QJsonObject optIns;
+    optIns.insert("toolsListChanged"_L1, true);
+    QJsonObject params;
+    params.insert("notifications"_L1, optIns);
+    const auto message = withStatelessMeta(jsonRpc("subscriptions/listen"_L1, listenId, params),
+                                           version);
+    auto request = endpoint(version);
+    request.setRawHeader("Mcp-Method"_ba, "subscriptions/listen"_ba);
+
+    // WHEN: The client opens the subscription stream.
+    auto *streamReply = m_networkAccessManager.post(
+            request, QJsonDocument(message).toJson(QJsonDocument::Compact));
+    QByteArray streamed;
+    connect(streamReply, &QNetworkReply::readyRead, streamReply, [&streamed, streamReply]() {
+        streamed.append(streamReply->readAll());
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(streamed.contains("notifications/subscriptions/acknowledged"), Timeout);
+
+    // THEN: The acknowledgement names the listen request as its subscription.
+    QVERIFY(streamed.startsWith("data: "));
+    const auto acknowledged = QJsonDocument::fromJson(streamed.mid(6).trimmed()).object();
+    const auto subscriptionId = acknowledged.value("params"_L1).toObject()
+            .value("_meta"_L1).toObject()
+            .value("io.modelcontextprotocol/subscriptionId"_L1);
+    QCOMPARE(subscriptionId, listenId);
+
+    streamReply->abort();
+    streamReply->deleteLater();
 }
 
 void tst_StreamableHttp::forbiddenOrigin()
