@@ -289,7 +289,7 @@ void HttpServer::startStatelessSession()
     if (!d->statelessSession.isNull())
         return;
     d->statelessSession = QUuid::createUuid();
-    d->sessions.insert(d->statelessSession, {QtMcp::ProtocolVersion::v2026_07_28, {}});
+    d->sessions.insert(d->statelessSession, {QtMcp::ProtocolVersion::v2026_07_28, {}, {}, {}});
     emit newSession(d->statelessSession);
 }
 
@@ -392,7 +392,7 @@ QByteArray HttpServer::postMcp(const QNetworkRequest &request, const QByteArray 
             // needs a session of its own to keep its stream apart from the
             // shared stateless one.
             session = QUuid::createUuid();
-            d->sessions.insert(session, {version, {}});
+            d->sessions.insert(session, {version, {}, {}, {}});
             emit newSession(session);
         } else {
             if (d->statelessSession.isNull())
@@ -401,7 +401,7 @@ QByteArray HttpServer::postMcp(const QNetworkRequest &request, const QByteArray 
         }
     } else if (method == "initialize"_L1) {
         session = QUuid::createUuid();
-        d->sessions.insert(session, {version, {}});
+        d->sessions.insert(session, {version, {}, {}, {}});
         emit newSession(session);
         extraHeaders.append({"Mcp-Session-Id"_ba, session.toByteArray(QUuid::WithoutBraces)});
     } else if (!d->resolveSession(request, exchange, &session, 400)) {
