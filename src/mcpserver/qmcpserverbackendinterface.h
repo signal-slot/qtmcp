@@ -87,6 +87,13 @@ signals:
     void started();
 
     /*!
+        Emitted when an error occurs in the backend, e.g. when start() fails
+        to listen on the requested address.
+        \param error Description of the error
+    */
+    void errorOccurred(const QString &error);
+
+    /*!
         Emitted when the backend is shutting down.
     */
     void finished();

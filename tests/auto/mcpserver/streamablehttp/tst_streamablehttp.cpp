@@ -4,6 +4,7 @@
 #include <QtCore/QEventLoop>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
 #include <QtMcpCommon/qtmcpnamespace.h>
 #include <QtMcpServer/QMcpServer>
@@ -12,6 +13,7 @@
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QTcpServer>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 using namespace Qt::Literals::StringLiterals;
@@ -79,6 +81,7 @@ private slots:
     void cleanupTestCase();
 
     void backendIsAvailable();
+    void startFailureIsReported();
     void statefulLifecycle();
     void unknownSessionIsNotFound();
     void missingSessionHeaderIsBadRequest();
@@ -174,6 +177,19 @@ QByteArray tst_StreamableHttp::openSession(const QString &protocolVersion)
 void tst_StreamableHttp::backendIsAvailable()
 {
     QVERIFY(QMcpServer::backends().contains("streamablehttp"_L1));
+}
+
+void tst_StreamableHttp::startFailureIsReported()
+{
+    // m_server already listens on m_port, so a second server cannot.
+    QMcpServer server("streamablehttp"_L1);
+    QSignalSpy startedSpy(&server, &QMcpServer::started);
+    QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"server start failed\\."_s));
+    server.start(u"127.0.0.1:%1"_s.arg(m_port));
+    QCOMPARE(errorSpy.count(), 1);
+    QVERIFY(!errorSpy.first().first().toString().isEmpty());
+    QCOMPARE(startedSpy.count(), 0);
 }
 
 void tst_StreamableHttp::statefulLifecycle()

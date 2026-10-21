@@ -56,8 +56,14 @@ void QMcpServerStreamableHttp::start(const QString &server)
         address = QHostAddress(server.left(colon));
         port = server.mid(colon + 1).toUShort();
     }
-    if (!d->tcpServer.listen(address, port) || !d->httpServer.bind(&d->tcpServer)) {
+    if (!d->tcpServer.listen(address, port)) {
         qWarning() << "server start failed." << server;
+        emit errorOccurred("Failed to listen on %1: %2"_L1.arg(server, d->tcpServer.errorString()));
+        return;
+    }
+    if (!d->httpServer.bind(&d->tcpServer)) {
+        qWarning() << "server start failed." << server;
+        emit errorOccurred("Failed to bind the HTTP server to %1"_L1.arg(server));
         return;
     }
     qCDebug(lcQMcpServerStreamableHttpPlugin) << "Listening on port" << d->tcpServer.serverPort();

@@ -101,6 +101,7 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
 
     backend->setParent(q);
     connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
+    connect(backend, &QMcpServerBackendInterface::errorOccurred, q, &QMcpServer::errorOccurred);
     connect(backend, &QMcpServerBackendInterface::finished, q, &QMcpServer::finished);
     connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
         auto session = new QMcpServerSession(sessionId, q);
@@ -704,7 +705,10 @@ QMcpServer::~QMcpServer() = default;
 
 void QMcpServer::start(const QString &args)
 {
-    if (!d->backend) return;
+    if (!d->backend) {
+        emit errorOccurred("No backend is available"_L1);
+        return;
+    }
     d->backend->start(args);
 }
 
