@@ -431,6 +431,14 @@ signals:
     void started();
 
     /*!
+        Emitted when an error occurs, e.g. when start() fails because the
+        backend could not be loaded or could not listen on the requested
+        address. started() is not emitted in that case.
+        \param errorString Description of the error
+    */
+    void errorOccurred(const QString &errorString);
+
+    /*!
         Emitted when the backend has finished (e.g., stdin reached EOF).
     */
     void finished();

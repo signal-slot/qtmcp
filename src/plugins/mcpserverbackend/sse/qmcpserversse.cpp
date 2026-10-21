@@ -57,8 +57,16 @@ void QMcpServerSse::start(const QString &server)
         address = QHostAddress(server.left(colon));
         port = server.mid(colon + 1).toInt();
     }
-    if (!d->tcpServer.listen(address, port) || !d->httpServer.bind(&d->tcpServer)) {
-        qWarning() << "server start failed." << server;
+    if (!d->tcpServer.listen(address, port)) {
+        const auto error = "Failed to listen on %1: %2"_L1.arg(server, d->tcpServer.errorString());
+        qWarning().noquote() << error;
+        emit errorOccurred(error);
+        return;
+    }
+    if (!d->httpServer.bind(&d->tcpServer)) {
+        const auto error = "Failed to bind the HTTP server to %1"_L1.arg(server);
+        qWarning().noquote() << error;
+        emit errorOccurred(error);
         return;
     }
     qCDebug(lcQMcpServerSsePlugin) << "Listening on port" << d->tcpServer.serverPort();

@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include <QtCore/QEventLoop>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
 #include <QtMcpCommon/QMcpNotification>
 #include <QtMcpCommon/QMcpRequest>
 #include <QtMcpCommon/QMcpResult>
 #include <QtMcpServer/QMcpServer>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 QT_BEGIN_NAMESPACE
@@ -73,6 +75,7 @@ private slots:
     void cleanup();
 
     void testBasicServer();
+    void testUnknownBackend();
     void testRequestHandler();
     void testNotificationHandler();
 
@@ -104,6 +107,23 @@ void tst_QMcpServer::testBasicServer()
 {
     QVERIFY(m_server != nullptr);
     QVERIFY(!m_server->backends().isEmpty());
+}
+
+void tst_QMcpServer::testUnknownBackend()
+{
+    // The constructor warns that the backend is missing and lists the available ones.
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("not found")));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("QMcpServer::backends\\(\\)")));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("^QList\\(")));
+    QMcpServer server(QStringLiteral("nonexistent"));
+    QSignalSpy startedSpy(&server, &QMcpServer::started);
+    QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
+    server.start();
+    // The error arrives from the event loop, not from within start().
+    QCOMPARE(errorSpy.count(), 0);
+    QVERIFY(errorSpy.wait(TIMEOUT));
+    QCOMPARE(errorSpy.count(), 1);
+    QCOMPARE(startedSpy.count(), 0);
 }
 
 void tst_QMcpServer::testRequestHandler()
