@@ -46,6 +46,8 @@ private:
     // instead.
     QTimer *pipeTimer = nullptr;
 #endif
+    // Data read from STDIN that does not form a complete line yet
+    QByteArray data;
     const QUuid uuid = QUuid::createUuid();
 };
 
@@ -125,7 +127,6 @@ bool QMcpServerStdio::Private::readData()
     }
 
     // Append to buffer (may accumulate partial data from previous reads)
-    static QByteArray data;
     data.append(buffer, static_cast<int>(bytesRead));
 
     // Process complete lines in the buffer (assuming JSON messages are newline-terminated)
