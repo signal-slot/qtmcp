@@ -434,10 +434,6 @@ signals:
         Emitted when an error occurs, e.g. when start() fails because the
         backend could not be loaded or could not listen on the requested
         address. started() is not emitted in that case.
-
-        Like started(), it is emitted before start() returns, so connect to it
-        before calling start(). A slot that calls QCoreApplication::quit() has
-        no effect when start() is called before the event loop runs.
         \param errorString Description of the error
     */
     void errorOccurred(const QString &errorString);

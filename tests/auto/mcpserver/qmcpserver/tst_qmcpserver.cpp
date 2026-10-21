@@ -119,6 +119,9 @@ void tst_QMcpServer::testUnknownBackend()
     QSignalSpy startedSpy(&server, &QMcpServer::started);
     QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
     server.start();
+    // The error arrives from the event loop, not from within start().
+    QCOMPARE(errorSpy.count(), 0);
+    QVERIFY(errorSpy.wait(TIMEOUT));
     QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(startedSpy.count(), 0);
 }

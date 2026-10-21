@@ -187,6 +187,9 @@ void tst_StreamableHttp::startFailureIsReported()
     QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"^Failed to listen on "_s));
     server.start(u"127.0.0.1:%1"_s.arg(m_port));
+    // The error arrives from the event loop, not from within start().
+    QCOMPARE(errorSpy.count(), 0);
+    QVERIFY(errorSpy.wait(Timeout));
     QCOMPARE(errorSpy.count(), 1);
     QVERIFY(!errorSpy.first().first().toString().isEmpty());
     QCOMPARE(startedSpy.count(), 0);

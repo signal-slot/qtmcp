@@ -100,8 +100,11 @@ QMcpServer::Private::Private(const QString &type, QMcpServer *parent)
     }
 
     backend->setParent(q);
-    connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started);
-    connect(backend, &QMcpServerBackendInterface::errorOccurred, q, &QMcpServer::errorOccurred);
+    // Backends report the outcome of start() from within it; deliver it once
+    // control is back in the event loop, so that a caller can connect after
+    // start() or call it before exec().
+    connect(backend, &QMcpServerBackendInterface::started, q, &QMcpServer::started, Qt::QueuedConnection);
+    connect(backend, &QMcpServerBackendInterface::errorOccurred, q, &QMcpServer::errorOccurred, Qt::QueuedConnection);
     connect(backend, &QMcpServerBackendInterface::finished, q, &QMcpServer::finished);
     connect(backend, &QMcpServerBackendInterface::newSessionStarted, q, [this](const QUuid &sessionId) {
         auto session = new QMcpServerSession(sessionId, q);
@@ -706,7 +709,7 @@ QMcpServer::~QMcpServer() = default;
 void QMcpServer::start(const QString &args)
 {
     if (!d->backend) {
-        emit errorOccurred("No backend is available"_L1);
+        QMetaObject::invokeMethod(this, &QMcpServer::errorOccurred, Qt::QueuedConnection, "No backend is available"_L1);
         return;
     }
     d->backend->start(args);
