@@ -185,7 +185,7 @@ void tst_StreamableHttp::startFailureIsReported()
     QMcpServer server("streamablehttp"_L1);
     QSignalSpy startedSpy(&server, &QMcpServer::started);
     QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
-    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"server start failed\\."_s));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"^Failed to listen on "_s));
     server.start(u"127.0.0.1:%1"_s.arg(m_port));
     QCOMPARE(errorSpy.count(), 1);
     QVERIFY(!errorSpy.first().first().toString().isEmpty());

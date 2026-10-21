@@ -88,7 +88,8 @@ signals:
 
     /*!
         Emitted when an error occurs in the backend, e.g. when start() fails
-        to listen on the requested address.
+        to listen on the requested address. Like started(), it is emitted
+        before start() returns.
         \param error Description of the error
     */
     void errorOccurred(const QString &error);

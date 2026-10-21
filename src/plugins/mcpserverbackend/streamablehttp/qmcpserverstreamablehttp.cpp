@@ -57,13 +57,15 @@ void QMcpServerStreamableHttp::start(const QString &server)
         port = server.mid(colon + 1).toUShort();
     }
     if (!d->tcpServer.listen(address, port)) {
-        qWarning() << "server start failed." << server;
-        emit errorOccurred("Failed to listen on %1: %2"_L1.arg(server, d->tcpServer.errorString()));
+        const auto error = "Failed to listen on %1: %2"_L1.arg(server, d->tcpServer.errorString());
+        qWarning().noquote() << error;
+        emit errorOccurred(error);
         return;
     }
     if (!d->httpServer.bind(&d->tcpServer)) {
-        qWarning() << "server start failed." << server;
-        emit errorOccurred("Failed to bind the HTTP server to %1"_L1.arg(server));
+        const auto error = "Failed to bind the HTTP server to %1"_L1.arg(server);
+        qWarning().noquote() << error;
+        emit errorOccurred(error);
         return;
     }
     qCDebug(lcQMcpServerStreamableHttpPlugin) << "Listening on port" << d->tcpServer.serverPort();
