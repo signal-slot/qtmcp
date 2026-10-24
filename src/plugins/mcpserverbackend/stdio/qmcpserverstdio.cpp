@@ -7,6 +7,7 @@
 #include <QtCore/QJsonParseError>
 #include <QtCore/QJsonObject>
 #include <QtCore/QDebug>
+#include <QtCore/QPointer>
 #include <QtCore/QSocketNotifier>
 #ifdef Q_OS_WIN
 #include <QtCore/QTimer>
@@ -30,8 +31,14 @@ public:
     Private(QMcpServerStdio *parent);
 
 private:
-    // Returns false once STDIN reached EOF or failed.
-    bool readData();
+    enum class ReadResult {
+        Continue,
+        // STDIN reached EOF or failed
+        Finished,
+        // A slot connected to received() deleted the backend
+        Deleted,
+    };
+    ReadResult readData();
     void stopReading();
 #ifdef Q_OS_WIN
     void pollPipe();
@@ -68,7 +75,7 @@ QMcpServerStdio::Private::Private(QMcpServerStdio *parent)
 #endif
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, q);
     connect(notifier, &QSocketNotifier::activated, q, [this] {
-        if (!readData())
+        if (readData() == ReadResult::Finished)
             emit q->finished();
     });
 }
@@ -102,15 +109,20 @@ void QMcpServerStdio::Private::pollPipe()
         }
         if (available == 0)
             return;
-        if (!readData()) {
+        switch (readData()) {
+        case ReadResult::Continue:
+            break;
+        case ReadResult::Finished:
             emit q->finished();
+            return;
+        case ReadResult::Deleted:
             return;
         }
     }
 }
 #endif
 
-bool QMcpServerStdio::Private::readData()
+QMcpServerStdio::Private::ReadResult QMcpServerStdio::Private::readData()
 {
     // Read available data from STDIN (non-blocking, as data is ready)
     char buffer[1024];
@@ -118,16 +130,19 @@ bool QMcpServerStdio::Private::readData()
     if (bytesRead < 0) {
         std::perror("Error reading STDIN");
         stopReading();
-        return false;
+        return ReadResult::Finished;
     }
     if (bytesRead == 0) {
         // EOF reached (no more data)
         stopReading();
-        return false;
+        return ReadResult::Finished;
     }
 
     // Append to buffer (may accumulate partial data from previous reads)
     data.append(buffer, static_cast<int>(bytesRead));
+
+    // A slot connected to received() may delete q, and this along with it
+    const QPointer<QMcpServerStdio> guard(q);
 
     // Process complete lines in the buffer (assuming JSON messages are newline-terminated)
     while (true) {
@@ -159,8 +174,10 @@ bool QMcpServerStdio::Private::readData()
         }
 
         emit q->received(uuid, jsonDoc.object());
+        if (!guard)
+            return ReadResult::Deleted;
     }
-    return true;
+    return ReadResult::Continue;
 }
 
 QMcpServerStdio::QMcpServerStdio(QObject *parent)

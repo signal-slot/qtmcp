@@ -47,6 +47,7 @@ class tst_Stdio : public QObject
 private slots:
     void requestsOverPipes();
     void startedIsEmitted();
+    void deletedFromReceived();
 
 private:
     QString serverPath() const
@@ -100,6 +101,29 @@ void tst_Stdio::startedIsEmitted()
     QVERIFY(finished);
     QCOMPARE(server.exitStatus(), QProcess::NormalExit);
     QCOMPARE(server.exitCode(), 0);
+}
+
+void tst_Stdio::deletedFromReceived()
+{
+    QProcess server;
+    server.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+    server.start(serverPath(), { "--delete-on-received"_L1 });
+    QVERIFY2(server.waitForStarted(Timeout), qPrintable(server.errorString()));
+
+    // Both requests in one write, so the backend reads them in one go and
+    // still has the second one when the first one deletes it.
+    server.write(request(1, "ping"_L1) + request(2, "ping"_L1));
+    const auto response = readResponse(&server);
+    QCOMPARE(response.value("id"_L1).toInt(), 1);
+
+    const bool finished = server.waitForFinished(Timeout);
+    if (!finished)
+        server.kill();
+    QVERIFY(finished);
+    QCOMPARE(server.exitStatus(), QProcess::NormalExit);
+    QCOMPARE(server.exitCode(), 0);
+    // The deleted server must not have handled the second request.
+    QCOMPARE(server.readAllStandardOutput(), QByteArray());
 }
 
 QTEST_MAIN(tst_Stdio)
