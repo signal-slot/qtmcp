@@ -9,6 +9,8 @@
 #include <QtCore/QDebug>
 #include <QtCore/QSocketNotifier>
 #ifdef Q_OS_WIN
+#include <QtCore/QTimer>
+#include <QtCore/qt_windows.h>
 #include <io.h>
 #include <fcntl.h>
 #define STDIN_FILENO _fileno(stdin)
@@ -28,49 +30,103 @@ public:
     Private(QMcpServerStdio *parent);
 
 private:
-    void readData(QSocketDescriptor socket, QSocketNotifier::Type activationEvent);
+    // Returns false once STDIN reached EOF or failed.
+    bool readData();
+    void stopReading();
+#ifdef Q_OS_WIN
+    void pollPipe();
+#endif
 
 private:
     QMcpServerStdio *q;
-    QSocketNotifier *notifier;
+    QSocketNotifier *notifier = nullptr;
+#ifdef Q_OS_WIN
+    // QSocketNotifier only works with sockets on Windows and never fires for
+    // a pipe, which is what MCP clients connect to STDIN, so a pipe is polled
+    // instead.
+    QTimer *pipeTimer = nullptr;
+#endif
+    // Data read from STDIN that does not form a complete line yet
+    QByteArray data;
     const QUuid uuid = QUuid::createUuid();
 };
 
 QMcpServerStdio::Private::Private(QMcpServerStdio *parent)
     : q(parent)
-    , notifier(new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, q))
 {
+    QMetaObject::invokeMethod(q, "newSessionStarted", Qt::QueuedConnection, Q_ARG(QUuid, uuid));
 #ifdef Q_OS_WIN
     // Set stdin to binary mode to avoid CRLF translation
     _setmode(_fileno(stdin), _O_BINARY);
+    if (GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE) {
+        pipeTimer = new QTimer(q);
+        pipeTimer->setInterval(10);
+        connect(pipeTimer, &QTimer::timeout, q, [this] { pollPipe(); });
+        pipeTimer->start();
+        return;
+    }
 #endif
-    QMetaObject::invokeMethod(q, "newSessionStarted", Qt::QueuedConnection, Q_ARG(QUuid, uuid));
-    connect(notifier, &QSocketNotifier::activated, q, [this](QSocketDescriptor socket, QSocketNotifier::Type activationEvent) {
-        readData(socket, activationEvent);
+    notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, q);
+    connect(notifier, &QSocketNotifier::activated, q, [this] {
+        if (!readData())
+            emit q->finished();
     });
 }
 
-void QMcpServerStdio::Private::readData(QSocketDescriptor socket, QSocketNotifier::Type type) {
-    Q_UNUSED(socket);
-    Q_UNUSED(type);
+void QMcpServerStdio::Private::stopReading()
+{
+    if (notifier)
+        notifier->setEnabled(false);
+#ifdef Q_OS_WIN
+    if (pipeTimer)
+        pipeTimer->stop();
+#endif
+}
+
+#ifdef Q_OS_WIN
+void QMcpServerStdio::Private::pollPipe()
+{
+    // PeekNamedPipe tells how much can be read without blocking, so the event
+    // loop keeps running while the client is idle.
+    const HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
+    while (true) {
+        DWORD available = 0;
+        if (!PeekNamedPipe(in, nullptr, 0, nullptr, &available, nullptr)) {
+            // ERROR_BROKEN_PIPE means the client closed its end, i.e. EOF
+            const auto error = GetLastError();
+            if (error != ERROR_BROKEN_PIPE)
+                qCWarning(lcQMcpServerStdioPlugin) << "PeekNamedPipe failed:" << error;
+            stopReading();
+            emit q->finished();
+            return;
+        }
+        if (available == 0)
+            return;
+        if (!readData()) {
+            emit q->finished();
+            return;
+        }
+    }
+}
+#endif
+
+bool QMcpServerStdio::Private::readData()
+{
     // Read available data from STDIN (non-blocking, as data is ready)
     char buffer[1024];
     const auto bytesRead = ::read(STDIN_FILENO, buffer, sizeof(buffer));
     if (bytesRead < 0) {
         std::perror("Error reading STDIN");
-        notifier->setEnabled(false);
-        emit q->finished();
-        return;
+        stopReading();
+        return false;
     }
     if (bytesRead == 0) {
         // EOF reached (no more data)
-        notifier->setEnabled(false);
-        emit q->finished();
-        return;
+        stopReading();
+        return false;
     }
 
     // Append to buffer (may accumulate partial data from previous reads)
-    static QByteArray data;
     data.append(buffer, static_cast<int>(bytesRead));
 
     // Process complete lines in the buffer (assuming JSON messages are newline-terminated)
@@ -104,6 +160,7 @@ void QMcpServerStdio::Private::readData(QSocketDescriptor socket, QSocketNotifie
 
         emit q->received(uuid, jsonDoc.object());
     }
+    return true;
 }
 
 QMcpServerStdio::QMcpServerStdio(QObject *parent)

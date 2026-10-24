@@ -4,6 +4,7 @@
 add_subdirectory(qmcpabstracthttpserver)
 add_subdirectory(qmcpserver)
 add_subdirectory(qmcpserversession)
+add_subdirectory(stdio)
 add_subdirectory(streamablehttp)
 
 # These drive a real server over a loopback transport, so they need the sse
