@@ -82,6 +82,8 @@ private slots:
 
     void backendIsAvailable();
     void startFailureIsReported();
+    void invalidPortIsRejected_data();
+    void invalidPortIsRejected();
     void statefulLifecycle();
     void unknownSessionIsNotFound();
     void missingSessionHeaderIsBadRequest();
@@ -192,6 +194,28 @@ void tst_StreamableHttp::startFailureIsReported()
     QVERIFY(errorSpy.wait(Timeout));
     QCOMPARE(errorSpy.count(), 1);
     QVERIFY(!errorSpy.first().first().toString().isEmpty());
+    QCOMPARE(startedSpy.count(), 0);
+}
+
+void tst_StreamableHttp::invalidPortIsRejected_data()
+{
+    QTest::addColumn<QString>("address");
+    QTest::newRow("not a number") << u"127.0.0.1:abc"_s;
+    QTest::newRow("out of range") << u"127.0.0.1:70000"_s;
+    QTest::newRow("negative") << u"127.0.0.1:-1"_s;
+    QTest::newRow("empty") << u"127.0.0.1:"_s;
+}
+
+void tst_StreamableHttp::invalidPortIsRejected()
+{
+    QFETCH(QString, address);
+    QMcpServer server("streamablehttp"_L1);
+    QSignalSpy startedSpy(&server, &QMcpServer::started);
+    QSignalSpy errorSpy(&server, &QMcpServer::errorOccurred);
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(u"^Invalid port in "_s));
+    server.start(address);
+    QVERIFY(errorSpy.wait(Timeout));
+    QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(startedSpy.count(), 0);
 }
 

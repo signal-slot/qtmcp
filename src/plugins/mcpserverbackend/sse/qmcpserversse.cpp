@@ -55,7 +55,14 @@ void QMcpServerSse::start(const QString &server)
         address = QHostAddress(server);
     } else {
         address = QHostAddress(server.left(colon));
-        port = server.mid(colon + 1).toInt();
+        bool ok = false;
+        port = server.mid(colon + 1).toUShort(&ok);
+        if (!ok) {
+            const auto error = "Invalid port in %1"_L1.arg(server);
+            qWarning().noquote() << error;
+            emit errorOccurred(error);
+            return;
+        }
     }
     if (!d->tcpServer.listen(address, port)) {
         const auto error = "Failed to listen on %1: %2"_L1.arg(server, d->tcpServer.errorString());
