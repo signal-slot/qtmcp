@@ -46,6 +46,7 @@ class tst_Stdio : public QObject
 
 private slots:
     void requestsOverPipes();
+    void startedIsEmitted();
 
 private:
     QString serverPath() const
@@ -81,6 +82,22 @@ void tst_Stdio::requestsOverPipes()
     // Closing STDIN is EOF, which ends the server.
     server.closeWriteChannel();
     QVERIFY(server.waitForFinished(Timeout));
+    QCOMPARE(server.exitStatus(), QProcess::NormalExit);
+    QCOMPARE(server.exitCode(), 0);
+}
+
+void tst_Stdio::startedIsEmitted()
+{
+    QProcess server;
+    server.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+    server.start(serverPath(), { "--exit-on-started"_L1 });
+    QVERIFY2(server.waitForStarted(Timeout), qPrintable(server.errorString()));
+
+    // STDIN stays open, so only started() ends the server.
+    const bool finished = server.waitForFinished(Timeout);
+    if (!finished)
+        server.kill();
+    QVERIFY(finished);
     QCOMPARE(server.exitStatus(), QProcess::NormalExit);
     QCOMPARE(server.exitCode(), 0);
 }

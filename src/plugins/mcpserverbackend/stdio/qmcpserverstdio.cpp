@@ -173,6 +173,8 @@ QMcpServerStdio::~QMcpServerStdio() = default;
 void QMcpServerStdio::start(const QString &server)
 {
     Q_UNUSED(server);
+    // STDIN is read from construction on, so there is nothing left to set up.
+    emit started();
 }
 
 void QMcpServerStdio::send(const QUuid &session, const QJsonObject &object)
