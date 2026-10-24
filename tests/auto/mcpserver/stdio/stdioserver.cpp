@@ -4,11 +4,18 @@
 #include <QtCore/QCoreApplication>
 #include <QtMcpServer/QMcpServer>
 
+using namespace Qt::Literals::StringLiterals;
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     QMcpServer server(QStringLiteral("stdio"));
     QObject::connect(&server, &QMcpServer::finished, &app, &QCoreApplication::quit);
+    // Exits with 0 once started() arrives, without serving any request.
+    if (app.arguments().contains("--exit-on-started"_L1)) {
+        QObject::connect(&server, &QMcpServer::started, &app, &QCoreApplication::quit);
+        QObject::connect(&server, &QMcpServer::finished, &app, [] { QCoreApplication::exit(1); });
+    }
     server.start();
     return app.exec();
 }
